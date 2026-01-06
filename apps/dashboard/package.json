@@ -1,0 +1,11 @@
+{
+  "name": "@byteroute/dashboard",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "node -e \"console.log('dashboard: dev (placeholder)')\"",
+    "build": "node -e \"console.log('dashboard: build (placeholder)')\"",
+    "lint": "node -e \"console.log('dashboard: lint (placeholder)')\"",
+    "test": "node -e \"console.log('dashboard: test (placeholder)')\""
+  }
+}

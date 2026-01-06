@@ -1,0 +1,16 @@
+{
+  "name": "@byteroute/backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "build": "node -e \"console.log('backend: build (placeholder)')\"",
+    "lint": "node -e \"console.log('backend: lint (placeholder)')\"",
+    "test": "node -e \"console.log('backend: test (placeholder)')\""
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.8.1"
+  }
+}
