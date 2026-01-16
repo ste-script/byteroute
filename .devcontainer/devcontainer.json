@@ -2,8 +2,10 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
 	"name": "Node.js & TypeScript",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm"
+	// Use Docker Compose so we can apply SELinux relabeling (`:z`) on the workspace bind mount.
+	"dockerComposeFile": ["docker-compose.yml"],
+	"service": "byteroute",
+	"workspaceFolder": "/workspaces/byteroute"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

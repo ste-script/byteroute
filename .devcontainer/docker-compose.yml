@@ -1,0 +1,7 @@
+services:
+  byteroute:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm
+    volumes:
+      # Bind-mount the repo into the container with SELinux relabeling.
+      - ..:/workspaces/byteroute:z
+    command: sleep infinity
