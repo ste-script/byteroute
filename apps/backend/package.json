@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "node src/index.js",
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
     "lint": "node -e \"console.log('backend: lint (placeholder)')\"",
-    "test": "node -e \"console.log('backend: test (placeholder)')\""
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "express": "^4.22.1",

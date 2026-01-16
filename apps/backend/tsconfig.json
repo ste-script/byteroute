@@ -1,12 +1,14 @@
 {
     "extends": "@byteroute/typescript/tsconfig.base.json",
     "compilerOptions": {
-        "outDir": "dist"
+        "noEmit": true
     },
     "include": [
-        "src"
+        "src",
+        "test"
     ],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        "dist"
     ]
 }
