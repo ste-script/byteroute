@@ -48,7 +48,8 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+          # Handle missing BASE_SHA: new branches (all zeros) or force pushes (commit no longer exists)
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git rev-parse --verify "$BASE_SHA^{commit}" >/dev/null 2>&1; then
             if git rev-parse HEAD^ >/dev/null 2>&1; then
               BASE_SHA="HEAD^"
             else
