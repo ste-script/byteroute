@@ -5,7 +5,10 @@
 	// Use Docker Compose so we can apply SELinux relabeling (`:z`) on the workspace bind mount.
 	"dockerComposeFile": ["docker-compose.yml"],
 	"service": "byteroute",
-	"workspaceFolder": "/workspaces/byteroute"
+	"workspaceFolder": "/workspaces/byteroute",
+	"containerEnv": {
+		"MONGODB_URI": "mongodb://mongodb:27017/byteroute"
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
