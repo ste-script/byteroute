@@ -6,6 +6,8 @@
   ],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
+  "automerge": true,
+  "platformAutomerge": true,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
