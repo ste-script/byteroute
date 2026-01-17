@@ -1,5 +1,8 @@
 # ByteRoute
 
+[![CI](https://github.com/ste-script/byteroute/actions/workflows/ci.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/v/release/ste-script/byteroute)](https://github.com/ste-script/byteroute/releases)
+
 **University Project for SPE (Software Performance Engineering) and ASW (Architetture Software per il Web)**
 
 ## Project Overview
