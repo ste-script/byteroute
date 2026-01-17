@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/ste-script/byteroute/compare/v1.2.0...v1.2.1) (2026-01-17)
+
+### Bug Fixes
+
+* **deps:** update dependency express to v5 ([39a1f18](https://github.com/ste-script/byteroute/commit/39a1f18ec05e5f45cb6642674d8ac2e990d2b97c))
+* **deps:** update dependency mongoose to ^9.1.4 ([e484498](https://github.com/ste-script/byteroute/commit/e4844984792281df47ee5cd944597bcafb61300d))
+* **deps:** update socket.io packages to ^4.8.3 ([d1e7ecc](https://github.com/ste-script/byteroute/commit/d1e7ecc954243f0926f5a67a7c9b247b09f3388d))
+
 ## [1.2.0](https://github.com/ste-script/byteroute/compare/v1.1.0...v1.2.0) (2026-01-17)
 
 ### Features
