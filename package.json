@@ -1,7 +1,6 @@
 {
   "name": "byteroute",
   "private": true,
-  "version": "0.0.0",
   "packageManager": "pnpm@10.11.0",
   "workspaces": [
     "apps/*",
@@ -13,6 +12,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "turbo run format",
+    "seed": "pnpm -F @byteroute/seed seed",
     "release": "semantic-release"
   },
   "devDependencies": {
