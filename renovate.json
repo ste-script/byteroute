@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "monorepo:turbo"
+  ],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "groupName": "TypeScript and related",
+      "matchPackageNames": ["typescript", "ts-node", "tslib"]
+    },
+    {
+      "groupName": "Vitest",
+      "matchPackagePatterns": ["^vitest", "^@vitest/"]
+    },
+    {
+      "groupName": "ESLint and Prettier",
+      "matchPackagePatterns": ["eslint", "prettier"]
+    }
+  ]
+}
