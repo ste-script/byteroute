@@ -1,3 +1,13 @@
+## [1.2.0](https://github.com/ste-script/byteroute/compare/v1.1.0...v1.2.0) (2026-01-17)
+
+### Features
+
+* **dashboard:** first dasboard impl ([e824411](https://github.com/ste-script/byteroute/commit/e8244117aa571f9703f4cae65eece8d68b6a68c3))
+
+### Bug Fixes
+
+* **dashboard:** correct linting ([9ddd617](https://github.com/ste-script/byteroute/commit/9ddd617c7b4b9f22137f59b7d09b4b0e00a0ede6))
+
 ## [1.1.0](https://github.com/ste-script/byteroute/compare/v1.0.0...v1.1.0) (2026-01-17)
 
 ### Features
