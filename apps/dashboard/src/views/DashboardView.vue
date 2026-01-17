@@ -128,7 +128,7 @@ const displayFlows = computed(() =>
 )
 
 // Socket event handlers
-let unsubscribers: (() => void)[] = []
+const unsubscribers: (() => void)[] = []
 
 function setupSocketListeners() {
   unsubscribers.push(

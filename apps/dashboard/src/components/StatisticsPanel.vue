@@ -10,7 +10,7 @@ import {
   LegendComponent,
   GridComponent
 } from 'echarts/components'
-import type { CountryStats, CategoryStats, ProtocolStats, Statistics } from '@/types'
+import type { Statistics } from '@/types'
 
 use([
   CanvasRenderer,
