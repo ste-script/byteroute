@@ -1,7 +1,13 @@
 import mongoose from "mongoose";
 
 function getMongoUri(): string {
-  return process.env.MONGODB_URI ?? "mongodb://mongodb:27017/byteroute";
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error(
+      "MONGODB_URI is not set"
+    );
+  }
+  return uri;
 }
 
 export async function connectMongo(): Promise<void> {

@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+# Validate commit messages with commitlint (Conventional Commits).
+# `husky` sets PATH to include node_modules/.bin, so `commitlint` is available.
+commitlint --edit "$1"
