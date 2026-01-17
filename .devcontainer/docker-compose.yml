@@ -1,6 +1,8 @@
 services:
   byteroute:
     image: mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/byteroute
     depends_on:
       mongodb:
         condition: service_healthy
