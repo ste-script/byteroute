@@ -140,9 +140,9 @@ function updateLayers() {
         getWidth: (d: TrafficFlow) => Math.max(1, Math.min(d.value / 100, 8)),
         greatCircle: true,
         pickable: true,
-        onClick: ({ object }: { object: TrafficFlow }) => {
-          if (object) {
-            emit('flowClick', object)
+        onClick: (info: { object?: TrafficFlow }) => {
+          if (info.object) {
+            emit('flowClick', info.object)
           }
         }
       })

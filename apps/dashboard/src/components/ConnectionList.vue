@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import InputText from 'primevue/inputtext'
-import Dropdown from 'primevue/dropdown'
 import Tag from 'primevue/tag'
 import type { Connection } from '@/types'
 
@@ -111,7 +110,7 @@ function handleSelect(connection: Connection) {
         class="search-input"
       />
       <div class="filter-row">
-        <Dropdown
+        <Select
           v-model="statusFilter"
           :options="statusOptions"
           optionLabel="label"
@@ -119,7 +118,7 @@ function handleSelect(connection: Connection) {
           placeholder="Status"
           class="filter-dropdown"
         />
-        <Dropdown
+        <Select
           v-model="protocolFilter"
           :options="protocolOptions"
           optionLabel="label"
