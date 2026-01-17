@@ -1,0 +1,24 @@
+{
+  "name": "@byteroute/seed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node -e \"console.log('seed: dev (use pnpm seed)')\"",
+    "seed": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "node -e \"console.log('seed: lint (placeholder)')\"",
+    "test": "node -e \"console.log('seed: test (placeholder)')\""
+  },
+  "dependencies": {
+    "@byteroute/shared": "workspace:*",
+    "mongoose": "^9.0.0"
+  },
+  "devDependencies": {
+    "@byteroute/typescript": "workspace:*",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.3"
+  }
+}
