@@ -43,7 +43,7 @@
     "happy-dom": "^16.6.0",
     "typescript": "^5.9.3",
     "vite": "^6.0.7",
-    "vitest": "^2.1.9",
+    "vitest": "^4.0.17",
     "vue-tsc": "^2.2.0",
     "@types/node": "^24.10.9"
   }
