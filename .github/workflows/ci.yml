@@ -3,6 +3,10 @@ name: CI
 on:
   pull_request:
   push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '*'
   workflow_dispatch:
 
 concurrency:
@@ -14,138 +18,8 @@ permissions:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
-    services:
-      mongo:
-        image: mongo:8
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'" 
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-    env:
-      MONGODB_URI: mongodb://127.0.0.1:27017/byteroute_test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.13.0
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint commits (Conventional Commits)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          else
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
-          fi
-
-          # Handle missing BASE_SHA: new branches (all zeros) or force pushes (commit no longer exists)
-          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git rev-parse --verify "$BASE_SHA^{commit}" >/dev/null 2>&1; then
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              BASE_SHA="HEAD^"
-            else
-              BASE_SHA="HEAD"
-            fi
-          fi
-
-          pnpm exec commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
-
-      - name: Lint
-        run: pnpm -w lint
-
-      - name: Test
-        run: pnpm -w test
-
-      - name: Build
-        run: pnpm -w build
-
-  docker:
-    name: Docker Images
-    runs-on: ubuntu-latest
-    needs: build-test
-    permissions:
-      contents: read
-      packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/byteroute-backend
-      IMAGE_DASHBOARD: ghcr.io/${{ github.repository_owner }}/byteroute-dashboard
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker metadata (backend)
-        id: meta_backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_BACKEND }}
-          tags: |
-            type=sha
-            type=ref,event=branch
-            type=ref,event=tag
-
-      - name: Build (and optionally push) backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/backend/Dockerfile
-          platforms: linux/amd64
-          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
-          tags: ${{ steps.meta_backend.outputs.tags }}
-          labels: ${{ steps.meta_backend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Docker metadata (dashboard)
-        id: meta_dashboard
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_DASHBOARD }}
-          tags: |
-            type=sha
-            type=ref,event=branch
-            type=ref,event=tag
-
-      - name: Build (and optionally push) dashboard image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/dashboard/Dockerfile
-          platforms: linux/amd64
-          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
-          tags: ${{ steps.meta_dashboard.outputs.tags }}
-          labels: ${{ steps.meta_dashboard.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    uses: ./.github/workflows/reusable-build-test.yml
+    with:
+      run_commitlint: ${{ github.event_name != 'workflow_dispatch' }}
+      base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
