@@ -2,11 +2,13 @@ import { config } from '@vue/test-utils'
 import { vi } from 'vitest'
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}))
+globalThis.ResizeObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn()
+  } as unknown as ResizeObserver
+})
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -24,11 +26,13 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}))
+globalThis.IntersectionObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn()
+  } as unknown as IntersectionObserver
+})
 
 // Stub PrimeVue components globally
 config.global.stubs = {
@@ -37,6 +41,7 @@ config.global.stubs = {
   Button: true,
   InputText: true,
   Dropdown: true,
+  Select: true,
   Tag: true,
   Badge: true,
   SelectButton: true
