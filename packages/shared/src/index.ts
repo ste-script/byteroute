@@ -1,2 +1,3 @@
 export * from "./models/user.js";
 export * from "./mongo.js";
+export * from "./types/index.js";
