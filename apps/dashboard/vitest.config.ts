@@ -7,15 +7,23 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'happy-dom',
-      exclude: [...configDefaults.exclude, 'e2e/**'],
+      exclude: [
+        ...configDefaults.exclude,
+        '**/dist/**',
+        '**/dist-ssr/**',
+        '**/coverage/**',
+        'e2e/**',
+        '**/.{idea,git,cache,output,temp}/**',
+        '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*'
+      ],
       root: fileURLToPath(new URL('./', import.meta.url)),
       setupFiles: ['./src/test/setup.ts'],
       globals: true,
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json', 'html'],
+        include: ['src/**/*.{js,jsx,ts,tsx,vue}'],
         exclude: [
-          'node_modules/',
           'src/test/',
           '**/*.d.ts',
           '**/*.config.*',
