@@ -115,7 +115,7 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       pinia:
-        specifier: ^2.3.0
+        specifier: ^2.3.1
         version: 2.3.1(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
       primeicons:
         specifier: ^7.0.0
