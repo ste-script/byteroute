@@ -2,7 +2,10 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "monorepo:turbo"
+    "monorepo:turbo",
+    ":rebaseStalePrs",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)"
   ],
   "labels": [
     "dependencies"
@@ -10,6 +13,9 @@
   "rangeStrategy": "bump",
   "automerge": true,
   "platformAutomerge": true,
+  "prCreation": "immediate",
+  "prHourlyLimit": 0,
+  "rebaseWhen": "behind-base-branch",
   "packageRules": [
     {
       "matchUpdateTypes": [
