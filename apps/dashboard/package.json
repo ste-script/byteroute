@@ -20,7 +20,7 @@
     "pinia": "^2.3.0",
     "@tanstack/vue-query": "^5.62.16",
     "primevue": "^4.2.5",
-    "@primevue/themes": "^4.2.5",
+    "@primevue/themes": "^4.5.4",
     "primeicons": "^7.0.0",
     "maplibre-gl": "^4.7.1",
     "@deck.gl/core": "^9.2.6",
