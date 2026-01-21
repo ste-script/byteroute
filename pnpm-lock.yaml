@@ -109,7 +109,7 @@ importers:
         specifier: ^5.62.16
         version: 5.92.7(vue@3.5.26(typescript@5.9.3))
       echarts:
-        specifier: ^5.5.1
+        specifier: ^5.6.0
         version: 5.6.0
       maplibre-gl:
         specifier: ^4.7.1
