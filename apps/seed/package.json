@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@byteroute/shared": "workspace:*",
-    "mongoose": "^9.1.4"
+    "mongoose": "^9.1.5"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
