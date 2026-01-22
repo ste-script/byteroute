@@ -19,7 +19,7 @@
     "vue-router": "^4.5.0",
     "pinia": "^2.3.1",
     "@tanstack/vue-query": "^5.92.8",
-    "primevue": "^4.2.5",
+    "primevue": "^4.5.4",
     "@primevue/themes": "^4.5.4",
     "primeicons": "^7.0.0",
     "maplibre-gl": "^4.7.1",
