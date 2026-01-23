@@ -20,7 +20,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 COPY --from=prepare /app/out/full/ .
 RUN pnpm turbo run build --filter=@byteroute/dashboard...
 
-FROM nginx:1.27-alpine AS runner
+FROM nginx:1.29-alpine AS runner
 COPY apps/dashboard/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/dashboard/dist /usr/share/nginx/html
 
