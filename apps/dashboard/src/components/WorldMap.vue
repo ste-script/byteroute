@@ -53,7 +53,6 @@ function initMap() {
     zoom: currentViewState.value.zoom,
     pitch: currentViewState.value.pitch,
     bearing: currentViewState.value.bearing,
-    antialias: true
   })
 
   map.value.on('move', () => {
@@ -137,9 +136,9 @@ function updateLayers() {
         getTargetPosition: (d: TrafficFlow) => [d.target.lng, d.target.lat],
         getSourceColor: (d: TrafficFlow) => d.color || [0, 128, 255, 200],
         getTargetColor: (d: TrafficFlow) => d.color || [255, 100, 100, 200],
-        getWidth: (d: TrafficFlow) => Math.max(1, Math.min(d.value / 100, 8)),
+        getWidth: (d: TrafficFlow) => Math.max(1, Math.min(d.value / 10000, 8)),
         greatCircle: true,
-        pickable: true,
+        pickable: false,
         onClick: (info: { object?: TrafficFlow }) => {
           if (info.object) {
             emit('flowClick', info.object)
