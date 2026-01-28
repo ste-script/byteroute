@@ -8,6 +8,13 @@
 	"workspaceFolder": "/workspaces/byteroute",
 	"containerEnv": {
 		"MONGODB_URI": "mongodb://mongodb:27017/byteroute"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"Vue.volar"
+			]
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
