@@ -1,3 +1,25 @@
+## [1.3.0](https://github.com/ste-script/byteroute/compare/v1.2.1...v1.3.0) (2026-01-30)
+
+### Features
+
+* add socket.io comunication from backend and dashboard ([074b501](https://github.com/ste-script/byteroute/commit/074b5019d5bb01b09f3d92c42e45cabe27960f4e))
+
+### Bug Fixes
+
+* **deps:** update deck-gl monorepo to ^9.2.6 ([#41](https://github.com/ste-script/byteroute/issues/41)) ([ce464fe](https://github.com/ste-script/byteroute/commit/ce464fed9667d22b431af41c59393b9ed0340c93))
+* **deps:** update dependency @primevue/themes to ^4.5.4 ([#42](https://github.com/ste-script/byteroute/issues/42)) ([4a59c02](https://github.com/ste-script/byteroute/commit/4a59c02018f75ca17eb8f265ea91eef9359ad701))
+* **deps:** update dependency @tanstack/vue-query to ^5.92.8 ([#43](https://github.com/ste-script/byteroute/issues/43)) ([aadb30d](https://github.com/ste-script/byteroute/commit/aadb30d2a7127676eb75941abaa08166cb12ebd1))
+* **deps:** update dependency @tanstack/vue-query to ^5.92.9 ([#66](https://github.com/ste-script/byteroute/issues/66)) ([4ea2433](https://github.com/ste-script/byteroute/commit/4ea24330fb47ae1d66835900b99011224a3ade0c))
+* **deps:** update dependency echarts to ^5.6.0 ([a2a7cdb](https://github.com/ste-script/byteroute/commit/a2a7cdb64e35784549e2bfd811ef7e5fcc9e5a74))
+* **deps:** update dependency echarts to v6 ([#62](https://github.com/ste-script/byteroute/issues/62)) ([8248e5d](https://github.com/ste-script/byteroute/commit/8248e5d9c9a74cc79726debf50fc26082d907dc9))
+* **deps:** update dependency mongoose to ^9.1.5 ([#45](https://github.com/ste-script/byteroute/issues/45)) ([5731ce9](https://github.com/ste-script/byteroute/commit/5731ce90016f185a9d26ff50a80494b304eb8c0d))
+* **deps:** update dependency pinia to ^2.3.1 ([8771b6f](https://github.com/ste-script/byteroute/commit/8771b6fbff5113519d03c28fe207b03907e90830))
+* **deps:** update dependency pinia to v3 ([#64](https://github.com/ste-script/byteroute/issues/64)) ([1cca0ab](https://github.com/ste-script/byteroute/commit/1cca0ab33e6e619f91b2327030e1f3849c781bbe))
+* **deps:** update dependency primevue to ^4.5.4 ([#48](https://github.com/ste-script/byteroute/issues/48)) ([8a5cc22](https://github.com/ste-script/byteroute/commit/8a5cc229a264b6fc989ecf0ddfd18f26de5ca000))
+* **deps:** update dependency vue to ^3.5.27 ([#49](https://github.com/ste-script/byteroute/issues/49)) ([84aa99e](https://github.com/ste-script/byteroute/commit/84aa99e61fa8f188aa012d600052ba6fa556347f))
+* **deps:** update dependency vue-echarts to v8 ([#65](https://github.com/ste-script/byteroute/issues/65)) ([9d0c2d5](https://github.com/ste-script/byteroute/commit/9d0c2d5abc7683dec13333280fe9cda2f2b2eb44))
+* **deps:** update dependency vue-router to ^4.6.4 ([#51](https://github.com/ste-script/byteroute/issues/51)) ([a9d874f](https://github.com/ste-script/byteroute/commit/a9d874f124c4aa03cc2e8de5ce34fd1d5dcc0a6c))
+
 ## [1.2.1](https://github.com/ste-script/byteroute/compare/v1.2.0...v1.2.1) (2026-01-17)
 
 ### Bug Fixes
