@@ -3,8 +3,8 @@ name: Build & Test CI
 on:
   pull_request:
   push:
-    branches:
-      - '**'
+    branches-ignore:
+      - main
     tags-ignore:
       - '*'
   workflow_dispatch:
