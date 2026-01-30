@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+# Require signed commits
+if [ "$(git log -1 --pretty=%G?)" != "G" ]; then
+  echo "❌ Commit is not signed."
+  echo "👉 Use: git commit -S -m \"message\""
+  echo "👉 Or enable auto-signing:"
+  echo "   git config --global commit.gpgsign true"
+  exit 1
+fi
+echo "✅ Commit is signed."
