@@ -47,6 +47,8 @@ jobs:
           tags: |
             type=sha
             type=semver,pattern=v{{version}}
+            type=ref,event=tag
+            latest
 
       - name: Build and push backend image
         uses: docker/build-push-action@v6
@@ -68,6 +70,8 @@ jobs:
           tags: |
             type=sha
             type=semver,pattern=v{{version}}
+            type=ref,event=tag
+            latest
 
       - name: Build and push dashboard image
         uses: docker/build-push-action@v6
