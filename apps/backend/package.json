@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "node -e \"console.log('backend: lint (placeholder)')\"",
     "test": "vitest run",
+    "update:maxmind": "node scripts/update-maxmind.mjs",
     "test:watch": "vitest --watch"
   },
   "devDependencies": {
@@ -21,6 +22,8 @@
   },
   "dependencies": {
     "@byteroute/shared": "workspace:*",
+    "@maxmind/geoip2-node": "^6.3.4",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "mongoose": "^9.1.5",
     "reflect-metadata": "^0.2.2",
