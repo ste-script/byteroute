@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 #custom
 .pnpm-store
 .turbo
+# MaxMind database files
+*.mmdb 
