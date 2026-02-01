@@ -55,6 +55,19 @@ export function addConnection(io: TypedSocketServer, connection?: Partial<Connec
   return newConnection;
 }
 
+export function upsertConnectionsLocal(io: TypedSocketServer, batch: Connection[]): void {
+  for (const connection of batch) {
+    const existing = connections.get(connection.id);
+    connections.set(connection.id, connection);
+
+    if (existing) {
+      io.emit("connection:update", connection);
+    } else {
+      io.emit("connection:new", connection);
+    }
+  }
+}
+
 export function updateConnection(
   io: TypedSocketServer,
   id: string,

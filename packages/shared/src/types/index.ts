@@ -8,11 +8,14 @@ export interface Connection {
   destPort: number
   protocol: 'TCP' | 'UDP' | 'ICMP' | 'OTHER'
   status: 'active' | 'inactive' | 'blocked'
+  enriched?: boolean
   country?: string
   countryCode?: string
   city?: string
   latitude?: number
   longitude?: number
+  asn?: number
+  asOrganization?: string
   category?: string
   bandwidth?: number
   bytesIn?: number

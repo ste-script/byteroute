@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 import {
   connectMongo,
   disconnectMongo,
+  ConnectionModel,
   UserModel,
   type ServerToClientEvents,
   type ClientToServerEvents,
@@ -26,6 +27,9 @@ const io: TypedSocketServer = new SocketIOServer<
   cors: { origin: true }
 });
 
+app.use(express.json({ limit: "2mb" }));
+app.set("io", io);
+
 // Register routes
 app.use(routes);
 
@@ -39,6 +43,7 @@ let demoTimer: NodeJS.Timeout | undefined;
 async function start(): Promise<void> {
   await connectMongo();
   await UserModel.init();
+  await ConnectionModel.init();
 
   // Start demo mode if enabled
   if (demoMode) {
