@@ -59,7 +59,8 @@ func BuildDefaultBPF(baseExpr, direction string, localIPs map[string]struct{}) s
 func bothPrivateIPv4Clause() string {
 	// Exclude packets where BOTH endpoints are private RFC1918 IPv4.
 	// (10.0.0.0/8) OR (172.16.0.0/12) OR (192.168.0.0/16)
-	private := "(net 10.0.0.0/8 or net 172.16.0.0/12 or net 192.168.0.0/16)"
-	return "(src " + private + " and dst " + private + ")"
+	srcPrivate := "(src net 10.0.0.0/8 or src net 172.16.0.0/12 or src net 192.168.0.0/16)"
+	dstPrivate := "(dst net 10.0.0.0/8 or dst net 172.16.0.0/12 or dst net 192.168.0.0/16)"
+	return "(" + srcPrivate + " and " + dstPrivate + ")"
 }
  
