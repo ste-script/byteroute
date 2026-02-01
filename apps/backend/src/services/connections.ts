@@ -6,9 +6,9 @@ import type {
   InterServerEvents,
   SocketData,
 } from "@byteroute/shared";
+import { ConnectionModel } from "@byteroute/shared";
 import {
   generateConnection,
-  generateConnections,
   generateTrafficFlows,
   generateStatistics,
 } from "../mock/connections.js";
@@ -23,16 +23,53 @@ export type TypedSocketServer = Server<
 // In-memory store for connections
 const connections: Map<string, Connection> = new Map();
 
-// Initialize with some mock connections
-function initializeMockData(): void {
-  const initialConnections = generateConnections(50);
-  for (const conn of initialConnections) {
-    connections.set(conn.id, conn);
-  }
-}
+// NOTE: This service is DB-backed for "real" mode.
+// Mock connection generation only happens in demo mode (see startDemoMode).
 
-// Initialize on module load
-initializeMockData();
+export async function loadConnectionsFromDb(limit = 500): Promise<number> {
+  const docs = await ConnectionModel.find(
+    {},
+    {
+      _id: 0,
+      id: 1,
+      sourceIp: 1,
+      destIp: 1,
+      sourcePort: 1,
+      destPort: 1,
+      protocol: 1,
+      status: 1,
+      enriched: 1,
+      country: 1,
+      countryCode: 1,
+      city: 1,
+      latitude: 1,
+      longitude: 1,
+      asn: 1,
+      asOrganization: 1,
+      category: 1,
+      bandwidth: 1,
+      bytesIn: 1,
+      bytesOut: 1,
+      packetsIn: 1,
+      packetsOut: 1,
+      startTime: 1,
+      lastActivity: 1,
+      duration: 1,
+    }
+  )
+    .sort({ lastActivity: -1 })
+    .limit(limit)
+    .lean();
+
+  connections.clear();
+
+  for (const doc of docs) {
+    // Mongoose returns Date objects for Date fields; Connection allows Date|string.
+    connections.set(doc.id, doc as unknown as Connection);
+  }
+
+  return docs.length;
+}
 
 export function getConnections(): Connection[] {
   return Array.from(connections.values());

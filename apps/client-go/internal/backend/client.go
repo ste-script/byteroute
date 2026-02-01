@@ -1,0 +1,67 @@
+package backend
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"time"
+)
+
+type Client struct {
+	baseURL *url.URL
+	hc      *http.Client
+}
+
+func NewClient(baseURL string, timeout time.Duration) (*Client, error) {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		baseURL: u,
+		hc: &http.Client{
+			Timeout: timeout,
+		},
+	}, nil
+}
+
+func (c *Client) PostConnections(ctx context.Context, connections []Connection, reporterIP string) (*AcceptedResponse, error) {
+	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/connections"})
+
+	payload := ConnectionsPayload{ReporterIP: reporterIP, Connections: connections}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+
+	if resp.StatusCode != http.StatusAccepted {
+		return nil, fmt.Errorf("backend returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var accepted AcceptedResponse
+	if err := json.Unmarshal(respBody, &accepted); err != nil {
+		// Backend always returns JSON today, but don't fail hard if it changes.
+		return &AcceptedResponse{Received: len(connections), Status: "processing"}, nil
+	}
+
+	return &accepted, nil
+}

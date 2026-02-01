@@ -1,0 +1,9 @@
+{
+    "name": "@byteroute/client-go",
+    "private": true,
+    "version": "1.3.0",
+    "scripts": {
+        "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client ",
+        "test": "go test ./..."
+    }
+}
