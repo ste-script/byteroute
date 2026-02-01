@@ -36,6 +36,31 @@ describe("geoip enrichment", () => {
     expect(enriched.asn === undefined || Number.isFinite(enriched.asn)).toBe(true);
   });
 
+  it("falls back to destIp when sourceIp is not enrichable", async () => {
+    const enriched = await enrichConnection(
+      baseConnection({
+        sourceIp: "10.0.0.1",
+        destIp: "8.8.8.8",
+      })
+    );
+
+    expect(enriched.enriched).toBe(true);
+    expect(enriched.countryCode).toBeTypeOf("string");
+  });
+
+  it("uses reporterIp when sourceIp is private", async () => {
+    const enriched = await enrichConnection(
+      baseConnection({
+        sourceIp: "192.168.1.10",
+        destIp: "not-an-ip",
+      }),
+      { reporterIp: "8.8.8.8" }
+    );
+
+    expect(enriched.enriched).toBe(true);
+    expect(enriched.countryCode).toBeTypeOf("string");
+  });
+
   it("does not override producer-provided geo fields", async () => {
     const enriched = await enrichConnection(
       baseConnection({
@@ -55,7 +80,7 @@ describe("geoip enrichment", () => {
     const batch: Connection[] = [
       baseConnection({ id: "a", sourceIp: "8.8.8.8" }),
       baseConnection({ id: "b", sourceIp: "1.1.1.1" }),
-      baseConnection({ id: "c", sourceIp: "not-an-ip" }),
+      baseConnection({ id: "c", sourceIp: "not-an-ip", destIp: "not-an-ip" }),
     ];
 
     const enriched = await enrichBatch(batch);

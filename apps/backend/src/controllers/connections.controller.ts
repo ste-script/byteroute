@@ -4,6 +4,7 @@ import type { TypedSocketServer } from "../services/connections.js";
 import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
 
 type ConnectionsBody = {
+  reporterIp?: string;
   connections?: Partial<Connection>[];
 };
 
@@ -21,7 +22,7 @@ export async function postConnections(req: Request, res: Response): Promise<void
 
   const io = req.app.get("io") as TypedSocketServer | undefined;
 
-  void enrichAndStoreConnections(io, connections).catch((err) => {
+  void enrichAndStoreConnections(io, connections, { reporterIp: body?.reporterIp }).catch((err) => {
     console.error("Enrichment failed:", err);
 
     void storeRawConnections(connections).catch((fallbackErr) => {

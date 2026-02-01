@@ -12,7 +12,7 @@ import {
   type InterServerEvents,
   type SocketData,
 } from "@byteroute/shared";
-import { type TypedSocketServer, startDemoMode, stopDemoMode } from "./services/connections.js";
+import { type TypedSocketServer, loadConnectionsFromDb, startDemoMode, stopDemoMode } from "./services/connections.js";
 import routes from "./routes/index.js";
 import { handleConnection } from "./controllers/socket.controller.js";
 
@@ -37,13 +37,21 @@ app.use(routes);
 io.on("connection", (socket) => handleConnection(io, socket));
 
 const port = Number(process.env.PORT ?? 4000);
-const demoMode = process.env.DEMO_MODE !== "false"; // Enable demo mode by default
+const demoMode = process.env.DEMO_MODE === "true"; // Opt-in demo mode (real data by default)
 let demoTimer: NodeJS.Timeout | undefined;
 
 async function start(): Promise<void> {
   await connectMongo();
   await UserModel.init();
   await ConnectionModel.init();
+
+  try {
+    const limit = Number(process.env.CONNECTIONS_BOOTSTRAP_LIMIT ?? 500);
+    const loaded = await loadConnectionsFromDb(limit);
+    console.log(`Loaded ${loaded} connections from Mongo`);
+  } catch (err) {
+    console.warn("Failed to load connections from Mongo (continuing):", err);
+  }
 
   // Start demo mode if enabled
   if (demoMode) {

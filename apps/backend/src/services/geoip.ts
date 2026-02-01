@@ -1,6 +1,7 @@
 import { Reader, type ReaderModel } from "@maxmind/geoip2-node";
 import { fileURLToPath } from "node:url";
 import type { Connection } from "@byteroute/shared";
+import { isPrivateIp, normalizeIp } from "../utils/ip.js";
 
 export type GeoIpEnrichment = {
   country?: string;
@@ -82,8 +83,39 @@ export async function lookupIp(ip: string): Promise<GeoIpEnrichment> {
   };
 }
 
-export async function enrichConnection(connection: Connection): Promise<Connection> {
-  const enrichment = await lookupIp(connection.sourceIp);
+export type GeoIpContext = {
+  reporterIp?: string;
+};
+
+function hasAnyEnrichment(enrichment: GeoIpEnrichment): boolean {
+  return Boolean(
+    enrichment.countryCode || enrichment.city || enrichment.latitude || enrichment.longitude || enrichment.asn
+  );
+}
+
+export async function enrichConnection(connection: Connection, context: GeoIpContext = {}): Promise<Connection> {
+  const sourceIp = normalizeIp(connection.sourceIp) ?? connection.sourceIp;
+  const destIp = normalizeIp(connection.destIp) ?? connection.destIp;
+  const reporterIp = normalizeIp(context.reporterIp);
+
+  // Goal: establish the location of the *source network*.
+  // - If sourceIp is public, geo-locate sourceIp.
+  // - If sourceIp is private, use reporterIp (public WAN IP) when available.
+  // - Otherwise fall back to destIp as a best-effort.
+
+  let enrichment: GeoIpEnrichment = {};
+
+  if (sourceIp && !isPrivateIp(sourceIp)) {
+    enrichment = await lookupIp(sourceIp);
+  }
+
+  if (!hasAnyEnrichment(enrichment) && reporterIp && !isPrivateIp(reporterIp)) {
+    enrichment = await lookupIp(reporterIp);
+  }
+
+  if (!hasAnyEnrichment(enrichment) && destIp && !isPrivateIp(destIp)) {
+    enrichment = await lookupIp(destIp);
+  }
 
   const enriched: Connection = {
     ...connection,
@@ -95,15 +127,13 @@ export async function enrichConnection(connection: Connection): Promise<Connecti
     longitude: connection.longitude ?? enrichment.longitude,
     asn: connection.asn ?? enrichment.asn,
     asOrganization: connection.asOrganization ?? enrichment.asOrganization,
-    enriched: Boolean(
-      enrichment.countryCode || enrichment.city || enrichment.latitude || enrichment.longitude || enrichment.asn
-    ),
+    enriched: hasAnyEnrichment(enrichment),
   };
 
   return enriched;
 }
 
-export async function enrichBatch(connections: Connection[]): Promise<Connection[]> {
+export async function enrichBatch(connections: Connection[], context: GeoIpContext = {}): Promise<Connection[]> {
   const concurrency = 20;
   const results = new Array<Connection>(connections.length);
 
@@ -116,7 +146,7 @@ export async function enrichBatch(connections: Connection[]): Promise<Connection
       if (current >= connections.length) {
         return;
       }
-      results[current] = await enrichConnection(connections[current]!);
+      results[current] = await enrichConnection(connections[current]!, context);
     }
   });
 

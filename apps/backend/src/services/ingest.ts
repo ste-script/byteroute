@@ -10,6 +10,10 @@ type IngestResult = {
   enriched: number;
 };
 
+export type IngestConnectionsOptions = {
+  reporterIp?: string;
+};
+
 const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);
 const ALLOWED_STATUSES = new Set<Connection["status"]>(["active", "inactive", "blocked"]);
 
@@ -111,11 +115,12 @@ async function upsertConnectionsInDb(connections: Connection[]): Promise<number>
 
 export async function enrichAndStoreConnections(
   io: TypedSocketServer | undefined,
-  rawConnections: Partial<Connection>[]
+  rawConnections: Partial<Connection>[],
+  options: IngestConnectionsOptions = {}
 ): Promise<IngestResult> {
   const normalized = rawConnections.map(normalizeConnection);
 
-  const enriched = await enrichBatch(normalized);
+  const enriched = await enrichBatch(normalized, { reporterIp: options.reporterIp });
 
   const stored = await upsertConnectionsInDb(enriched);
 
