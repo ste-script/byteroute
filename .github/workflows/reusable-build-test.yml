@@ -80,6 +80,9 @@ jobs:
       - name: Lint
         run: pnpm -w lint
 
+      - name: Install libpcap for Go tests
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
       - name: Build Go client (Docker)
         run: |
           cd apps/client-go
