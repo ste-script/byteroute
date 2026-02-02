@@ -30,10 +30,10 @@ func NewClient(baseURL string, timeout time.Duration) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) PostConnections(ctx context.Context, connections []Connection, reporterIP string) (*AcceptedResponse, error) {
+func (c *Client) PostConnections(ctx context.Context, connections []Connection) (*AcceptedResponse, error) {
 	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/connections"})
 
-	payload := ConnectionsPayload{ReporterIP: reporterIP, Connections: connections}
+	payload := ConnectionsPayload{Connections: connections}
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err

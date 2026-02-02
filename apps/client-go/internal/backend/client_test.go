@@ -47,7 +47,7 @@ func TestClient_PostConnections(t *testing.T) {
 	resp, err := c.PostConnections(ctx, []Connection{
 		{ID: "a", SourceIP: "1.1.1.1", DestIP: "8.8.8.8", SourcePort: 1, DestPort: 2, Protocol: "TCP", Status: "active", StartTime: time.Now().UTC().Format(time.RFC3339Nano), LastActivity: time.Now().UTC().Format(time.RFC3339Nano)},
 		{ID: "b", SourceIP: "1.1.1.1", DestIP: "8.8.8.8", SourcePort: 1, DestPort: 2, Protocol: "TCP", Status: "active", StartTime: time.Now().UTC().Format(time.RFC3339Nano), LastActivity: time.Now().UTC().Format(time.RFC3339Nano)},
-	}, "8.8.8.8")
+	})
 	if err != nil {
 		t.Fatalf("PostConnections: %v", err)
 	}

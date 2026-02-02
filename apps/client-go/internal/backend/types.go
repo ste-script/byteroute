@@ -34,7 +34,6 @@ type Connection struct {
 }
 
 type ConnectionsPayload struct {
-	ReporterIP  string       `json:"reporterIp,omitempty"`
 	Connections []Connection `json:"connections"`
 }
 
