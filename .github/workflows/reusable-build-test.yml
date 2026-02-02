@@ -90,7 +90,7 @@ jobs:
           MAXMIND_USER_ID: ${{ secrets.MAXMIND_USER_ID }}
         run: |
           cd apps/backend
-          node scripts/update-maxmind.js
+          node scripts/update-maxmind.mjs
 
       - name: Test
         run: pnpm -w test
