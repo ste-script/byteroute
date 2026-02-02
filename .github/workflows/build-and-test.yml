@@ -23,3 +23,6 @@ jobs:
       run_commitlint: ${{ github.event_name != 'workflow_dispatch' }}
       base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    secrets:
+      MAXMIND_API_KEY: ${{ secrets.MAXMIND_API_KEY }}
+      MAXMIND_USER_ID: ${{ secrets.MAXMIND_USER_ID }}
