@@ -13,6 +13,9 @@ on:
       image_dashboard:
         type: string
         required: true
+      image_client:
+        type: string
+        required: true
 
 jobs:
   docker:
@@ -25,6 +28,7 @@ jobs:
       REGISTRY: ${{ inputs.registry }}
       IMAGE_BACKEND: ${{ inputs.image_backend }}
       IMAGE_DASHBOARD: ${{ inputs.image_dashboard }}
+      IMAGE_CLIENT: ${{ inputs.image_client }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -78,5 +82,26 @@ jobs:
           push: true
           tags: ${{ steps.meta_dashboard.outputs.tags }}
           labels: ${{ steps.meta_dashboard.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Docker metadata (client)
+        id: meta_client
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_CLIENT }}
+          tags: |
+            type=sha
+            type=semver,pattern=v{{version}}
+
+      - name: Build and push client image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/client-go
+          file: apps/client-go/Dockerfile.static
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta_client.outputs.tags }}
+          labels: ${{ steps.meta_client.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

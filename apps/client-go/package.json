@@ -3,7 +3,8 @@
     "private": true,
     "version": "1.3.0",
     "scripts": {
-        "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client ",
+        "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client",
+        "build:docker": "docker build -f Dockerfile.static -t byteroute-client-builder . && docker create --name byteroute-temp byteroute-client-builder && mkdir -p build && docker cp byteroute-temp:/byteroute-client build/byteroute-client && docker rm byteroute-temp",
         "test": "go test ./..."
     }
 }

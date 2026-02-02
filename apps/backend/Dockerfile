@@ -29,6 +29,11 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/apps/backend/scripts ./apps/backend/scripts
+
+# Copy and set up entrypoint script
+COPY apps/backend/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3000
-CMD ["node", "apps/backend/dist/index.js"]
+ENTRYPOINT ["docker-entrypoint.sh"]
