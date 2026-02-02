@@ -2,9 +2,9 @@ import type { Request, Response } from "express";
 import type { Connection } from "@byteroute/shared";
 import type { TypedSocketServer } from "../services/connections.js";
 import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
+import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
 
 type ConnectionsBody = {
-  reporterIp?: string;
   connections?: Partial<Connection>[];
 };
 
@@ -22,7 +22,10 @@ export async function postConnections(req: Request, res: Response): Promise<void
 
   const io = req.app.get("io") as TypedSocketServer | undefined;
 
-  void enrichAndStoreConnections(io, connections, { reporterIp: body?.reporterIp }).catch((err) => {
+  // Detect client IP from request (supports X-Forwarded-For)
+  const reporterIp = firstForwardedFor(req.headers["x-forwarded-for"]) ?? normalizeIp(req.ip) ?? normalizeIp(req.socket.remoteAddress);
+
+  void enrichAndStoreConnections(io, connections, { reporterIp }).catch((err) => {
     console.error("Enrichment failed:", err);
 
     void storeRawConnections(connections).catch((fallbackErr) => {

@@ -90,6 +90,11 @@ jobs:
           MAXMIND_USER_ID: ${{ secrets.MAXMIND_USER_ID }}
         run: |
           cd apps/backend
+          echo "MaxMind credentials check..."
+          if [ -z "$MAXMIND_API_KEY" ] || [ -z "$MAXMIND_USER_ID" ]; then
+            echo "Warning: MaxMind credentials not set, error on database update"
+            exit 1
+          fi
           node scripts/update-maxmind.mjs
 
       - name: Test

@@ -63,14 +63,13 @@ func main() {
 	defer cancel()
 
 	log.Printf(
-		"byteroute-client: iface=%s direction=%s bpf=%q backend=%s flush=%s dedupe=%s reporterIp=%q",
+		"byteroute-client: iface=%s direction=%s bpf=%q backend=%s flush=%s dedupe=%s",
 		cfg.Iface,
 		cfg.Direction,
 		bpf,
 		cfg.BackendURL,
 		cfg.FlushInterval,
 		cfg.DedupMode,
-		cfg.ReporterIP,
 	)
 
 	go func() {
@@ -99,13 +98,13 @@ func main() {
 					break
 				}
 
-				batch, keys = enforceMaxBytes(batch, keys, cfg.MaxBatchBytes, cfg.ReporterIP)
+				batch, keys = enforceMaxBytes(batch, keys, cfg.MaxBatchBytes)
 				if len(batch) == 0 {
 					break
 				}
 
 				reqCtx, cancelReq := context.WithTimeout(ctx, cfg.HTTPTimeout)
-				_, err := bc.PostConnections(reqCtx, batch, cfg.ReporterIP)
+				_, err := bc.PostConnections(reqCtx, batch)
 				cancelReq()
 
 				if err != nil {
@@ -135,13 +134,13 @@ func minDuration(a, b time.Duration) time.Duration {
 	return b
 }
 
-func enforceMaxBytes(batch []backend.Connection, keys []flow.Key, maxBytes int, reporterIP string) ([]backend.Connection, []flow.Key) {
+func enforceMaxBytes(batch []backend.Connection, keys []flow.Key, maxBytes int) ([]backend.Connection, []flow.Key) {
 	if maxBytes <= 0 {
 		return batch, keys
 	}
 
 	// Fast path: check if full batch fits.
-	payload := backend.ConnectionsPayload{ReporterIP: reporterIP, Connections: batch}
+	payload := backend.ConnectionsPayload{Connections: batch}
 	b, err := json.Marshal(payload)
 	if err == nil && len(b) <= maxBytes {
 		return batch, keys
@@ -154,7 +153,7 @@ func enforceMaxBytes(batch []backend.Connection, keys []flow.Key, maxBytes int, 
 
 	for lo <= hi {
 		mid := (lo + hi) / 2
-		payload := backend.ConnectionsPayload{ReporterIP: reporterIP, Connections: batch[:mid]}
+		payload := backend.ConnectionsPayload{Connections: batch[:mid]}
 		bb, e := json.Marshal(payload)
 		if e != nil {
 			// fall back to linear reduction
@@ -174,7 +173,7 @@ func enforceMaxBytes(batch []backend.Connection, keys []flow.Key, maxBytes int, 
 
 	// Last resort: try single item
 	if len(batch) > 0 {
-		payload := backend.ConnectionsPayload{ReporterIP: reporterIP, Connections: batch[:1]}
+		payload := backend.ConnectionsPayload{Connections: batch[:1]}
 		bb, e := json.Marshal(payload)
 		if e == nil && len(bb) <= maxBytes {
 			return batch[:1], keys[:1]

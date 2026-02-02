@@ -11,7 +11,6 @@ type Config struct {
 	Iface         string
 	BPF           string
 	Direction     string
-	ReporterIP    string
 	SnapLen       int
 	Promisc       bool
 	FlushInterval time.Duration
@@ -40,7 +39,6 @@ func Parse() Config {
 	flag.StringVar(&cfg.Iface, "iface", env("BYTEROUTE_IFACE", ""), "Network interface to capture on (required)")
 	flag.StringVar(&cfg.Direction, "direction", env("BYTEROUTE_DIRECTION", "out"), "Capture direction: out, in, or both (used for default BPF)")
 	flag.StringVar(&cfg.BPF, "bpf", env("BYTEROUTE_BPF", ""), "BPF filter expression (if empty, a default is generated)")
-	flag.StringVar(&cfg.ReporterIP, "reporter-ip", env("BYTEROUTE_REPORTER_IP", ""), "Public/WAN IP of this sensor; used to geo-locate private source networks")
 	flag.IntVar(&cfg.SnapLen, "snaplen", 1600, "pcap snapshot length")
 	flag.BoolVar(&cfg.Promisc, "promisc", true, "Enable promiscuous mode")
 
