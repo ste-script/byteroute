@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import ipLib from "ip";
 
 export function normalizeIp(input: string | undefined | null): string | undefined {
   if (!input) {
@@ -40,20 +41,7 @@ export function firstForwardedFor(header: unknown): string | undefined {
 }
 
 export function isPrivateIpv4(ip: string): boolean {
-  // Assumes ip is a valid IPv4 dotted-quad.
-  const parts = ip.split(".").map((p) => Number(p));
-  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
-    return false;
-  }
-
-  const [a, b] = parts;
-  if (a === 10) return true;
-  if (a === 127) return true; // loopback
-  if (a === 169 && b === 254) return true; // link-local
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-  return false;
+  return ipLib.isPrivate(ip);
 }
 
 export function isPrivateIp(ip: string): boolean {
