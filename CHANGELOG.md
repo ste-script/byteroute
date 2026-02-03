@@ -1,3 +1,15 @@
+## [1.4.0](https://github.com/ste-script/byteroute/compare/v1.3.0...v1.4.0) (2026-02-03)
+
+### Features
+
+* **client-go:** remove reporterIp ([0f29db6](https://github.com/ste-script/byteroute/commit/0f29db641ce0e4f321fcf61f8d5fd0efe10acc47))
+* fire-and-forget enrichment ([7ffdb06](https://github.com/ste-script/byteroute/commit/7ffdb06a0a35d3809ad0308059f3a6ee587cb938))
+* specify wan ip address ([95f5374](https://github.com/ste-script/byteroute/commit/95f5374ac3576a44e43760b12fb13eb3f351924b))
+
+### Bug Fixes
+
+* bpf statement ([0c966b0](https://github.com/ste-script/byteroute/commit/0c966b08caa0e0b8cb3e63f9c0494f99b4ee8f0a))
+
 ## [1.3.0](https://github.com/ste-script/byteroute/compare/v1.2.1...v1.3.0) (2026-01-30)
 
 ### Features

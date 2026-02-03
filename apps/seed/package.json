@@ -1,7 +1,7 @@
 {
   "name": "@byteroute/seed",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "node -e \"console.log('seed: dev (use pnpm seed)')\"",
