@@ -72,8 +72,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -211,8 +211,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
     devDependencies:
       '@byteroute/typescript':
         specifier: workspace:*
@@ -230,8 +230,8 @@ importers:
   packages/shared:
     dependencies:
       mongoose:
-        specifier: ^9.1.5
-        version: 9.1.5
+        specifier: ^9.1.6
+        version: 9.1.6
     devDependencies:
       '@byteroute/typescript':
         specifier: workspace:*
@@ -2774,8 +2774,8 @@ packages:
       socks:
         optional: true
 
-  mongoose@9.1.5:
-    resolution: {integrity: sha512-N6gypEO+wLmZp8kCYNQmrEWxVMT0KhyHvVttBZoKA/1ngY7aUsBjqHzCPtDgz+i8JAnqMOiEKmuJIDEQu1b9Dw==}
+  mongoose@9.1.6:
+    resolution: {integrity: sha512-ZrtgRsJKtW3od36TVXtAnrNHOO3rqhsqfVut6IzyWyJeLLeLTqW66qej/0qB37GZd5jL06nHfAceTikkfnSqbA==}
     engines: {node: '>=20.19.0'}
 
   mpath@0.9.0:
@@ -6635,7 +6635,7 @@ snapshots:
       bson: 7.1.1
       mongodb-connection-string-url: 7.0.0
 
-  mongoose@9.1.5:
+  mongoose@9.1.6:
     dependencies:
       kareem: 3.0.0
       mongodb: 7.0.0
