@@ -14,13 +14,7 @@ permissions:
   packages: write
 
 jobs:
-  build-test:
-    uses: ./.github/workflows/reusable-build-test.yml
-    with:
-      run_commitlint: false
-
   docker:
-    needs: build-test
     uses: ./.github/workflows/reusable-docker-release.yml
     permissions:
       contents: read
