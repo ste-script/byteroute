@@ -22,7 +22,7 @@
     "test": "node -e \"console.log('shared: test (placeholder)')\""
   },
   "dependencies": {
-    "mongoose": "^9.1.5"
+    "mongoose": "^9.1.6"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
