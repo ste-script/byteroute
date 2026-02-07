@@ -108,6 +108,7 @@ func main() {
 					BandwidthIn:  snapshot.BandwidthIn,
 					BandwidthOut: snapshot.BandwidthOut,
 					Blocked:      snapshot.Blocked,
+					Inactive:     snapshot.Inactive,
 				},
 			}
 
@@ -118,8 +119,8 @@ func main() {
 			if err != nil {
 				log.Printf("post metrics failed: %v", err)
 			} else {
-				log.Printf("posted metrics snapshot: %d connections, %s in, %s out",
-					snapshot.Connections, formatBytes(snapshot.BandwidthIn), formatBytes(snapshot.BandwidthOut))
+				log.Printf("posted metrics snapshot: %d connections (%d inactive), %s in, %s out",
+					snapshot.Connections, snapshot.Inactive, formatBytes(snapshot.BandwidthIn), formatBytes(snapshot.BandwidthOut))
 			}
 		case t := <-ticker.C:
 			agg.Prune(t)
@@ -160,6 +161,7 @@ func main() {
 					bytesIn := int64(0)
 					bytesOut := int64(0)
 					blocked := conn.Status == "blocked"
+					inactive := conn.Status == "inactive"
 
 					if conn.BytesIn != nil {
 						bytesIn = *conn.BytesIn
@@ -168,7 +170,7 @@ func main() {
 						bytesOut = *conn.BytesOut
 					}
 
-					metricsCollector.RecordConnection(conn.ID, bytesIn, bytesOut, blocked)
+					metricsCollector.RecordConnection(conn.ID, bytesIn, bytesOut, blocked, inactive)
 				}
 			}
 		}

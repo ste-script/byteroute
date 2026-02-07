@@ -30,6 +30,7 @@ type entry struct {
 	packetsOut int64
 	dirty      bool
 	pending    bool
+	inactive   bool
 }
 
 type Aggregator struct {
@@ -85,11 +86,15 @@ func (a *Aggregator) Update(ts time.Time, srcIP, dstIP net.IP, srcPort, dstPort 
 	e := a.flows[k]
 	if e == nil {
 		id := util.StableID(a.hostID, k.Protocol, k.SrcIP, k.DstIP, k.SrcPort, k.DstPort)
-		e = &entry{key: k, id: id, firstSeen: ts, lastSeen: ts, dirty: true}
+		e = &entry{key: k, id: id, firstSeen: ts, lastSeen: ts, dirty: true, inactive: false}
 		a.flows[k] = e
 	} else {
 		e.lastSeen = ts
 		e.dirty = true
+		// Mark as active if it was inactive
+		if e.inactive {
+			e.inactive = false
+		}
 	}
 
 	// Direction is based on the original packet direction (pre-canonicalization).
@@ -110,7 +115,16 @@ func (a *Aggregator) Prune(now time.Time) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for k, e := range a.flows {
-		if now.Sub(e.lastSeen) > a.idleTTL {
+		idle := now.Sub(e.lastSeen)
+
+		// After idleTTL: mark as inactive
+		if idle > a.idleTTL && !e.inactive {
+			e.inactive = true
+			e.dirty = true // Mark dirty so it gets sent with new status
+		}
+
+		// After 2x idleTTL: delete
+		if idle > a.idleTTL*2 {
 			delete(a.flows, k)
 		}
 	}
@@ -162,6 +176,12 @@ func (a *Aggregator) ExportBatch(max int) ([]backend.Connection, []Key) {
 		packetsIn := e.packetsIn
 		packetsOut := e.packetsOut
 
+		// Set status based on inactive flag
+		status := "active"
+		if e.inactive {
+			status = "inactive"
+		}
+
 		c := backend.Connection{
 			ID:           e.id,
 			SourceIP:     e.key.SrcIP,
@@ -169,7 +189,7 @@ func (a *Aggregator) ExportBatch(max int) ([]backend.Connection, []Key) {
 			SourcePort:   int(e.key.SrcPort),
 			DestPort:     int(e.key.DstPort),
 			Protocol:     e.key.Protocol,
-			Status:       "active",
+			Status:       status,
 			StartTime:    start,
 			LastActivity: last,
 			DurationMs:   &dur,

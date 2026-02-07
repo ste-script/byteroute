@@ -23,6 +23,7 @@ class MetricsStore {
         bandwidthIn: snapshot.bandwidthIn,
         bandwidthOut: snapshot.bandwidthOut,
         blocked: snapshot.blocked ?? 0,
+        inactive: snapshot.inactive ?? 0,
       });
     }
 

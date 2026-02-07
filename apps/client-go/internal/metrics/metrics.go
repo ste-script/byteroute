@@ -12,6 +12,7 @@ type Snapshot struct {
 	BandwidthIn  int64     `json:"bandwidthIn"`
 	BandwidthOut int64     `json:"bandwidthOut"`
 	Blocked      int       `json:"blocked"`
+	Inactive     int       `json:"inactive"`
 }
 
 // Collector aggregates network interface metrics over time
@@ -24,6 +25,7 @@ type Collector struct {
 	totalBytesIn   int64
 	totalBytesOut  int64
 	blockedCount   int
+	inactiveCount  int
 
 	// Historical snapshots
 	snapshots      []Snapshot
@@ -44,7 +46,7 @@ func New(maxSnapshots int) *Collector {
 }
 
 // RecordConnection records metrics for a connection
-func (c *Collector) RecordConnection(connID string, bytesIn, bytesOut int64, blocked bool) {
+func (c *Collector) RecordConnection(connID string, bytesIn, bytesOut int64, blocked, inactive bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -54,6 +56,9 @@ func (c *Collector) RecordConnection(connID string, bytesIn, bytesOut int64, blo
 
 	if blocked {
 		c.blockedCount++
+	}
+	if inactive {
+		c.inactiveCount++
 	}
 }
 
@@ -68,6 +73,7 @@ func (c *Collector) TakeSnapshot() Snapshot {
 		BandwidthIn:  c.totalBytesIn,
 		BandwidthOut: c.totalBytesOut,
 		Blocked:      c.blockedCount,
+		Inactive:     c.inactiveCount,
 	}
 
 	// Store snapshot
@@ -84,6 +90,7 @@ func (c *Collector) TakeSnapshot() Snapshot {
 	c.totalBytesIn = 0
 	c.totalBytesOut = 0
 	c.blockedCount = 0
+	c.inactiveCount = 0
 
 	return snapshot
 }
@@ -109,5 +116,6 @@ func (c *Collector) GetCurrentMetrics() Snapshot {
 		BandwidthIn:  c.totalBytesIn,
 		BandwidthOut: c.totalBytesOut,
 		Blocked:      c.blockedCount,
+		Inactive:     c.inactiveCount,
 	}
 }

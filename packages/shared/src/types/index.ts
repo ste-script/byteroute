@@ -87,6 +87,7 @@ export interface TimeSeriesData {
   bandwidthIn: number
   bandwidthOut: number
   blocked?: number
+  inactive?: number
 }
 
 export interface MapViewState {
