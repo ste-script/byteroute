@@ -46,14 +46,13 @@ function generateMockData() {
     connections: Math.floor(Math.random() * 500) + 100,
     bandwidthIn: Math.floor(Math.random() * 100000000) + 10000000,
     bandwidthOut: Math.floor(Math.random() * 80000000) + 8000000,
-    blocked: Math.floor(Math.random() * 50)
+    inactive: Math.floor(Math.random() * 50)
   }))
 
   // Generate statistics
   mockStatistics.value = {
     totalConnections: 1247,
     activeConnections: 892,
-    blockedConnections: 45,
     totalBandwidth: 847293847,
     bandwidthIn: 523948234,
     bandwidthOut: 323345613,
@@ -105,7 +104,7 @@ function generateMockData() {
     sourcePort: Math.floor(Math.random() * 60000) + 1024,
     destPort: [80, 443, 8080, 3000, 5432, 27017][Math.floor(Math.random() * 6)],
     protocol: ['TCP', 'UDP', 'ICMP', 'OTHER'][Math.floor(Math.random() * 4)] as Connection['protocol'],
-    status: ['active', 'active', 'active', 'inactive', 'blocked'][Math.floor(Math.random() * 5)] as Connection['status'],
+    status: ['active', 'active', 'active', 'inactive'][Math.floor(Math.random() * 4)] as Connection['status'],
     country: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].country,
     countryCode: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].countryCode,
     category: mockStatistics.value!.byCategory[Math.floor(Math.random() * 5)].category,

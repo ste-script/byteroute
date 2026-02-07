@@ -28,13 +28,11 @@ interface Props {
   data: TimeSeriesData[]
   title?: string
   darkMode?: boolean
-  showBlocked?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: 'Traffic Over Time',
-  darkMode: false,
-  showBlocked: true
+  darkMode: false
 })
 
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
@@ -86,19 +84,6 @@ const chartOption = computed(() => {
       barMaxWidth: 20
     }
   ]
-
-  if (props.showBlocked) {
-    series.push({
-      name: 'Blocked',
-      type: 'bar',
-      data: props.data.map(d => d.blocked || 0),
-      yAxisIndex: 1,
-      itemStyle: { 
-        color: props.darkMode ? 'rgba(239, 68, 68, 0.6)' : 'rgba(239, 68, 68, 0.4)'
-      },
-      barMaxWidth: 20
-    })
-  }
 
   return {
     backgroundColor: 'transparent',
