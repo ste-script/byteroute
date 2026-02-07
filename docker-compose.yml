@@ -1,0 +1,45 @@
+services:
+  mongodb:
+    image: mongo:8
+    container_name: byteroute-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: byteroute
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/ste-script/byteroute-backend:latest
+    container_name: byteroute-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      MONGODB_URI: mongodb://mongodb:27017/byteroute
+      # Required by the backend entrypoint (downloads GeoLite2 databases on start)
+      MAXMIND_USER_ID: ${MAXMIND_USER_ID:?set in .env}
+      MAXMIND_API_KEY: ${MAXMIND_API_KEY:?set in .env}
+      # Optional
+      DEMO_MODE: ${DEMO_MODE:-false}
+    ports:
+      - "4000:4000"
+
+  dashboard:
+    image: ghcr.io/ste-script/byteroute-dashboard:latest
+    container_name: byteroute-dashboard
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mongodb_data:
