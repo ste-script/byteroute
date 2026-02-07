@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { enrichBatch, enrichConnection, lookupIp } from "../src/services/geoip.js";
+import { GeoIpService } from "../src/services/geoip.js";
 import type { Connection } from "@byteroute/shared";
+import { InMemoryGeoIpLookup } from "./mocks/geoip.js";
 
 function baseConnection(overrides?: Partial<Connection>): Connection {
   const now = new Date().toISOString();
@@ -19,25 +20,45 @@ function baseConnection(overrides?: Partial<Connection>): Connection {
 }
 
 describe("geoip enrichment", () => {
+  const geoip = new GeoIpService(
+    new InMemoryGeoIpLookup({
+      "8.8.8.8": {
+        country: "United States",
+        countryCode: "US",
+        city: "Mountain View",
+        latitude: 37.386,
+        longitude: -122.0838,
+        asn: 15169,
+        asOrganization: "Google LLC",
+      },
+      "1.1.1.1": {
+        country: "Australia",
+        countryCode: "AU",
+        city: "Sydney",
+        latitude: -33.8688,
+        longitude: 151.2093,
+        asn: 13335,
+        asOrganization: "Cloudflare, Inc.",
+      },
+    })
+  );
+
   it("lookupIp returns empty object for invalid IP", async () => {
-    const result = await lookupIp("not-an-ip");
+    const result = await geoip.lookupIp("not-an-ip");
     expect(result).toEqual({});
   });
 
   it("enrichConnection adds geo fields for a known public IP", async () => {
-    const enriched = await enrichConnection(baseConnection({ sourceIp: "8.8.8.8" }));
+    const enriched = await geoip.enrichConnection(baseConnection({ sourceIp: "8.8.8.8" }));
 
-    // GeoLite2 content can change over time; keep assertions resilient.
+    // Mocked enrichment should be stable.
     expect(enriched.enriched).toBe(true);
-    expect(enriched.countryCode).toBeTypeOf("string");
-    expect(enriched.countryCode?.length).toBeGreaterThanOrEqual(2);
-
-    // ASN for 8.8.8.8 is typically Google; allow for DB drift but require a number.
-    expect(enriched.asn === undefined || Number.isFinite(enriched.asn)).toBe(true);
+    expect(enriched.countryCode).toBe("US");
+    expect(enriched.asn).toBe(15169);
   });
 
   it("falls back to destIp when sourceIp is not enrichable", async () => {
-    const enriched = await enrichConnection(
+    const enriched = await geoip.enrichConnection(
       baseConnection({
         sourceIp: "10.0.0.1",
         destIp: "8.8.8.8",
@@ -45,11 +66,11 @@ describe("geoip enrichment", () => {
     );
 
     expect(enriched.enriched).toBe(true);
-    expect(enriched.countryCode).toBeTypeOf("string");
+    expect(enriched.countryCode).toBe("US");
   });
 
   it("uses reporterIp when sourceIp is private", async () => {
-    const enriched = await enrichConnection(
+    const enriched = await geoip.enrichConnection(
       baseConnection({
         sourceIp: "192.168.1.10",
         destIp: "not-an-ip",
@@ -58,11 +79,11 @@ describe("geoip enrichment", () => {
     );
 
     expect(enriched.enriched).toBe(true);
-    expect(enriched.countryCode).toBeTypeOf("string");
+    expect(enriched.countryCode).toBe("US");
   });
 
   it("does not override producer-provided geo fields", async () => {
-    const enriched = await enrichConnection(
+    const enriched = await geoip.enrichConnection(
       baseConnection({
         sourceIp: "1.1.1.1",
         countryCode: "ZZ",
@@ -83,7 +104,7 @@ describe("geoip enrichment", () => {
       baseConnection({ id: "c", sourceIp: "not-an-ip", destIp: "not-an-ip" }),
     ];
 
-    const enriched = await enrichBatch(batch);
+    const enriched = await geoip.enrichBatch(batch);
 
     expect(enriched).toHaveLength(3);
     expect(enriched.map((c) => c.id)).toEqual(["a", "b", "c"]);
