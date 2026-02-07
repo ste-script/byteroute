@@ -142,5 +142,7 @@ vite.config.ts.timestamp-*
 .pnpm-store
 .turbo
 build/
+byteroute-client
+coverage.out
 # MaxMind database files
 *.mmdb 
