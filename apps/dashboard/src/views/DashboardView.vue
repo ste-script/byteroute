@@ -14,16 +14,16 @@ import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/type
 import { version } from '../../package.json'
 
 const store = useDashboardStore()
-const { 
-  connections, 
-  trafficFlows, 
-  statistics, 
-  isConnected, 
+const {
+  connections,
+  trafficFlows,
+  statistics,
   darkMode,
-  selectedTimeRange 
+  selectedTimeRange
 } = storeToRefs(store)
 
 const socket = useSocket()
+const { isConnected } = socket
 const mapRef = ref<InstanceType<typeof WorldMap> | null>(null)
 
 const timeRangeOptions = [
