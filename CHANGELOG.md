@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/ste-script/byteroute/compare/v1.4.1...v1.4.2) (2026-02-07)
+
+### Bug Fixes
+
+* **backend:** rewrite script to not use curl ([830049b](https://github.com/ste-script/byteroute/commit/830049b77600e00b5f266b47f83c8dd78813efbd))
+
 ## [1.4.1](https://github.com/ste-script/byteroute/compare/v1.4.0...v1.4.1) (2026-02-07)
 
 ### Bug Fixes
