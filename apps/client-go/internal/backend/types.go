@@ -44,6 +44,7 @@ type MetricsSnapshot struct {
 	BandwidthIn  int64  `json:"bandwidthIn"`
 	BandwidthOut int64  `json:"bandwidthOut"`
 	Blocked      int    `json:"blocked"`
+	Inactive     int    `json:"inactive"`
 }
 
 type MetricsPayload struct {
