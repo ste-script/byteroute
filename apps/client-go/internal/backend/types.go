@@ -37,6 +37,19 @@ type ConnectionsPayload struct {
 	Connections []Connection `json:"connections"`
 }
 
+// MetricsSnapshot represents aggregated interface metrics for a time period
+type MetricsSnapshot struct {
+	Timestamp    string `json:"timestamp"`
+	Connections  int    `json:"connections"`
+	BandwidthIn  int64  `json:"bandwidthIn"`
+	BandwidthOut int64  `json:"bandwidthOut"`
+	Blocked      int    `json:"blocked"`
+}
+
+type MetricsPayload struct {
+	Snapshots []MetricsSnapshot `json:"snapshots"`
+}
+
 type AcceptedResponse struct {
 	Received int    `json:"received"`
 	Status   string `json:"status"`
