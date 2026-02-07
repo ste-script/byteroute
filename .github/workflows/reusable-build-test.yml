@@ -13,11 +13,6 @@ on:
       head_sha:
         type: string
         required: false
-    secrets:
-      MAXMIND_API_KEY:
-        required: false
-      MAXMIND_USER_ID:
-        required: false
 
 jobs:
   build-test:
@@ -91,19 +86,6 @@ jobs:
           mkdir -p build
           docker cp byteroute-temp:/byteroute-client build/byteroute-client
           docker rm byteroute-temp
-
-      - name: install maxminddb
-        env:
-          MAXMIND_API_KEY: ${{ secrets.MAXMIND_API_KEY }}
-          MAXMIND_USER_ID: ${{ secrets.MAXMIND_USER_ID }}
-        run: |
-          cd apps/backend
-          if [ -z "$MAXMIND_API_KEY" ] || [ -z "$MAXMIND_USER_ID" ]; then
-            echo "⚠️  MaxMind credentials not available, skipping database update (using existing files)"
-            exit 0
-          fi
-          echo "Updating MaxMind databases..."
-          node scripts/update-maxmind.mjs
 
       - name: Test
         run: pnpm -w test
