@@ -96,6 +96,20 @@ function formatBandwidth(bytes?: number): string {
   return bytes + ' B/s'
 }
 
+function calculateBandwidth(connection: Connection): number {
+  // Calculate bandwidth from bytesIn, bytesOut, and duration
+  const bytesIn = connection.bytesIn ?? 0
+  const bytesOut = connection.bytesOut ?? 0
+  const durationMs = connection.duration ?? 0
+
+  if (durationMs === 0) return 0
+
+  const totalBytes = bytesIn + bytesOut
+  const durationSeconds = durationMs / 1000
+
+  return Math.round(totalBytes / durationSeconds)
+}
+
 function handleSelect(connection: Connection) {
   emit('select', connection)
 }
@@ -176,7 +190,7 @@ function handleSelect(connection: Connection) {
             </span>
             <span class="bandwidth">
               <i class="pi pi-chart-line" />
-              {{ formatBandwidth(item.bandwidth) }}
+              {{ formatBandwidth(calculateBandwidth(item)) }}
             </span>
             <Tag 
               :value="item.status" 
