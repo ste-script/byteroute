@@ -5,6 +5,7 @@
   "scripts": {
     "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client",
     "build:docker": "docker build -f Dockerfile.static -t byteroute-client-builder . && docker create --name byteroute-temp byteroute-client-builder && mkdir -p build && docker cp byteroute-temp:/byteroute-client build/byteroute-client && docker rm byteroute-temp",
-    "test": "go test ./..."
+    "test": "go test ./...",
+    "coverage": "go test ./... -coverprofile=coverage.out -covermode=atomic && go tool cover -func=coverage.out | tail -1"
   }
 }

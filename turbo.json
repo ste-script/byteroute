@@ -11,6 +11,10 @@
       "cache": false,
       "persistent": true
     },
+    "coverage": {
+      "dependsOn": ["^coverage"],
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
