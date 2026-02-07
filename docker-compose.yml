@@ -1,4 +1,20 @@
 services:
+  traefik:
+    image: traefik:v3.5
+    container_name: byteroute-traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      # Single public entrypoint for dashboard + API + Socket.IO
+      - "${TRAEFIK_PORT:-8080}:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik
+
   mongodb:
     image: mongo:8
     container_name: byteroute-mongodb
@@ -12,6 +28,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
 
   backend:
     image: ghcr.io/ste-script/byteroute-backend:latest
@@ -29,8 +47,16 @@ services:
       MAXMIND_API_KEY: ${MAXMIND_API_KEY:?set in .env}
       # Optional
       DEMO_MODE: ${DEMO_MODE:-false}
-    ports:
-      - "4000:4000"
+    labels:
+      - traefik.enable=true
+      # Route REST API + Socket.IO to backend
+      - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`)
+      - traefik.http.routers.byteroute-api.entrypoints=web
+      - traefik.http.routers.byteroute-api.priority=100
+      - traefik.http.services.byteroute-backend.loadbalancer.server.port=4000
+    networks:
+      - internal
+      - traefik
 
   dashboard:
     image: ghcr.io/ste-script/byteroute-dashboard:latest
@@ -38,8 +64,19 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
-      - "80:80"
+    labels:
+      - traefik.enable=true
+      # Route everything else to the SPA
+      - traefik.http.routers.byteroute-ui.rule=PathPrefix(`/`)
+      - traefik.http.routers.byteroute-ui.entrypoints=web
+      - traefik.http.routers.byteroute-ui.priority=1
+      - traefik.http.services.byteroute-dashboard.loadbalancer.server.port=80
+    networks:
+      - traefik
 
 volumes:
   mongodb_data:
+
+networks:
+  traefik:
+  internal:

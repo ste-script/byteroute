@@ -3,6 +3,8 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 
 // Load environment variables from .env file if present
 dotenv.config();
@@ -25,6 +27,33 @@ function run(cmd, opts = {}) {
   }
 }
 
+async function downloadTarGz({ url, outFile, userId, apiKey }) {
+  console.log(`Downloading ${url} -> ${outFile}`);
+
+  const auth = Buffer.from(`${userId}:${apiKey}`).toString('base64');
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'User-Agent': 'byteroute/update-maxmind',
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Download failed (${res.status} ${res.statusText}) ${body}`.trim());
+  }
+
+  if (!res.body) {
+    throw new Error('Download failed (empty response body)');
+  }
+
+  await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(outFile));
+
+  if (!fs.existsSync(outFile) || fs.statSync(outFile).size === 0) {
+    throw new Error('Download failed (file missing or empty)');
+  }
+}
+
 // Find the mmdb file
 function findMmdbFile(dir, name) {
   const files = fs.readdirSync(dir);
@@ -40,35 +69,43 @@ function findMmdbFile(dir, name) {
   return null;
 }
 
-console.log('Downloading GeoLite2-ASN database...');
-run(`curl -fsSL -o GeoLite2-ASN.tar.gz -u "${MAXMIND_USER_ID}:${MAXMIND_API_KEY}" "https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz"`);
+(async () => {
+  try {
+    console.log('Downloading GeoLite2-ASN database...');
+    await downloadTarGz({
+      url: 'https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz',
+      outFile: 'GeoLite2-ASN.tar.gz',
+      userId: MAXMIND_USER_ID,
+      apiKey: MAXMIND_API_KEY,
+    });
+    run('tar -xzf GeoLite2-ASN.tar.gz');
+    const ASNmmdbFile = findMmdbFile('.', 'GeoLite2-ASN.mmdb');
+    if (!ASNmmdbFile) {
+      throw new Error('Could not find GeoLite2-ASN.mmdb in archive');
+    }
+    fs.rmSync('GeoLite2-ASN.tar.gz');
+    fs.renameSync(ASNmmdbFile, path.join('.', 'databases', 'GeoLite2-ASN.mmdb'));
+    fs.rmSync(path.dirname(ASNmmdbFile), { recursive: true });
 
-if (!fs.existsSync('GeoLite2-ASN.tar.gz') || fs.statSync('GeoLite2-ASN.tar.gz').size === 0) {
-  console.error('Download failed or file is empty');
-  process.exit(1);
-}
-run('tar -xzf GeoLite2-ASN.tar.gz');
-const ASNmmdbFile = findMmdbFile('.', 'GeoLite2-ASN.mmdb');
-if (!ASNmmdbFile) {
-  console.error('Could not find GeoLite2-ASN.mmdb in archive');
-  process.exit(1);
-}
-fs.rmSync('GeoLite2-ASN.tar.gz');
-fs.renameSync(ASNmmdbFile, path.join('.', 'databases', 'GeoLite2-ASN.mmdb'));
-fs.rmSync(path.dirname(ASNmmdbFile), { recursive: true });
-console.log('Downloading GeoLite2-City database...');
-run(`curl -fsSL -o GeoLite2-City.tar.gz -u "${MAXMIND_USER_ID}:${MAXMIND_API_KEY}" "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz"`);
-if (!fs.existsSync('GeoLite2-City.tar.gz') || fs.statSync('GeoLite2-City.tar.gz').size === 0) {
-  console.error('Download failed or file is empty');
-  process.exit(1);
-}
-run('tar -xzf GeoLite2-City.tar.gz');
-const mmdbFile = findMmdbFile('.', 'GeoLite2-City.mmdb');
-if (!mmdbFile) {
-  console.error('Could not find GeoLite2-City.mmdb in archive');
-  process.exit(1);
-}
-fs.rmSync('GeoLite2-City.tar.gz');
-fs.renameSync(mmdbFile, path.join('.', 'databases', 'GeoLite2-City.mmdb'));
-fs.rmSync(path.dirname(mmdbFile), { recursive: true });
-console.log('MaxMind databases updated successfully.');
+    console.log('Downloading GeoLite2-City database...');
+    await downloadTarGz({
+      url: 'https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz',
+      outFile: 'GeoLite2-City.tar.gz',
+      userId: MAXMIND_USER_ID,
+      apiKey: MAXMIND_API_KEY,
+    });
+    run('tar -xzf GeoLite2-City.tar.gz');
+    const mmdbFile = findMmdbFile('.', 'GeoLite2-City.mmdb');
+    if (!mmdbFile) {
+      throw new Error('Could not find GeoLite2-City.mmdb in archive');
+    }
+    fs.rmSync('GeoLite2-City.tar.gz');
+    fs.renameSync(mmdbFile, path.join('.', 'databases', 'GeoLite2-City.mmdb'));
+    fs.rmSync(path.dirname(mmdbFile), { recursive: true });
+
+    console.log('MaxMind databases updated successfully.');
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+})();

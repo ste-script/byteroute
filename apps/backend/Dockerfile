@@ -22,7 +22,6 @@ RUN pnpm turbo run build --filter=@byteroute/backend...
 
 FROM base AS runner
 #install curl for entrypoint script
-RUN apk add --no-cache curl
 ENV NODE_ENV=production
 
 COPY --from=prepare /app/out/json/ .
