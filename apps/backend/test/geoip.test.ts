@@ -113,4 +113,178 @@ describe("geoip enrichment", () => {
     expect(enriched[1]?.enriched).toBe(true);
     expect(enriched[2]?.enriched).toBe(false);
   });
+
+  it("handles empty string IPs gracefully", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "",
+        destIp: "",
+      })
+    );
+
+    expect(enriched.enriched).toBe(false);
+  });
+
+  it("handles connections with all geo fields already populated", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "8.8.8.8",
+        country: "France",
+        countryCode: "FR",
+        city: "Paris",
+        latitude: 48.8566,
+        longitude: 2.3522,
+        asn: 12345,
+        asOrganization: "Custom Org"
+      })
+    );
+
+    // Should not override any existing fields
+    expect(enriched.country).toBe("France");
+    expect(enriched.countryCode).toBe("FR");
+    expect(enriched.city).toBe("Paris");
+    expect(enriched.latitude).toBe(48.8566);
+    expect(enriched.longitude).toBe(2.3522);
+    expect(enriched.asn).toBe(12345);
+    expect(enriched.asOrganization).toBe("Custom Org");
+  });
+
+  it("handles reporterIp that is private", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "192.168.1.1",
+        destIp: "8.8.8.8",
+      }),
+      { reporterIp: "10.0.0.1" } // Private IP
+    );
+
+    // Should fall back to destIp
+    expect(enriched.enriched).toBe(true);
+    expect(enriched.countryCode).toBe("US");
+  });
+
+  it("handles undefined reporterIp", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "192.168.1.1",
+        destIp: "8.8.8.8",
+      }),
+      { reporterIp: undefined }
+    );
+
+    // Should fall back to destIp
+    expect(enriched.enriched).toBe(true);
+    expect(enriched.countryCode).toBe("US");
+  });
+
+  it("handles all private IPs", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "192.168.1.1",
+        destIp: "10.0.0.1",
+      }),
+      { reporterIp: "172.16.0.1" }
+    );
+
+    // No enrichment possible
+    expect(enriched.enriched).toBe(false);
+  });
+
+  it("enrichBatch handles large batches", async () => {
+    const batch = Array.from({ length: 100 }, (_, i) =>
+      baseConnection({
+        id: `conn-${i}`,
+        sourceIp: i % 2 === 0 ? "8.8.8.8" : "1.1.1.1"
+      })
+    );
+
+    const enriched = await geoip.enrichBatch(batch);
+
+    expect(enriched).toHaveLength(100);
+    expect(enriched.every(c => c.enriched)).toBe(true);
+
+    // Check alternating enrichments
+    expect(enriched[0]?.countryCode).toBe("US");
+    expect(enriched[1]?.countryCode).toBe("AU");
+    expect(enriched[2]?.countryCode).toBe("US");
+  });
+
+  it("enrichBatch handles empty array", async () => {
+    const enriched = await geoip.enrichBatch([]);
+
+    expect(enriched).toEqual([]);
+  });
+
+  it("enrichBatch handles single connection", async () => {
+    const batch = [baseConnection({ sourceIp: "8.8.8.8" })];
+    const enriched = await geoip.enrichBatch(batch);
+
+    expect(enriched).toHaveLength(1);
+    expect(enriched[0]?.enriched).toBe(true);
+  });
+
+  it("preserves all original connection fields", async () => {
+    const original = baseConnection({
+      sourceIp: "8.8.8.8",
+      bytesIn: 1024,
+      bytesOut: 2048,
+      packetsIn: 10,
+      packetsOut: 20
+    });
+
+    const enriched = await geoip.enrichConnection(original);
+
+    expect(enriched.id).toBe(original.id);
+    expect(enriched.sourceIp).toBe(original.sourceIp);
+    expect(enriched.destIp).toBe(original.destIp);
+    expect(enriched.sourcePort).toBe(original.sourcePort);
+    expect(enriched.destPort).toBe(original.destPort);
+    expect(enriched.protocol).toBe(original.protocol);
+    expect(enriched.status).toBe(original.status);
+    expect(enriched.bytesIn).toBe(1024);
+    expect(enriched.bytesOut).toBe(2048);
+    expect(enriched.packetsIn).toBe(10);
+    expect(enriched.packetsOut).toBe(20);
+  });
+
+  it("handles partial geo data from lookup", async () => {
+    // Create a lookup that returns partial data
+    const partialGeoip = new GeoIpService(
+      new InMemoryGeoIpLookup({
+        "9.9.9.9": {
+          countryCode: "XX",
+          // No other fields
+        }
+      })
+    );
+
+    const enriched = await partialGeoip.enrichConnection(
+      baseConnection({ sourceIp: "9.9.9.9" })
+    );
+
+    expect(enriched.enriched).toBe(true);
+    expect(enriched.countryCode).toBe("XX");
+    expect(enriched.country).toBeUndefined();
+    expect(enriched.city).toBeUndefined();
+  });
+
+  it("lookupIp returns empty object for empty string", async () => {
+    const result = await geoip.lookupIp("");
+    expect(result).toEqual({});
+  });
+
+  it("enrichBatch with context", async () => {
+    const batch = [
+      baseConnection({
+        id: "a",
+        sourceIp: "192.168.1.1",
+        destIp: "not-an-ip"
+      })
+    ];
+
+    const enriched = await geoip.enrichBatch(batch, { reporterIp: "8.8.8.8" });
+
+    expect(enriched[0]?.enriched).toBe(true);
+    expect(enriched[0]?.countryCode).toBe("US");
+  });
 });
