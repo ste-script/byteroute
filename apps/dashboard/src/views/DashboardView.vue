@@ -11,6 +11,7 @@ import ConnectionList from '@/components/ConnectionList.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSocket } from '@/services/socket'
 import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
+import { version } from '../../package.json'
 
 const store = useDashboardStore()
 const { 
@@ -202,6 +203,7 @@ onUnmounted(() => {
         />
       </div>
       <div class="header-right">
+        <span class="version">v{{ version }}</span>
         <Button
           :icon="darkMode ? 'pi pi-sun' : 'pi pi-moon'"
           text
@@ -324,7 +326,13 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
+}
+
+.version {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  font-weight: 500;
 }
 
 .dashboard-grid {
