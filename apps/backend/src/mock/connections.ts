@@ -1,4 +1,5 @@
 import type { Connection, TrafficFlow, Statistics } from "@byteroute/shared";
+import { metricsStore } from "../services/metrics";
 
 // Sample data for generating realistic mock connections
 const countries = [
@@ -254,18 +255,23 @@ export function generateStatistics(connections: Connection[]): Statistics {
     percentage: connections.length > 0 ? (count / connections.length) * 100 : 0,
   }));
 
-  // Generate time series (last 24 data points)
-  const now = Date.now();
-  const timeSeries = Array.from({ length: 24 }, (_, i) => {
-    const timestamp = new Date(now - (23 - i) * 3600000);
-    return {
-      timestamp: timestamp.toISOString(),
-      connections: randomInt(50, 200),
-      bandwidthIn: randomInt(10000, 100000),
-      bandwidthOut: randomInt(10000, 100000),
-      blocked: randomInt(0, 20),
-    };
-  });
+  // Get real time series data from metrics store, fallback to mock if empty
+  let timeSeries = metricsStore.getTimeSeries(24);
+
+  // If no real metrics yet, generate mock data
+  if (timeSeries.length === 0) {
+    const now = Date.now();
+    timeSeries = Array.from({ length: 24 }, (_, i) => {
+      const timestamp = new Date(now - (23 - i) * 3600000);
+      return {
+        timestamp: timestamp.toISOString(),
+        connections: randomInt(50, 200),
+        bandwidthIn: randomInt(10000, 100000),
+        bandwidthOut: randomInt(10000, 100000),
+        blocked: randomInt(0, 20),
+      };
+    });
+  }
 
   return {
     totalConnections: connections.length,
