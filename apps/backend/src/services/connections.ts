@@ -65,7 +65,8 @@ export async function loadConnectionsFromDb(limit = 500): Promise<number> {
 
   for (const doc of docs) {
     // Mongoose returns Date objects for Date fields; Connection allows Date|string.
-    connections.set(doc.id, doc as unknown as Connection);
+    const connection = doc as unknown as Connection;
+    connections.set(connection.id, connection);
   }
 
   return docs.length;
