@@ -131,8 +131,8 @@ describe('Metrics Controller', () => {
 
       const stored = store.getAll()
       expect(stored).toHaveLength(2)
-      expect(stored[0]!.connections).toBe(10)
-      expect(stored[1]!.connections).toBe(20)
+      expect(stored[0].connections).toBe(10)
+      expect(stored[1].connections).toBe(20)
     })
 
     it('should return received count', async () => {
@@ -205,10 +205,10 @@ describe('Metrics Controller', () => {
       await controller(req as Request, res as Response)
 
       const stored = store.getAll()
-      expect(stored[0]!.connections).toBe(100)
-      expect(stored[0]!.inactive).toBe(5)
-      expect(stored[1]!.connections).toBe(200)
-      expect(stored[1]!.inactive).toBe(10)
+      expect(stored[0].connections).toBe(100)
+      expect(stored[0].inactive).toBe(5)
+      expect(stored[1].connections).toBe(200)
+      expect(stored[1].inactive).toBe(10)
     })
 
     it('should handle snapshots with string timestamps', async () => {
