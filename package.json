@@ -13,7 +13,8 @@
     "test": "turbo run test",
     "format": "turbo run format",
     "seed": "pnpm -F @byteroute/seed seed",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "coverage": "turbo run coverage"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.1",
