@@ -28,8 +28,7 @@ const protocolFilter = ref<string | null>(null)
 const statusOptions = [
   { label: 'All Status', value: null },
   { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' },
-  { label: 'Blocked', value: 'blocked' }
+  { label: 'Inactive', value: 'inactive' }
 ]
 
 const protocolOptions = [
@@ -65,10 +64,9 @@ const filteredConnections = computed(() => {
   return result
 })
 
-function getStatusSeverity(status: Connection['status']): 'success' | 'secondary' | 'danger' {
+function getStatusSeverity(status: Connection['status']): 'success' | 'secondary' {
   switch (status) {
     case 'active': return 'success'
-    case 'blocked': return 'danger'
     default: return 'secondary'
   }
 }
@@ -290,10 +288,6 @@ function handleSelect(connection: Connection) {
 
 .connection-status.inactive {
   background: var(--p-surface-400);
-}
-
-.connection-status.blocked {
-  background: var(--p-red-500);
 }
 
 .connection-info {

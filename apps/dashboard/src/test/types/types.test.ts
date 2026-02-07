@@ -36,8 +36,8 @@ describe('Type definitions', () => {
     })
 
     it('should accept all status types', () => {
-      const statuses: Connection['status'][] = ['active', 'inactive', 'blocked']
-      expect(statuses).toHaveLength(3)
+      const statuses: Connection['status'][] = ['active', 'inactive']
+      expect(statuses).toHaveLength(2)
     })
 
     it('should accept optional fields', () => {
@@ -103,7 +103,6 @@ describe('Type definitions', () => {
       const stats: Statistics = {
         totalConnections: 1000,
         activeConnections: 800,
-        blockedConnections: 50,
         totalBandwidth: 1000000000,
         bandwidthIn: 600000000,
         bandwidthOut: 400000000,
@@ -172,16 +171,16 @@ describe('Type definitions', () => {
       expect(data.connections).toBe(100)
     })
 
-    it('should accept optional blocked field', () => {
+    it('should accept optional inactive field', () => {
       const data: TimeSeriesData = {
         timestamp: '2026-01-17T12:00:00Z',
         connections: 100,
         bandwidthIn: 50000000,
         bandwidthOut: 40000000,
-        blocked: 5
+        inactive: 5
       }
-      
-      expect(data.blocked).toBe(5)
+
+      expect(data.inactive).toBe(5)
     })
   })
 
@@ -192,7 +191,7 @@ describe('Type definitions', () => {
         countries: ['US', 'DE'],
         categories: ['Web Traffic'],
         protocols: ['TCP', 'UDP'],
-        status: ['active', 'blocked'],
+        status: ['active', 'inactive'],
         search: 'test'
       }
       

@@ -107,7 +107,6 @@ func main() {
 					Connections:  snapshot.Connections,
 					BandwidthIn:  snapshot.BandwidthIn,
 					BandwidthOut: snapshot.BandwidthOut,
-					Blocked:      snapshot.Blocked,
 					Inactive:     snapshot.Inactive,
 				},
 			}
@@ -160,7 +159,6 @@ func main() {
 				for _, conn := range batch {
 					bytesIn := int64(0)
 					bytesOut := int64(0)
-					blocked := conn.Status == "blocked"
 					inactive := conn.Status == "inactive"
 
 					if conn.BytesIn != nil {
@@ -170,7 +168,7 @@ func main() {
 						bytesOut = *conn.BytesOut
 					}
 
-					metricsCollector.RecordConnection(conn.ID, bytesIn, bytesOut, blocked, inactive)
+					metricsCollector.RecordConnection(conn.ID, bytesIn, bytesOut, inactive)
 				}
 			}
 		}

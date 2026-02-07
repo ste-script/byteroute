@@ -207,10 +207,6 @@ function formatNumber(num: number): string {
         <div class="stat-label">Active</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value blocked">{{ formatNumber(statistics?.blockedConnections || 0) }}</div>
-        <div class="stat-label">Blocked</div>
-      </div>
-      <div class="stat-card">
         <div class="stat-value">{{ formatBandwidth(statistics?.totalBandwidth || 0) }}</div>
         <div class="stat-label">Bandwidth</div>
       </div>
@@ -288,10 +284,6 @@ function formatNumber(num: number): string {
 
 .stat-value.active {
   color: var(--p-green-500);
-}
-
-.stat-value.blocked {
-  color: var(--p-red-500);
 }
 
 .stat-label {

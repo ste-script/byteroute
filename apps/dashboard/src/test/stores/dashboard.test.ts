@@ -108,7 +108,7 @@ describe('Dashboard Store', () => {
         { id: '1', status: 'active', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() },
         { id: '2', status: 'inactive', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() },
         { id: '3', status: 'active', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() },
-        { id: '4', status: 'blocked', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() }
+        { id: '4', status: 'inactive', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() }
       ] as Connection[])
       
       expect(store.activeConnections).toHaveLength(2)
@@ -157,7 +157,6 @@ describe('Dashboard Store', () => {
       const stats: Statistics = {
         totalConnections: 100,
         activeConnections: 80,
-        blockedConnections: 5,
         totalBandwidth: 1000000,
         bandwidthIn: 600000,
         bandwidthOut: 400000,

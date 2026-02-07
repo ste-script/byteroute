@@ -185,7 +185,7 @@ export function startDemoMode(io: TypedSocketServer, intervalMs = 5000): NodeJS.
       if (allConnections.length > 0) {
         const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)];
         if (randomConn) {
-          const statuses: Connection["status"][] = ["active", "inactive", "blocked"];
+          const statuses: Connection["status"][] = ["active", "inactive"];
           updateConnection(io, randomConn.id, {
             status: statuses[Math.floor(Math.random() * statuses.length)],
             bandwidth: Math.floor(Math.random() * 100000),

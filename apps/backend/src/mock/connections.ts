@@ -1,5 +1,5 @@
 import type { Connection, TrafficFlow, Statistics } from "@byteroute/shared";
-import { metricsStore } from "../services/metrics";
+import { metricsStore } from "../services/metrics.js";
 
 // Sample data for generating realistic mock connections
 const countries = [
@@ -29,7 +29,7 @@ const cities: Record<string, string[]> = {
 };
 
 const protocols: Connection["protocol"][] = ["TCP", "UDP", "ICMP", "OTHER"];
-const statuses: Connection["status"][] = ["active", "inactive", "blocked"];
+const statuses: Connection["status"][] = ["active", "inactive"];
 const categories = ["web", "streaming", "gaming", "email", "file-transfer", "voip", "vpn", "social"];
 
 function randomInt(min: number, max: number): number {
@@ -156,7 +156,6 @@ export function generateTrafficFlow(connection?: Connection): TrafficFlow {
   const colors: [number, number, number, number][] = [
     [0, 255, 0, 200],   // green - active
     [255, 165, 0, 200], // orange - inactive
-    [255, 0, 0, 200],   // red - blocked
     [0, 191, 255, 200], // blue - default
   ];
 
@@ -189,7 +188,6 @@ export function generateTrafficFlows(connections: Connection[]): TrafficFlow[] {
 
 export function generateStatistics(connections: Connection[]): Statistics {
   const activeConnections = connections.filter(c => c.status === "active").length;
-  const blockedConnections = connections.filter(c => c.status === "blocked").length;
   const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
   const bandwidthOut = connections.reduce((sum, c) => sum + (c.bytesOut ?? 0), 0);
@@ -268,7 +266,6 @@ export function generateStatistics(connections: Connection[]): Statistics {
         connections: randomInt(50, 200),
         bandwidthIn: randomInt(10000, 100000),
         bandwidthOut: randomInt(10000, 100000),
-        blocked: randomInt(0, 20),
       };
     });
   }
@@ -276,7 +273,6 @@ export function generateStatistics(connections: Connection[]): Statistics {
   return {
     totalConnections: connections.length,
     activeConnections,
-    blockedConnections,
     totalBandwidth,
     bandwidthIn,
     bandwidthOut,
