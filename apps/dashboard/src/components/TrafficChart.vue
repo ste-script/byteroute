@@ -120,6 +120,29 @@ const chartOption = computed(() => {
       borderColor: props.darkMode ? '#374151' : '#e5e7eb',
       textStyle: {
         color: textColor
+      },
+      formatter: (params: any) => {
+        if (!Array.isArray(params)) return ''
+
+        let result = `<div style="font-weight: 600; margin-bottom: 4px;">${params[0].axisValue}</div>`
+
+        params.forEach((param: any) => {
+          const value = param.value
+          let formattedValue = value
+
+          // Format bandwidth values (first two series)
+          if (param.seriesName === 'Bandwidth In' || param.seriesName === 'Bandwidth Out') {
+            formattedValue = formatBandwidth(value)
+          }
+
+          result += `<div style="display: flex; align-items: center; margin: 2px 0;">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${param.color}; margin-right: 6px;"></span>
+            <span style="flex: 1;">${param.seriesName}:</span>
+            <span style="font-weight: 600; margin-left: 8px;">${formattedValue}</span>
+          </div>`
+        })
+
+        return result
       }
     },
     legend: {
