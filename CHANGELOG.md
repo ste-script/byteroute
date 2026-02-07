@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/ste-script/byteroute/compare/v1.4.0...v1.4.1) (2026-02-07)
+
+### Bug Fixes
+
+* **client-go:** setup docker lease ([be46240](https://github.com/ste-script/byteroute/commit/be4624048661eff123fb58fb9d8fca9cef96d542))
+
 ## [1.4.0](https://github.com/ste-script/byteroute/compare/v1.3.0...v1.4.0) (2026-02-03)
 
 ### Features
