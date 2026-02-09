@@ -87,8 +87,31 @@ jobs:
           docker cp byteroute-temp:/byteroute-client build/byteroute-client
           docker rm byteroute-temp
 
-      - name: Test
-        run: pnpm -w test
-
       - name: Build
         run: pnpm -w build
+          
+      - name: Test Go client with coverage
+        run: |
+          cd apps/client-go
+          pnpm coverage
+
+      - name: Upload Go coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-go
+          path: apps/client-go/coverage.out
+          retention-days: 30
+
+      - name: Test
+        run: pnpm -w coverage
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 30
+
+
