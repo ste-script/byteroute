@@ -71,6 +71,17 @@ function findMmdbFile(dir, name) {
 
 (async () => {
   try {
+    // Check if databases already exist
+    const asnDbPath = path.join('.', 'databases', 'GeoLite2-ASN.mmdb');
+    const cityDbPath = path.join('.', 'databases', 'GeoLite2-City.mmdb');
+
+    if (fs.existsSync(asnDbPath) && fs.existsSync(cityDbPath)) {
+      console.log('MaxMind databases already exist. Skipping download.');
+      console.log(`  - ${asnDbPath}`);
+      console.log(`  - ${cityDbPath}`);
+      process.exit(0);
+    }
+
     console.log('Downloading GeoLite2-ASN database...');
     await downloadTarGz({
       url: 'https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz',
