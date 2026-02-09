@@ -13,9 +13,7 @@ class MetricsStore {
   addSnapshots(newSnapshots: TimeSeriesData[]): void {
     for (const snapshot of newSnapshots) {
       // Ensure timestamp is a Date object
-      const timestamp = snapshot.timestamp instanceof Date
-        ? snapshot.timestamp
-        : new Date(snapshot.timestamp);
+      const timestamp = new Date(snapshot.timestamp);
 
       this.snapshots.push({
         timestamp,
@@ -28,8 +26,8 @@ class MetricsStore {
 
     // Sort by timestamp (oldest first)
     this.snapshots.sort((a, b) => {
-      const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
-      const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
       return timeA - timeB;
     });
 

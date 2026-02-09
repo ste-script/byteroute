@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeIp, firstForwardedFor, isPrivateIp, isPrivateIpv4 } from '../src/utils/ip.js'
+import { normalizeIp, firstForwardedFor, isPrivateIp, isPrivateIpv4 } from '../../src/utils/ip.js'
 
 describe('IP Utils', () => {
   describe('normalizeIp', () => {
