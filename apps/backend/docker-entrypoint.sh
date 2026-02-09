@@ -12,7 +12,7 @@ fi
 # Download MaxMind databases
 echo "Downloading MaxMind databases..."
 cd apps/backend
-node scripts/update-maxmind.mjs
+node scripts/download-maxmind.mjs
 
 # Start the Node.js server
 echo "Starting Node.js server..."
