@@ -90,7 +90,7 @@ describe('MetricsStore', () => {
 
       const snapshots = store.getAllSnapshots()
       expect(snapshots).toHaveLength(1)
-      expect(snapshots[0].connections).toBe(100)
+      expect(snapshots[0]!.connections).toBe(100)
     })
 
     it('should add multiple snapshots', () => {
@@ -107,7 +107,7 @@ describe('MetricsStore', () => {
       store.addSnapshots([snapshot])
 
       const result = store.getAllSnapshots()
-      expect(result[0].timestamp).toBeInstanceOf(Date)
+      expect(result[0]!.timestamp).toBeInstanceOf(Date)
     })
 
     it('should handle Date timestamps', () => {
@@ -116,7 +116,7 @@ describe('MetricsStore', () => {
       store.addSnapshots([snapshot])
 
       const result = store.getAllSnapshots()
-      expect(result[0].timestamp).toBe(now)
+      expect(result[0]!.timestamp).toBe(now)
     })
 
     it('should default inactive to 0 when missing', () => {
@@ -124,7 +124,7 @@ describe('MetricsStore', () => {
       store.addSnapshots([snapshot])
 
       const result = store.getAllSnapshots()
-      expect(result[0].inactive).toBe(0)
+      expect(result[0]!.inactive).toBe(0)
     })
 
     it('should preserve inactive count when provided', () => {
@@ -132,7 +132,7 @@ describe('MetricsStore', () => {
       store.addSnapshots([snapshot])
 
       const result = store.getAllSnapshots()
-      expect(result[0].inactive).toBe(5)
+      expect(result[0]!.inactive).toBe(5)
     })
   })
 
@@ -277,11 +277,12 @@ describe('MetricsStore', () => {
 
       store.addSnapshots([snapshot])
       const result = store.getAllSnapshots()[0]
+      const first = result!
 
-      expect(result.connections).toBe(123)
-      expect(result.bandwidthIn).toBe(456789)
-      expect(result.bandwidthOut).toBe(987654)
-      expect(result.inactive).toBe(5)
+      expect(first.connections).toBe(123)
+      expect(first.bandwidthIn).toBe(456789)
+      expect(first.bandwidthOut).toBe(987654)
+      expect(first.inactive).toBe(5)
     })
 
     it('should not mutate input snapshots', () => {
@@ -309,7 +310,7 @@ describe('MetricsStore edge cases', () => {
 
     const result = store.getAllSnapshots()
     expect(result).toHaveLength(1)
-    expect(result[0].connections).toBe(2)
+    expect(result[0]!.connections).toBe(2)
   })
 
   it('should handle very large retention limits', () => {
@@ -328,6 +329,8 @@ describe('MetricsStore edge cases', () => {
     store.addSnapshots([snapshot])
 
     const result = store.getAllSnapshots()[0]
-    expect(result.timestamp.getTime()).toBe(now.getTime())
+    const first = result!
+    const timestamp = first.timestamp instanceof Date ? first.timestamp : new Date(first.timestamp)
+    expect(timestamp.getTime()).toBe(now.getTime())
   })
 })

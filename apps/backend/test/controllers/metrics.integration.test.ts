@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import express, { type Express } from 'express'
-import { metricsStore } from '../src/services/metrics.js'
-import { postMetrics } from '../src/controllers/metrics.controller.js'
+import { metricsStore } from '../../src/services/metrics.js'
+import { postMetrics } from '../../src/controllers/metrics.controller.js'
 
 /**
  * Integration tests for metrics API endpoint
@@ -49,7 +49,7 @@ describe('Metrics API Integration', () => {
       // Verify data was stored
       const stored = metricsStore.getAllSnapshots()
       expect(stored).toHaveLength(1)
-      expect(stored[0].connections).toBe(100)
+      expect(stored[0]!.connections).toBe(100)
     })
 
     it('should accept multiple snapshots in one request', async () => {
@@ -115,7 +115,7 @@ describe('Metrics API Integration', () => {
         .expect(202)
 
       const stored = metricsStore.getAllSnapshots()
-      expect(stored[0].inactive).toBe(12)
+      expect(stored[0]!.inactive).toBe(12)
     })
 
     it('should default inactive to 0 when omitted', async () => {
@@ -134,7 +134,7 @@ describe('Metrics API Integration', () => {
         .expect(202)
 
       const stored = metricsStore.getAllSnapshots()
-      expect(stored[0].inactive).toBe(0)
+      expect(stored[0]!.inactive).toBe(0)
     })
   })
 
@@ -239,7 +239,7 @@ describe('Metrics API Integration', () => {
 
       const last12 = metricsStore.getTimeSeries(12)
       expect(last12).toHaveLength(12)
-      expect(last12[0].connections).toBe(130) // 13th snapshot
+      expect(last12[0]!.connections).toBe(130) // 13th snapshot
     })
   })
 

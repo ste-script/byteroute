@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { handleConnection } from '../src/controllers/socket.controller.js'
-import type { TypedSocket } from '../src/controllers/socket.controller.js'
-import type { TypedSocketServer } from '../src/services/connections.js'
+import { handleConnection } from '../../src/controllers/socket.controller.js'
+import type { TypedSocket } from '../../src/controllers/socket.controller.js'
+import type { TypedSocketServer } from '../../src/services/connections.js'
 
 // Mock the connections service
-vi.mock('../src/services/connections.js', () => ({
+vi.mock('../../src/services/connections.js', () => ({
   getConnections: vi.fn(() => []),
   emitStatisticsUpdate: vi.fn(),
   emitTrafficFlows: vi.fn()
 }))
 
-import { getConnections, emitStatisticsUpdate, emitTrafficFlows } from '../src/services/connections.js'
+import { getConnections, emitStatisticsUpdate, emitTrafficFlows } from '../../src/services/connections.js'
 
 const createMockSocket = (): TypedSocket => {
   const socket: any = {
@@ -104,7 +104,7 @@ describe('Socket Controller', () => {
       expect(subscribeHandler).toBeDefined()
 
       // Call the subscribe handler
-      subscribeHandler?.({ rooms: ['room1', 'room2'] })
+      subscribeHandler?.({ rooms: ['room1', 'room2'] } as any)
 
       expect(mockSocket.join).toHaveBeenCalledWith('room1')
       expect(mockSocket.join).toHaveBeenCalledWith('room2')
@@ -126,7 +126,7 @@ describe('Socket Controller', () => {
       expect(unsubscribeHandler).toBeDefined()
 
       // Call the unsubscribe handler
-      unsubscribeHandler?.({ rooms: ['room1', 'room3'] })
+      unsubscribeHandler?.({ rooms: ['room1', 'room3'] } as any)
 
       expect(mockSocket.leave).toHaveBeenCalledWith('room1')
       expect(mockSocket.leave).toHaveBeenCalledWith('room3')
@@ -147,7 +147,7 @@ describe('Socket Controller', () => {
 
       // Should not throw
       expect(() => {
-        unsubscribeHandler?.({ rooms: ['room1'] })
+        unsubscribeHandler?.({ rooms: ['room1'] } as any)
       }).not.toThrow()
 
       expect(mockSocket.leave).toHaveBeenCalledWith('room1')
@@ -164,7 +164,7 @@ describe('Socket Controller', () => {
       expect(disconnectHandler).toBeDefined()
 
       // Call the disconnect handler
-      disconnectHandler?.('client namespace disconnect')
+      disconnectHandler?.('client namespace disconnect' as any)
 
       expect(consoleLog).toHaveBeenCalledWith(
         'Client disconnected: test-socket-id (client namespace disconnect)'
@@ -179,11 +179,11 @@ describe('Socket Controller', () => {
       )?.[1]
 
       // First subscription
-      subscribeHandler?.({ rooms: ['room1'] })
+      subscribeHandler?.({ rooms: ['room1'] } as any)
       expect(mockSocket.data.subscribedRooms).toEqual(['room1'])
 
       // Second subscription
-      subscribeHandler?.({ rooms: ['room2', 'room3'] })
+      subscribeHandler?.({ rooms: ['room2', 'room3'] } as any)
       expect(mockSocket.data.subscribedRooms).toEqual(['room1', 'room2', 'room3'])
     })
 

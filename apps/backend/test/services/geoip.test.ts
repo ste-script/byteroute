@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { GeoIpService } from "../src/services/geoip.js";
+import { GeoIpService } from "../../src/services/geoip.js";
 import type { Connection } from "@byteroute/shared";
-import { InMemoryGeoIpLookup } from "./mocks/geoip.js";
+import { InMemoryGeoIpLookup } from "../mocks/geoip.js";
 
 function baseConnection(overrides?: Partial<Connection>): Connection {
   const now = new Date().toISOString();

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Request, Response } from 'express'
-import { healthCheck } from '../src/controllers/health.controller.js'
+import { healthCheck } from '../../src/controllers/health.controller.js'
 
 // Mock the mongoReadyState from shared package
 vi.mock('@byteroute/shared', () => ({

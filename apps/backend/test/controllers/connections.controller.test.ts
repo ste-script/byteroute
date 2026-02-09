@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
 import type { Connection } from '@byteroute/shared'
-import { postConnections } from '../src/controllers/connections.controller.js'
+import { postConnections } from '../../src/controllers/connections.controller.js'
 
 // Mock the dependencies
-vi.mock('../src/services/ingest.js', () => ({
+vi.mock('../../src/services/ingest.js', () => ({
   enrichAndStoreConnections: vi.fn().mockResolvedValue(undefined),
   storeRawConnections: vi.fn().mockResolvedValue(undefined)
 }))
 
-vi.mock('../src/utils/ip.js', () => ({
+vi.mock('../../src/utils/ip.js', () => ({
   normalizeIp: vi.fn((ip) => ip?.toString().trim() || undefined),
   firstForwardedFor: vi.fn((header) => {
     if (typeof header === 'string') {
@@ -19,8 +19,8 @@ vi.mock('../src/utils/ip.js', () => ({
   })
 }))
 
-import { enrichAndStoreConnections, storeRawConnections } from '../src/services/ingest.js'
-import { normalizeIp, firstForwardedFor } from '../src/utils/ip.js'
+import { enrichAndStoreConnections, storeRawConnections } from '../../src/services/ingest.js'
+import { normalizeIp, firstForwardedFor } from '../../src/utils/ip.js'
 
 const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Request> & {
   app: any
@@ -40,7 +40,7 @@ const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Requ
       return undefined
     })
   }
-})
+} as Partial<Request> & { app: any; socket: any })
 
 const createMockResponse = (): Partial<Response> & {
   statusCode?: number
@@ -181,6 +181,19 @@ describe('Connections Controller', () => {
       await postConnections(req as Request, res as Response)
 
       expect(normalizeIp).toHaveBeenCalled()
+    })
+
+    it('should fall back to socket remoteAddress when req.ip is missing', async () => {
+      const connections = [createConnection()]
+      const req = createMockRequest({ connections }, {}, '')
+      req.socket.remoteAddress = '203.0.113.9'
+      const res = createMockResponse()
+
+      await postConnections(req as Request, res as Response)
+
+      expect(firstForwardedFor).toHaveBeenCalled()
+      expect(normalizeIp).toHaveBeenCalledWith('')
+      expect(normalizeIp).toHaveBeenCalledWith('203.0.113.9')
     })
 
     it('should respond immediately (fire-and-forget)', async () => {
