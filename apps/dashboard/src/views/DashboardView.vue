@@ -11,7 +11,9 @@ import ConnectionList from '@/components/ConnectionList.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useSocket } from '@/services/socket'
 import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
-import { version } from '../../package.json'
+
+// Version injected at build time via Vite define
+const version = __APP_VERSION__
 
 const store = useDashboardStore()
 const {
