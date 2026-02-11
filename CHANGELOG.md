@@ -1,3 +1,21 @@
+## [1.5.0](https://github.com/ste-script/byteroute/compare/v1.4.2...v1.5.0) (2026-02-11)
+
+### Features
+
+* **backend:** store and provide traffic flow metrics ([27b2aa2](https://github.com/ste-script/byteroute/commit/27b2aa276a08190d952c2d2bfabf509fe90b169f))
+* **client-go:** provide traffic flow to the backend ([cf1d508](https://github.com/ste-script/byteroute/commit/cf1d50815692f992dde10aa089e41158bbd4f930))
+* connection status ([a52eb03](https://github.com/ste-script/byteroute/commit/a52eb035a96cf11522d484b88cd54e3fd3c85fa0))
+* **dashboard:** add connection bandwith in list ([fe4a2f8](https://github.com/ste-script/byteroute/commit/fe4a2f83f62a70af54188cdf3d16a2e786654247))
+* **dashboard:** human readable data ([772d1ff](https://github.com/ste-script/byteroute/commit/772d1ffa92acfe412b8bdf9b919403a533c3427f))
+* **dashboard:** version ([3307eac](https://github.com/ste-script/byteroute/commit/3307eace692e901c36e9fdbcc9affecf74a6b363))
+
+### Bug Fixes
+
+* **backend:** avoid unnecessary db downloads ([cb9ac40](https://github.com/ste-script/byteroute/commit/cb9ac408ec7b6216f3c58bd2f7522c6c8b5c38ad))
+* **dashboard:** connection status ([1d5eca4](https://github.com/ste-script/byteroute/commit/1d5eca4820bda083ae9fc12d759a43410709a3c1))
+* **dashboard:** select missing import ([9a3838b](https://github.com/ste-script/byteroute/commit/9a3838b16d0a33f4aac4f0d120dd614eca1da009))
+* remove category blocked status ([42e3794](https://github.com/ste-script/byteroute/commit/42e3794ee6bec5aef5aab4b29ebced451b1dff74))
+
 ## [1.4.2](https://github.com/ste-script/byteroute/compare/v1.4.1...v1.4.2) (2026-02-07)
 
 ### Bug Fixes
