@@ -334,3 +334,4 @@ describe('MetricsStore edge cases', () => {
     expect(timestamp.getTime()).toBe(now.getTime())
   })
 })
+
