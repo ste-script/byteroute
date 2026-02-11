@@ -16,7 +16,7 @@
     "@byteroute/typescript": "workspace:*",
     "@types/express": "^5.0.6",
     "@types/ip": "^1.1.3",
-    "@types/node": "^24.10.9",
+    "@types/node": "^24.10.13",
     "@vitest/coverage-v8": "^4.0.18",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
