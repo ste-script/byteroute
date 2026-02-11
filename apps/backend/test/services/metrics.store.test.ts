@@ -15,8 +15,6 @@ describe("metricsStore", () => {
     metricsStore.clear();
   });
 
-
-
   it("returns empty array when no snapshots", () => {
     expect(metricsStore.getTimeSeries()).toEqual([]);
   });
