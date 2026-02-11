@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "node -e \"console.log('backend: lint (placeholder)')\"",
     "test": "vitest run",
-    "update:maxmind": "node scripts/update-maxmind.mjs",
+    "update:maxmind": "node scripts/download-maxmind.mjs",
     "test:watch": "vitest --watch",
     "coverage": "vitest run --coverage"
   },
