@@ -65,7 +65,8 @@ export async function loadConnectionsFromDb(limit = 500): Promise<number> {
 
   for (const doc of docs) {
     // Mongoose returns Date objects for Date fields; Connection allows Date|string.
-    connections.set(doc.id, doc as unknown as Connection);
+    const connection = doc as unknown as Connection;
+    connections.set(connection.id, connection);
   }
 
   return docs.length;
@@ -182,25 +183,21 @@ export function startDemoMode(io: TypedSocketServer, intervalMs = 5000): NodeJS.
       // 30% chance: update random connection
       const allConnections = getConnections();
       if (allConnections.length > 0) {
-        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)];
-        if (randomConn) {
-          const statuses: Connection["status"][] = ["active", "inactive", "blocked"];
-          updateConnection(io, randomConn.id, {
-            status: statuses[Math.floor(Math.random() * statuses.length)],
-            bandwidth: Math.floor(Math.random() * 100000),
-            bytesIn: (randomConn.bytesIn ?? 0) + Math.floor(Math.random() * 10000),
-            bytesOut: (randomConn.bytesOut ?? 0) + Math.floor(Math.random() * 10000),
-          });
-        }
+        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)]!;
+        const statuses: Connection["status"][] = ["active", "inactive"];
+        updateConnection(io, randomConn.id, {
+          status: statuses[Math.floor(Math.random() * statuses.length)],
+          bandwidth: Math.floor(Math.random() * 100000),
+          bytesIn: (randomConn.bytesIn ?? 0) + Math.floor(Math.random() * 10000),
+          bytesOut: (randomConn.bytesOut ?? 0) + Math.floor(Math.random() * 10000),
+        });
       }
     } else if (action < 0.85) {
       // 15% chance: remove connection (keep at least 10)
       const allConnections = getConnections();
       if (allConnections.length > 10) {
-        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)];
-        if (randomConn) {
-          removeConnection(io, randomConn.id);
-        }
+        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)]!;
+        removeConnection(io, randomConn.id);
       }
     }
     // 15% chance: do nothing

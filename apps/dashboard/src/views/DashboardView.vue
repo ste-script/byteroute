@@ -12,17 +12,20 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useSocket } from '@/services/socket'
 import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
 
+// Version injected at build time via Vite define
+const version = __APP_VERSION__
+
 const store = useDashboardStore()
-const { 
-  connections, 
-  trafficFlows, 
-  statistics, 
-  isConnected, 
+const {
+  connections,
+  trafficFlows,
+  statistics,
   darkMode,
-  selectedTimeRange 
+  selectedTimeRange
 } = storeToRefs(store)
 
 const socket = useSocket()
+const { isConnected } = socket
 const mapRef = ref<InstanceType<typeof WorldMap> | null>(null)
 
 const timeRangeOptions = [
@@ -45,14 +48,13 @@ function generateMockData() {
     connections: Math.floor(Math.random() * 500) + 100,
     bandwidthIn: Math.floor(Math.random() * 100000000) + 10000000,
     bandwidthOut: Math.floor(Math.random() * 80000000) + 8000000,
-    blocked: Math.floor(Math.random() * 50)
+    inactive: Math.floor(Math.random() * 50)
   }))
 
   // Generate statistics
   mockStatistics.value = {
     totalConnections: 1247,
     activeConnections: 892,
-    blockedConnections: 45,
     totalBandwidth: 847293847,
     bandwidthIn: 523948234,
     bandwidthOut: 323345613,
@@ -104,7 +106,7 @@ function generateMockData() {
     sourcePort: Math.floor(Math.random() * 60000) + 1024,
     destPort: [80, 443, 8080, 3000, 5432, 27017][Math.floor(Math.random() * 6)],
     protocol: ['TCP', 'UDP', 'ICMP', 'OTHER'][Math.floor(Math.random() * 4)] as Connection['protocol'],
-    status: ['active', 'active', 'active', 'inactive', 'blocked'][Math.floor(Math.random() * 5)] as Connection['status'],
+    status: ['active', 'active', 'active', 'inactive'][Math.floor(Math.random() * 4)] as Connection['status'],
     country: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].country,
     countryCode: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].countryCode,
     category: mockStatistics.value!.byCategory[Math.floor(Math.random() * 5)].category,
@@ -202,6 +204,7 @@ onUnmounted(() => {
         />
       </div>
       <div class="header-right">
+        <span class="version">v{{ version }}</span>
         <Button
           :icon="darkMode ? 'pi pi-sun' : 'pi pi-moon'"
           text
@@ -324,7 +327,13 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
+}
+
+.version {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  font-weight: 500;
 }
 
 .dashboard-grid {

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import type { Connection } from '@/types'
 
@@ -27,8 +28,7 @@ const protocolFilter = ref<string | null>(null)
 const statusOptions = [
   { label: 'All Status', value: null },
   { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' },
-  { label: 'Blocked', value: 'blocked' }
+  { label: 'Inactive', value: 'inactive' }
 ]
 
 const protocolOptions = [
@@ -64,10 +64,9 @@ const filteredConnections = computed(() => {
   return result
 })
 
-function getStatusSeverity(status: Connection['status']): 'success' | 'secondary' | 'danger' {
+function getStatusSeverity(status: Connection['status']): 'success' | 'secondary' {
   switch (status) {
     case 'active': return 'success'
-    case 'blocked': return 'danger'
     default: return 'secondary'
   }
 }
@@ -93,6 +92,20 @@ function formatBandwidth(bytes?: number): string {
   if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB/s'
   if (bytes >= 1e3) return (bytes / 1e3).toFixed(1) + ' KB/s'
   return bytes + ' B/s'
+}
+
+function calculateBandwidth(connection: Connection): number {
+  // Calculate bandwidth from bytesIn, bytesOut, and duration
+  const bytesIn = connection.bytesIn ?? 0
+  const bytesOut = connection.bytesOut ?? 0
+  const durationMs = connection.duration ?? 0
+
+  if (durationMs === 0) return 0
+
+  const totalBytes = bytesIn + bytesOut
+  const durationSeconds = durationMs / 1000
+
+  return Math.round(totalBytes / durationSeconds)
 }
 
 function handleSelect(connection: Connection) {
@@ -175,7 +188,7 @@ function handleSelect(connection: Connection) {
             </span>
             <span class="bandwidth">
               <i class="pi pi-chart-line" />
-              {{ formatBandwidth(item.bandwidth) }}
+              {{ formatBandwidth(calculateBandwidth(item)) }}
             </span>
             <Tag 
               :value="item.status" 
@@ -275,10 +288,6 @@ function handleSelect(connection: Connection) {
 
 .connection-status.inactive {
   background: var(--p-surface-400);
-}
-
-.connection-status.blocked {
-  background: var(--p-red-500);
 }
 
 .connection-info {

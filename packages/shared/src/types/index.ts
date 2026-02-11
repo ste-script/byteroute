@@ -7,7 +7,7 @@ export interface Connection {
   sourcePort: number
   destPort: number
   protocol: 'TCP' | 'UDP' | 'ICMP' | 'OTHER'
-  status: 'active' | 'inactive' | 'blocked'
+  status: 'active' | 'inactive'
   enriched?: boolean
   country?: string
   countryCode?: string
@@ -49,7 +49,6 @@ export interface TrafficFlow {
 export interface Statistics {
   totalConnections: number
   activeConnections: number
-  blockedConnections: number
   totalBandwidth: number
   bandwidthIn: number
   bandwidthOut: number
@@ -86,7 +85,7 @@ export interface TimeSeriesData {
   connections: number
   bandwidthIn: number
   bandwidthOut: number
-  blocked?: number
+  inactive?: number
 }
 
 export interface MapViewState {
@@ -108,7 +107,7 @@ export interface DashboardFilters {
   countries?: string[]
   categories?: string[]
   protocols?: string[]
-  status?: ('active' | 'inactive' | 'blocked')[]
+  status?: ('active' | 'inactive')[]
   search?: string
 }
 

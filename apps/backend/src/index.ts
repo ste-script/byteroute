@@ -12,7 +12,7 @@ import {
   type InterServerEvents,
   type SocketData,
 } from "@byteroute/shared";
-import { type TypedSocketServer, loadConnectionsFromDb, startDemoMode, stopDemoMode } from "./services/connections.js";
+import { type TypedSocketServer, loadConnectionsFromDb, startDemoMode, stopDemoMode, emitStatisticsUpdate } from "./services/connections.js";
 import routes from "./routes/index.js";
 import { handleConnection } from "./controllers/socket.controller.js";
 
@@ -39,6 +39,7 @@ io.on("connection", (socket) => handleConnection(io, socket));
 const port = Number(process.env.PORT ?? 4000);
 const demoMode = process.env.DEMO_MODE === "true"; // Opt-in demo mode (real data by default)
 let demoTimer: NodeJS.Timeout | undefined;
+let statsEmitTimer: NodeJS.Timeout | undefined;
 
 async function start(): Promise<void> {
   await connectMongo();
@@ -52,6 +53,13 @@ async function start(): Promise<void> {
   } catch (err) {
     console.warn("Failed to load connections from Mongo (continuing):", err);
   }
+
+  // Emit statistics periodically to keep dashboard updated
+  const statsEmitIntervalMs = Number(process.env.STATS_EMIT_INTERVAL ?? 30000); // 30 seconds default
+  statsEmitTimer = setInterval(() => {
+    emitStatisticsUpdate(io);
+  }, statsEmitIntervalMs);
+  console.log(`Periodic statistics emission enabled (interval: ${statsEmitIntervalMs}ms)`);
 
   // Start demo mode if enabled
   if (demoMode) {
@@ -71,6 +79,11 @@ async function shutdown(signal: string): Promise<void> {
   // Stop demo mode
   if (demoTimer) {
     stopDemoMode(demoTimer);
+  }
+
+  // Stop periodic statistics emission
+  if (statsEmitTimer) {
+    clearInterval(statsEmitTimer);
   }
 
   io.close();

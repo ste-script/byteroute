@@ -43,7 +43,7 @@ describe('ConnectionList', () => {
       sourcePort: 54323,
       destPort: 443,
       protocol: 'UDP',
-      status: 'blocked',
+      status: 'inactive',
       country: 'France',
       countryCode: 'FR',
       category: 'Streaming',

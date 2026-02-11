@@ -15,6 +15,7 @@ import (
 	"github.com/byteroute/client-go/internal/capture"
 	"github.com/byteroute/client-go/internal/config"
 	"github.com/byteroute/client-go/internal/flow"
+	"github.com/byteroute/client-go/internal/metrics"
 )
 
 func main() {
@@ -47,6 +48,9 @@ func main() {
 	}
 
 	agg := flow.New(cfg.HostID, cfg.DedupMode, cfg.IdleTTL, localIPs)
+
+	// Create metrics collector for time-series data
+	metricsCollector := metrics.New(168) // Keep 7 days of hourly metrics
 
 	handle, packets, err := capture.Start(cfg.Iface, bpf, cfg.SnapLen, cfg.Promisc)
 	if err != nil {
@@ -82,6 +86,11 @@ func main() {
 	ticker := time.NewTicker(cfg.FlushInterval)
 	defer ticker.Stop()
 
+	// Metrics snapshot ticker (every minute for faster feedback)
+	metricsInterval := time.Minute
+	metricsTicker := time.NewTicker(metricsInterval)
+	defer metricsTicker.Stop()
+
 	backoff := 250 * time.Millisecond
 
 	for {
@@ -89,6 +98,29 @@ func main() {
 		case <-ctx.Done():
 			log.Printf("shutting down")
 			return
+		case <-metricsTicker.C:
+			// Take metrics snapshot and send to backend
+			snapshot := metricsCollector.TakeSnapshot()
+			snapshots := []backend.MetricsSnapshot{
+				{
+					Timestamp:    snapshot.Timestamp.UTC().Format(time.RFC3339Nano),
+					Connections:  snapshot.Connections,
+					BandwidthIn:  snapshot.BandwidthIn,
+					BandwidthOut: snapshot.BandwidthOut,
+					Inactive:     snapshot.Inactive,
+				},
+			}
+
+			reqCtx, cancelReq := context.WithTimeout(ctx, cfg.HTTPTimeout)
+			_, err := bc.PostMetrics(reqCtx, snapshots)
+			cancelReq()
+
+			if err != nil {
+				log.Printf("post metrics failed: %v", err)
+			} else {
+				log.Printf("posted metrics snapshot: %d connections (%d inactive), %s in, %s out",
+					snapshot.Connections, snapshot.Inactive, formatBytes(snapshot.BandwidthIn), formatBytes(snapshot.BandwidthOut))
+			}
 		case t := <-ticker.C:
 			agg.Prune(t)
 
@@ -122,6 +154,22 @@ func main() {
 				backoff = 250 * time.Millisecond
 				agg.Ack(keys)
 				log.Printf("posted %d connections", len(batch))
+
+				// Record metrics for posted connections
+				for _, conn := range batch {
+					bytesIn := int64(0)
+					bytesOut := int64(0)
+					inactive := conn.Status == "inactive"
+
+					if conn.BytesIn != nil {
+						bytesIn = *conn.BytesIn
+					}
+					if conn.BytesOut != nil {
+						bytesOut = *conn.BytesOut
+					}
+
+					metricsCollector.RecordConnection(conn.ID, bytesIn, bytesOut, inactive)
+				}
 			}
 		}
 	}
@@ -132,6 +180,19 @@ func minDuration(a, b time.Duration) time.Duration {
 		return a
 	}
 	return b
+}
+
+func formatBytes(bytes int64) string {
+	const unit = 1000
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 func enforceMaxBytes(batch []backend.Connection, keys []flow.Key, maxBytes int) ([]backend.Connection, []flow.Key) {

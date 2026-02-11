@@ -15,7 +15,7 @@ export type IngestConnectionsOptions = {
 };
 
 const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);
-const ALLOWED_STATUSES = new Set<Connection["status"]>(["active", "inactive", "blocked"]);
+const ALLOWED_STATUSES = new Set<Connection["status"]>(["active", "inactive"]);
 
 let generatedIdCounter = 0;
 
