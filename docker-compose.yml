@@ -40,7 +40,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: "4000"
+      PORT: "3000"
       MONGODB_URI: mongodb://mongodb:27017/byteroute
       # Required by the backend entrypoint (downloads GeoLite2 databases on start)
       MAXMIND_USER_ID: ${MAXMIND_USER_ID:?set in .env}
@@ -50,10 +50,11 @@ services:
     labels:
       - traefik.enable=true
       # Route REST API + Socket.IO to backend
-      - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`)
+      - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`) || Path(`/health`)
       - traefik.http.routers.byteroute-api.entrypoints=web
       - traefik.http.routers.byteroute-api.priority=100
-      - traefik.http.services.byteroute-backend.loadbalancer.server.port=4000
+      - traefik.http.routers.byteroute-api.service=byteroute-backend
+      - traefik.http.services.byteroute-backend.loadbalancer.server.port=3000
     networks:
       - internal
       - traefik
@@ -70,6 +71,7 @@ services:
       - traefik.http.routers.byteroute-ui.rule=PathPrefix(`/`)
       - traefik.http.routers.byteroute-ui.entrypoints=web
       - traefik.http.routers.byteroute-ui.priority=1
+      - traefik.http.routers.byteroute-ui.service=byteroute-dashboard
       - traefik.http.services.byteroute-dashboard.loadbalancer.server.port=80
     networks:
       - traefik
