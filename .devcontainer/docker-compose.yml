@@ -8,7 +8,13 @@ services:
         condition: service_healthy
     volumes:
       # Bind-mount the repo into the container with SELinux relabeling.
-      - ..:/workspaces/byteroute:z
+      - type: bind
+        read_only: false
+        source: ../
+        target: /workspaces/byteroute
+        bind:
+          propagation: shared
+          selinux: z
     command: sleep infinity
 
   mongodb:
