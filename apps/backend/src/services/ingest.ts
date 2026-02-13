@@ -3,6 +3,7 @@ import { ConnectionModel } from "@byteroute/shared";
 import type { TypedSocketServer } from "./connections.js";
 import { upsertConnectionsLocal, emitStatisticsUpdate, emitTrafficFlows } from "./connections.js";
 import { enrichBatch } from "./geoip.js";
+import { ensureTenantId } from "../utils/tenant.js";
 
 type IngestResult = {
   received: number;
@@ -12,6 +13,7 @@ type IngestResult = {
 
 export type IngestConnectionsOptions = {
   reporterIp?: string;
+  tenantId?: string;
 };
 
 const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);
@@ -34,7 +36,7 @@ function coerceDate(value: unknown, fallback: Date): Date {
   return fallback;
 }
 
-function normalizeConnection(input: Partial<Connection>): Connection {
+function normalizeConnection(input: Partial<Connection>, tenantId: string): Connection {
   const nowIso = toIsoNow();
 
   const id =
@@ -50,6 +52,7 @@ function normalizeConnection(input: Partial<Connection>): Connection {
 
   return {
     id,
+    tenantId,
     sourceIp: input.sourceIp ?? "0.0.0.0",
     destIp: input.destIp ?? "0.0.0.0",
     sourcePort: input.sourcePort ?? 0,
@@ -91,7 +94,7 @@ async function upsertConnectionsInDb(connections: Connection[]): Promise<number>
 
     return {
       updateOne: {
-        filter: { id: c.id },
+        filter: { tenantId: c.tenantId, id: c.id },
         update: {
           $set: {
             ...c,
@@ -118,16 +121,17 @@ export async function enrichAndStoreConnections(
   rawConnections: Partial<Connection>[],
   options: IngestConnectionsOptions = {}
 ): Promise<IngestResult> {
-  const normalized = rawConnections.map(normalizeConnection);
+  const tenantId = ensureTenantId(options.tenantId);
+  const normalized = rawConnections.map((connection) => normalizeConnection(connection, tenantId));
 
   const enriched = await enrichBatch(normalized, { reporterIp: options.reporterIp });
 
   const stored = await upsertConnectionsInDb(enriched);
 
   if (io) {
-    upsertConnectionsLocal(io, enriched);
-    emitStatisticsUpdate(io);
-    emitTrafficFlows(io);
+    upsertConnectionsLocal(io, tenantId, enriched);
+    emitStatisticsUpdate(io, tenantId);
+    emitTrafficFlows(io, tenantId);
   }
 
   const enrichedCount = enriched.filter((c) => c.enriched).length;
@@ -139,7 +143,13 @@ export async function enrichAndStoreConnections(
   };
 }
 
-export async function storeRawConnections(rawConnections: Partial<Connection>[]): Promise<number> {
-  const normalized = rawConnections.map(normalizeConnection).map((c) => ({ ...c, enriched: false }));
+export async function storeRawConnections(
+  rawConnections: Partial<Connection>[],
+  options: IngestConnectionsOptions = {}
+): Promise<number> {
+  const tenantId = ensureTenantId(options.tenantId);
+  const normalized = rawConnections
+    .map((connection) => normalizeConnection(connection, tenantId))
+    .map((c) => ({ ...c, enriched: false }));
   return upsertConnectionsInDb(normalized);
 }

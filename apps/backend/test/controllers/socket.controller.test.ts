@@ -5,12 +5,12 @@ import type { TypedSocketServer } from '../../src/services/connections.js'
 
 // Mock the connections service
 vi.mock('../../src/services/connections.js', () => ({
-  getConnections: vi.fn(() => []),
+  getConnectionsForTenant: vi.fn(() => []),
   emitStatisticsUpdate: vi.fn(),
   emitTrafficFlows: vi.fn()
 }))
 
-import { getConnections, emitStatisticsUpdate, emitTrafficFlows } from '../../src/services/connections.js'
+import { getConnectionsForTenant, emitStatisticsUpdate, emitTrafficFlows } from '../../src/services/connections.js'
 
 const createMockSocket = (): TypedSocket => {
   const socket: any = {
@@ -65,24 +65,24 @@ describe('Socket Controller', () => {
         { id: 'conn1', sourceIp: '1.2.3.4' },
         { id: 'conn2', sourceIp: '5.6.7.8' }
       ]
-      vi.mocked(getConnections).mockReturnValue(mockConnections as any)
+      vi.mocked(getConnectionsForTenant).mockReturnValue(mockConnections as any)
 
       handleConnection(mockIo, mockSocket)
 
-      expect(getConnections).toHaveBeenCalled()
+      expect(getConnectionsForTenant).toHaveBeenCalledWith('default')
       expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', mockConnections)
     })
 
     it('should emit statistics update', () => {
       handleConnection(mockIo, mockSocket)
 
-      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo)
+      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo, 'default')
     })
 
     it('should emit traffic flows', () => {
       handleConnection(mockIo, mockSocket)
 
-      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo)
+      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo, 'default')
     })
 
     it('should register event handlers', () => {
@@ -188,11 +188,23 @@ describe('Socket Controller', () => {
     })
 
     it('should send empty array if no connections', () => {
-      vi.mocked(getConnections).mockReturnValue([])
+      vi.mocked(getConnectionsForTenant).mockReturnValue([])
 
       handleConnection(mockIo, mockSocket)
 
       expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', [])
+    })
+
+    it('should use explicit tenant from handshake auth', () => {
+      ;(mockSocket as any).handshake = { auth: { tenantId: 'tenant-acme' } }
+
+      handleConnection(mockIo, mockSocket)
+
+      expect(mockSocket.data.tenantId).toBe('tenant-acme')
+      expect(mockSocket.join).toHaveBeenCalledWith('tenant:tenant-acme')
+      expect(getConnectionsForTenant).toHaveBeenCalledWith('tenant-acme')
+      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo, 'tenant-acme')
+      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo, 'tenant-acme')
     })
   })
 })

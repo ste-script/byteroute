@@ -12,7 +12,13 @@ import {
   type InterServerEvents,
   type SocketData,
 } from "@byteroute/shared";
-import { type TypedSocketServer, loadConnectionsFromDb, startDemoMode, stopDemoMode, emitStatisticsUpdate } from "./services/connections.js";
+import {
+  type TypedSocketServer,
+  loadConnectionsFromDb,
+  startDemoMode,
+  stopDemoMode,
+  emitStatisticsUpdateAllTenants,
+} from "./services/connections.js";
 import routes from "./routes/index.js";
 import { handleConnection } from "./controllers/socket.controller.js";
 
@@ -57,7 +63,7 @@ async function start(): Promise<void> {
   // Emit statistics periodically to keep dashboard updated
   const statsEmitIntervalMs = Number(process.env.STATS_EMIT_INTERVAL ?? 30000); // 30 seconds default
   statsEmitTimer = setInterval(() => {
-    emitStatisticsUpdate(io);
+    emitStatisticsUpdateAllTenants(io);
   }, statsEmitIntervalMs);
   console.log(`Periodic statistics emission enabled (interval: ${statsEmitIntervalMs}ms)`);
 

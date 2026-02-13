@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import Button from 'primevue/button'
 import SelectButton from 'primevue/selectbutton'
 import Badge from 'primevue/badge'
+import Select from 'primevue/select'
 import WorldMap from '@/components/WorldMap.vue'
 import TrafficChart from '@/components/TrafficChart.vue'
 import StatisticsPanel from '@/components/StatisticsPanel.vue'
@@ -34,6 +35,20 @@ const timeRangeOptions = [
   { label: '24H', value: '24h' },
   { label: '7D', value: '7d' }
 ]
+
+const connectionLimit = ref<5 | 10 | 20>(10)
+const connectionLimitOptions: Array<{ label: string; value: 5 | 10 | 20 }> = [
+  { label: 'Last 5', value: 5 },
+  { label: 'Last 10', value: 10 },
+  { label: 'Last 20', value: 20 }
+]
+
+const connectionsPaused = ref(false)
+
+function toggleConnectionsPaused() {
+  connectionsPaused.value = !connectionsPaused.value
+  socket.emit(connectionsPaused.value ? 'unsubscribe' : 'subscribe', { rooms: ['connections'] })
+}
 
 // Mock data for demo (remove when backend is connected)
 const mockTimeSeriesData = ref<TimeSeriesData[]>([])
@@ -129,15 +144,31 @@ const displayFlows = computed(() =>
   trafficFlows.value.length > 0 ? trafficFlows.value : mockFlows.value
 )
 
+const limitedConnections = computed(() => {
+  return connections.value.slice(0, connectionLimit.value)
+})
+
 // Socket event handlers
 const unsubscribers: (() => void)[] = []
 
 function setupSocketListeners() {
   unsubscribers.push(
-    socket.on('connection:new', (conn) => store.addConnection(conn)),
-    socket.on('connection:update', (conn) => store.updateConnection(conn.id, conn)),
-    socket.on('connection:remove', ({ id }) => store.removeConnection(id)),
-    socket.on('connections:batch', (conns) => store.setConnections(conns)),
+    socket.on('connection:new', (conn) => {
+      if (connectionsPaused.value) return
+      store.addConnection(conn)
+    }),
+    socket.on('connection:update', (conn) => {
+      if (connectionsPaused.value) return
+      store.updateConnection(conn.id, conn)
+    }),
+    socket.on('connection:remove', ({ id }) => {
+      if (connectionsPaused.value) return
+      store.removeConnection(id)
+    }),
+    socket.on('connections:batch', (conns) => {
+      if (connectionsPaused.value) return
+      store.setConnections(conns)
+    }),
     socket.on('traffic:flows', (flows) => store.setTrafficFlows(flows)),
     socket.on('statistics:update', (stats) => store.setStatistics(stats))
   )
@@ -168,7 +199,7 @@ onMounted(() => {
   generateMockData()
   
   // Connect to socket
-  socket.connect()
+  socket.connect(undefined, import.meta.env.VITE_TENANT_ID)
   setupSocketListeners()
   
   // Subscribe to initial data
@@ -257,12 +288,29 @@ onUnmounted(() => {
           <!-- Connections -->
           <div class="sidebar-section connections-section">
             <div class="panel-header">
-              <span class="panel-title">Live Connections</span>
-              <Badge :value="connections.length.toString()" severity="info" />
+              <div class="connections-header-left">
+                <span class="panel-title">Live Connections</span>
+                <Badge :value="connections.length.toString()" severity="info" />
+              </div>
+              <div class="connections-header-right">
+                <Select
+                  v-model="connectionLimit"
+                  :options="connectionLimitOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="connections-limit"
+                />
+                <Button
+                  :icon="connectionsPaused ? 'pi pi-play' : 'pi pi-pause'"
+                  text
+                  size="small"
+                  @click="toggleConnectionsPaused"
+                />
+              </div>
             </div>
             <div class="panel-content no-padding">
               <ConnectionList
-                :connections="connections"
+                :connections="limitedConnections"
                 @select="handleConnectionSelect"
               />
             </div>
@@ -381,6 +429,17 @@ onUnmounted(() => {
 .connections-section {
   flex: 1;
   min-height: 0;
+}
+
+.connections-header-left,
+.connections-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.connections-limit {
+  min-width: 8.5rem;
 }
 
 .sidebar-section .panel-content {

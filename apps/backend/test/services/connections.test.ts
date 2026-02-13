@@ -30,7 +30,18 @@ const createIo = () => ({
   emit: vi.fn()
 });
 
+const createRoomedIo = () => {
+  const roomEmit = vi.fn();
+  return {
+    emit: vi.fn(),
+    to: vi.fn(() => ({ emit: roomEmit })),
+    roomEmit,
+  };
+};
+
 describe("connections service", () => {
+  const TENANT = "default";
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
@@ -52,7 +63,7 @@ describe("connections service", () => {
 
     const count = await service.loadConnectionsFromDb(10);
     expect(count).toBe(2);
-    expect(service.getConnections().map((c) => c.id)).toEqual(["a", "b"]);
+    expect(service.getAllConnectionsSnapshot().map((c) => c.id)).toEqual(["a", "b"]);
   });
 
   it("adds and updates connections with events", async () => {
@@ -63,16 +74,16 @@ describe("connections service", () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    const created = service.addConnection(io as any);
+    const created = service.addConnection(io as any, TENANT);
     expect(created.id).toBe("conn-1");
     expect(io.emit).toHaveBeenCalledWith("connection:new", created);
     expect(io.emit).toHaveBeenCalledWith("statistics:update", { totalConnections: 1 });
 
-    const fetched = service.getConnection("conn-1");
+    const fetched = service.getConnectionById(TENANT, "conn-1");
     expect(fetched?.id).toBe("conn-1");
-    expect(service.getConnection("missing")).toBeUndefined();
+    expect(service.getConnectionById(TENANT, "missing")).toBeUndefined();
 
-    const updated = service.updateConnection(io as any, "conn-1", { status: "inactive" });
+    const updated = service.updateConnection(io as any, TENANT, "conn-1", { status: "inactive" });
     expect(updated?.status).toBe("inactive");
     expect(updated?.id).toBe("conn-1");
     expect(io.emit).toHaveBeenCalledWith("connection:update", expect.objectContaining({ id: "conn-1" }));
@@ -83,7 +94,7 @@ describe("connections service", () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.upsertConnectionsLocal(io as any, [
+    service.upsertConnectionsLocal(io as any, TENANT, [
       { id: "a" } as any,
       { id: "b" } as any
     ]);
@@ -91,21 +102,21 @@ describe("connections service", () => {
     expect(io.emit).toHaveBeenCalledWith("connection:new", expect.objectContaining({ id: "a" }));
     expect(io.emit).toHaveBeenCalledWith("connection:new", expect.objectContaining({ id: "b" }));
 
-    service.upsertConnectionsLocal(io as any, [
+    service.upsertConnectionsLocal(io as any, TENANT, [
       { id: "a" } as any
     ]);
 
     expect(io.emit).toHaveBeenCalledWith("connection:update", expect.objectContaining({ id: "a" }));
 
-    const removed = service.removeConnection(io as any, "a");
+    const removed = service.removeConnection(io as any, TENANT, "a");
     expect(removed).toBe(true);
     expect(io.emit).toHaveBeenCalledWith("connection:remove", { id: "a" });
 
-    const missing = service.removeConnection(io as any, "missing");
+    const missing = service.removeConnection(io as any, TENANT, "missing");
     expect(missing).toBe(false);
 
-    service.emitConnectionsBatch(io as any);
-    expect(io.emit).toHaveBeenCalledWith("connections:batch", service.getConnections());
+    service.emitConnectionsBatch(io as any, TENANT);
+    expect(io.emit).toHaveBeenCalledWith("connections:batch", service.getConnectionsForTenant(TENANT));
   });
 
   it("emits traffic flows and errors", async () => {
@@ -115,21 +126,61 @@ describe("connections service", () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.emitTrafficFlows(io as any);
+    service.emitTrafficFlows(io as any, TENANT);
     expect(io.emit).toHaveBeenCalledWith("traffic:flows", [{ id: "flow-1" }]);
 
-    service.emitStatisticsUpdate(io as any);
+    service.emitStatisticsUpdate(io as any, TENANT);
     expect(io.emit).toHaveBeenCalledWith("statistics:update", { totalConnections: 0 });
 
     service.emitError(io as any, "nope", "E_TEST");
     expect(io.emit).toHaveBeenCalledWith("error", { message: "nope", code: "E_TEST" });
   });
 
+  it("emits to tenant room when io.to exists", async () => {
+    generateConnection.mockReturnValue({ id: "conn-room", status: "active" });
+    generateStatistics.mockReturnValue({ totalConnections: 1 });
+
+    const service = await import("../../src/services/connections.js");
+    const io = createRoomedIo();
+
+    service.addConnection(io as any, "tenant-room");
+
+    expect(io.to).toHaveBeenCalledWith("tenant:tenant-room");
+    expect(io.roomEmit).toHaveBeenCalledWith(
+      "connection:new",
+      expect.objectContaining({ id: "conn-room", tenantId: "tenant-room" })
+    );
+    expect(io.emit).not.toHaveBeenCalledWith("connection:new", expect.anything());
+  });
+
+  it("emits statistics and flows for all known tenants", async () => {
+    generateTrafficFlows.mockReturnValue([{ id: "flow-multi" }]);
+    generateStatistics.mockReturnValue({ totalConnections: 1 });
+
+    const service = await import("../../src/services/connections.js");
+    const io = createIo();
+
+    service.upsertConnectionsLocal(io as any, "tenant-a", [{ id: "t1-a", tenantId: "tenant-a" } as any]);
+    service.upsertConnectionsLocal(io as any, "tenant-b", [{ id: "t2-a", tenantId: "tenant-b" } as any]);
+
+    io.emit.mockClear();
+    service.emitTrafficFlowsAllTenants(io as any);
+    service.emitStatisticsUpdateAllTenants(io as any);
+
+    expect(io.emit).toHaveBeenCalledWith("traffic:flows", [{ id: "flow-multi" }]);
+    expect(io.emit).toHaveBeenCalledWith("statistics:update", { totalConnections: 1 });
+
+    const flowCalls = io.emit.mock.calls.filter(([event]) => event === "traffic:flows");
+    const statsCalls = io.emit.mock.calls.filter(([event]) => event === "statistics:update");
+    expect(flowCalls.length).toBeGreaterThanOrEqual(2);
+    expect(statsCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("handles missing connection updates", async () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    const missing = service.updateConnection(io as any, "missing", { status: "inactive" });
+    const missing = service.updateConnection(io as any, TENANT, "missing", { status: "inactive" });
     expect(missing).toBeNull();
   });
 
@@ -139,10 +190,10 @@ describe("connections service", () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.addConnection(io as any);
+    service.addConnection(io as any, TENANT);
     io.emit.mockClear();
 
-    const updated = service.updateConnection(io as any, "conn-2", { bandwidth: 1000 });
+    const updated = service.updateConnection(io as any, TENANT, "conn-2", { bandwidth: 1000 });
     expect(updated?.bandwidth).toBe(1000);
 
     expect(io.emit).toHaveBeenCalledWith("connection:update", expect.objectContaining({ id: "conn-2" }));
@@ -165,7 +216,7 @@ describe("connections service", () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.upsertConnectionsLocal(io as any, Array.from({ length: 11 }, (_, i) => ({ id: `seed-${i}` } as any)));
+    service.upsertConnectionsLocal(io as any, TENANT, Array.from({ length: 11 }, (_, i) => ({ id: `seed-${i}` } as any)));
 
     const randomValues = [
       0.1,
@@ -190,7 +241,7 @@ describe("connections service", () => {
     service.stopDemoMode(timer);
     randomSpy.mockRestore();
 
-    expect(service.getConnections().length).toBeGreaterThanOrEqual(10);
+    expect(service.getAllConnectionsSnapshot().length).toBeGreaterThanOrEqual(10);
   });
 
   it("skips demo updates when no connections", async () => {
@@ -205,14 +256,14 @@ describe("connections service", () => {
     service.stopDemoMode(timer);
 
     randomSpy.mockRestore();
-    expect(service.getConnections()).toHaveLength(0);
+    expect(service.getAllConnectionsSnapshot()).toHaveLength(0);
   });
 
   it("skips demo removal when under threshold", async () => {
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.upsertConnectionsLocal(io as any, Array.from({ length: 5 }, (_, i) => ({ id: `seed-${i}` } as any)));
+    service.upsertConnectionsLocal(io as any, TENANT, Array.from({ length: 5 }, (_, i) => ({ id: `seed-${i}` } as any)));
 
     const removeSpy = vi.spyOn(service, "removeConnection");
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.8);

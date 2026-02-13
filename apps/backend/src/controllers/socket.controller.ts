@@ -7,10 +7,11 @@ import type {
 } from "@byteroute/shared";
 import {
   type TypedSocketServer,
-  getConnections,
+  getConnectionsForTenant,
   emitStatisticsUpdate,
   emitTrafficFlows,
 } from "../services/connections.js";
+import { resolveTenantContextFromSocketHandshake } from "../utils/tenant.js";
 
 export type TypedSocket = Socket<
   ClientToServerEvents,
@@ -20,16 +21,20 @@ export type TypedSocket = Socket<
 >;
 
 export function handleConnection(io: TypedSocketServer, socket: TypedSocket): void {
+  const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(socket.handshake);
+
   console.log(`Client connected: ${socket.id}`);
 
   // Initialize socket data
+  socket.data.tenantId = tenantId;
   socket.data.subscribedRooms = [];
+  void socket.join(tenantRoom);
 
   // Send initial data to client
-  const connections = getConnections();
+  const connections = getConnectionsForTenant(tenantId);
   socket.emit("connections:batch", connections);
-  emitStatisticsUpdate(io);
-  emitTrafficFlows(io);
+  emitStatisticsUpdate(io, tenantId);
+  emitTrafficFlows(io, tenantId);
 
   // Register event handlers
   socket.on("subscribe", (data) => handleSubscribe(socket, data));

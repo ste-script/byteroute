@@ -12,11 +12,12 @@ import (
 )
 
 type Client struct {
-	baseURL *url.URL
-	hc      *http.Client
+	baseURL  *url.URL
+	hc       *http.Client
+	tenantID string
 }
 
-func NewClient(baseURL string, timeout time.Duration) (*Client, error) {
+func NewClient(baseURL string, timeout time.Duration, tenantID string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -27,6 +28,7 @@ func NewClient(baseURL string, timeout time.Duration) (*Client, error) {
 		hc: &http.Client{
 			Timeout: timeout,
 		},
+		tenantID: tenantID,
 	}, nil
 }
 
@@ -44,6 +46,9 @@ func (c *Client) PostConnections(ctx context.Context, connections []Connection) 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.tenantID != "" {
+		req.Header.Set("X-Tenant-ID", c.tenantID)
+	}
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
@@ -80,6 +85,9 @@ func (c *Client) PostMetrics(ctx context.Context, snapshots []MetricsSnapshot) (
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.tenantID != "" {
+		req.Header.Set("X-Tenant-ID", c.tenantID)
+	}
 
 	resp, err := c.hc.Do(req)
 	if err != nil {

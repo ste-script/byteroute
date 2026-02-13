@@ -28,7 +28,7 @@ class SocketService {
     return readonly(this._connectionError)
   }
 
-  connect(url?: string): void {
+  connect(url?: string, tenantId?: string): void {
     if (this.socket?.connected) {
       return
     }
@@ -41,7 +41,9 @@ class SocketService {
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000
+      timeout: 20000,
+      auth: tenantId ? { tenantId } : undefined,
+      query: tenantId ? { tenantId } : undefined
     })
 
     this.setupEventHandlers()
@@ -152,7 +154,7 @@ export function useSocket() {
   return {
     isConnected: socketService.isConnected,
     connectionError: socketService.connectionError,
-    connect: (url?: string) => socketService.connect(url),
+    connect: (url?: string, tenantId?: string) => socketService.connect(url, tenantId),
     disconnect: () => socketService.disconnect(),
     reconnect: () => socketService.reconnect(),
     on: <K extends keyof SocketEvents>(

@@ -19,6 +19,10 @@ func TestClient_PostConnections(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-a" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 
 		var payload ConnectionsPayload
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -36,7 +40,7 @@ func TestClient_PostConnections(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c, err := NewClient(ts.URL, 2*time.Second)
+	c, err := NewClient(ts.URL, 2*time.Second, "tenant-a")
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}

@@ -3,6 +3,7 @@ import type { Connection } from "@byteroute/shared";
 import type { TypedSocketServer } from "../services/connections.js";
 import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
 import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
+import { resolveTenantContextFromRequest } from "../utils/tenant.js";
 
 type ConnectionsBody = {
   connections?: Partial<Connection>[];
@@ -21,14 +22,17 @@ export async function postConnections(req: Request, res: Response): Promise<void
   res.status(202).json({ received: connections.length, status: "processing" });
 
   const io = req.app.get("io") as TypedSocketServer | undefined;
+  const { tenantId } = resolveTenantContextFromRequest(req);
 
   // Detect client IP from request (supports X-Forwarded-For)
   const reporterIp = firstForwardedFor(req.headers["x-forwarded-for"]) ?? normalizeIp(req.ip) ?? normalizeIp(req.socket.remoteAddress);
 
-  void enrichAndStoreConnections(io, connections, { reporterIp }).catch((err) => {
+  void enrichAndStoreConnections(io, connections, { reporterIp, tenantId }).catch((err) => {
     console.error("Enrichment failed:", err);
 
-    void storeRawConnections(connections).catch((fallbackErr) => {
+    const fallbackWrite = storeRawConnections(connections, { tenantId });
+
+    void fallbackWrite.catch((fallbackErr) => {
       console.error("Raw insert fallback failed:", fallbackErr);
     });
   });

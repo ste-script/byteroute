@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { metricsStore } from "../services/metrics.js";
 import type { TimeSeriesData } from "@byteroute/shared";
+import { resolveTenantIdFromRequest } from "../utils/tenant.js";
 
 interface MetricsRequestBody {
   snapshots: TimeSeriesData[];
@@ -15,8 +16,10 @@ export async function postMetrics(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const tenantId = resolveTenantIdFromRequest(req);
+
     // Store the metrics
-    metricsStore.addSnapshots(body.snapshots);
+    metricsStore.addSnapshots(tenantId, body.snapshots);
 
     res.status(202).json({
       received: body.snapshots.length,
