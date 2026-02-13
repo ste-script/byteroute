@@ -2,7 +2,9 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -33,6 +35,8 @@ func env(key, def string) string {
 
 func Parse() Config {
 	var cfg Config
+	var flowFlag string
+	defaultFlush := 5 * time.Second
 
 	flag.BoolVar(&cfg.ListIfaces, "list-ifaces", false, "List network interfaces and exit")
 
@@ -42,7 +46,8 @@ func Parse() Config {
 	flag.IntVar(&cfg.SnapLen, "snaplen", 1600, "pcap snapshot length")
 	flag.BoolVar(&cfg.Promisc, "promisc", true, "Enable promiscuous mode")
 
-	flag.DurationVar(&cfg.FlushInterval, "flush", 5*time.Second, "Flush interval")
+	flag.DurationVar(&cfg.FlushInterval, "flush", defaultFlush, "Flush interval")
+	flag.StringVar(&flowFlag, "flow", env("BYTEROUTE_FLOW", ""), "Legacy alias for --flush (e.g. 5s or 5)")
 	flag.IntVar(&cfg.MaxBatchConns, "max-batch-conns", 200, "Max connections per HTTP batch")
 	flag.IntVar(&cfg.MaxBatchBytes, "max-batch-bytes", 1500000, "Max JSON payload size per batch (bytes)")
 
@@ -54,5 +59,18 @@ func Parse() Config {
 	flag.DurationVar(&cfg.IdleTTL, "idle-ttl", 2*time.Minute, "Drop flows idle longer than this")
 
 	flag.Parse()
+
+	// Best-effort precedence: if the user set --flush explicitly, keep it;
+	// otherwise allow legacy --flow to override the default.
+	if flowFlag != "" && cfg.FlushInterval == defaultFlush {
+		if d, err := time.ParseDuration(flowFlag); err == nil {
+			cfg.FlushInterval = d
+		} else if secs, err := strconv.Atoi(flowFlag); err == nil {
+			cfg.FlushInterval = time.Duration(secs) * time.Second
+		} else {
+			fmt.Fprintf(os.Stderr, "invalid --flow value %q (expected duration like 5s or integer seconds like 5)\n", flowFlag)
+			os.Exit(2)
+		}
+	}
 	return cfg
 }

@@ -38,6 +38,8 @@ sudo setcap cap_net_raw,cap_net_admin=eip ./byteroute-client
 	--flush 5s
 ```
 
+Note: `--flow` is a legacy alias for `--flush`. It accepts either a duration (`5s`) or integer seconds (`5`). Prefer `--flush`.
+
 List interfaces:
 
 ```bash
@@ -54,6 +56,8 @@ List interfaces:
 - `--max-batch-conns`: max records per request
 - `--max-batch-bytes`: max JSON payload bytes per request (backend uses 2mb limit)
 - `--idle-ttl`: drop flows that have been idle
+- `--flush`: how often to post updates
+- `--flow`: legacy alias for `--flush`
 
 ### Env vars
 

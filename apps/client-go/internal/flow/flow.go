@@ -43,6 +43,20 @@ type Aggregator struct {
 	flows map[Key]*entry
 }
 
+// ResetPending clears the internal pending state for all flows.
+//
+// ExportBatch marks selected flows as pending so they are not selected again
+// until Ack/Nack. By leaving flows pending after a successful Ack, we ensure a
+// flow is posted at most once per flush interval even under continuous traffic.
+// Call ResetPending once per flush interval to allow re-export.
+func (a *Aggregator) ResetPending() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, e := range a.flows {
+		e.pending = false
+	}
+}
+
 func New(hostID, dedupMode string, idleTTL time.Duration, localIPs map[string]struct{}) *Aggregator {
 	if localIPs == nil {
 		localIPs = map[string]struct{}{}
@@ -211,7 +225,8 @@ func (a *Aggregator) Ack(keys []Key) {
 	defer a.mu.Unlock()
 	for _, k := range keys {
 		if e := a.flows[k]; e != nil {
-			e.pending = false
+			// Keep pending=true until the next flush interval to avoid immediately
+			// re-exporting the same flow within the same flush tick.
 			e.dirty = false
 		}
 	}

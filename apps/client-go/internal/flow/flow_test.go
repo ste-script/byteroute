@@ -49,3 +49,33 @@ func TestAggregator_DedupeByIP(t *testing.T) {
 		t.Fatalf("expected 1 flow, got %d", len(batch))
 	}
 }
+
+func TestAggregator_DoesNotReExportWithinInterval(t *testing.T) {
+	localIPs := map[string]struct{}{"10.0.0.1": {}}
+	agg := New("host", "flow", 0, localIPs)
+
+	now := time.Now()
+	agg.Update(now, net.ParseIP("10.0.0.1"), net.ParseIP("8.8.8.8"), 1234, 53, "UDP", 100)
+
+	batch, keys := agg.ExportBatch(10)
+	if len(batch) != 1 {
+		t.Fatalf("expected 1 flow, got %d", len(batch))
+	}
+	agg.Ack(keys)
+
+	// More traffic arrives for the same flow during the same flush tick.
+	agg.Update(now.Add(10*time.Millisecond), net.ParseIP("10.0.0.1"), net.ParseIP("8.8.8.8"), 1234, 53, "UDP", 50)
+
+	// Without ResetPending, the flow should not be exported again in this interval.
+	batch2, _ := agg.ExportBatch(10)
+	if len(batch2) != 0 {
+		t.Fatalf("expected no export before ResetPending, got %d", len(batch2))
+	}
+
+	// Next interval: allow re-export.
+	agg.ResetPending()
+	batch3, _ := agg.ExportBatch(10)
+	if len(batch3) != 1 {
+		t.Fatalf("expected export after ResetPending, got %d", len(batch3))
+	}
+}
