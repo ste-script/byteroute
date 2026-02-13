@@ -2,7 +2,7 @@
   "name": "@byteroute/dashboard",
   "private": true,
   "type": "module",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc -b && vite build",
