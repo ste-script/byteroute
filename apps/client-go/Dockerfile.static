@@ -6,7 +6,8 @@ RUN apk add --no-cache \
     gcc \
     musl-dev \
     libpcap-dev \
-    linux-headers
+    linux-headers \
+    ca-certificates
 
 WORKDIR /build
 
@@ -29,4 +30,6 @@ RUN CGO_ENABLED=1 \
 # Minimal runtime image
 FROM scratch
 COPY --from=builder /build/byteroute-client /byteroute-client
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["/byteroute-client"]
