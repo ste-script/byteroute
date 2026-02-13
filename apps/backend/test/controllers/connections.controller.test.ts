@@ -229,7 +229,7 @@ describe('Connections Controller', () => {
       expect(res.statusCode).toBe(202)
 
       // Should call fallback
-      expect(storeRawConnections).toHaveBeenCalledWith(connections)
+      expect(storeRawConnections).toHaveBeenCalledWith(connections, { tenantId: 'default' })
     })
 
     it('should handle fallback failure gracefully', async () => {
@@ -256,6 +256,22 @@ describe('Connections Controller', () => {
       expect(consoleError).toHaveBeenCalledWith('Raw insert fallback failed:', expect.any(Error))
 
       consoleError.mockRestore()
+    })
+
+    it('should use tenant-aware fallback for non-default tenant', async () => {
+      const connections = [createConnection()]
+      const req = createMockRequest(
+        { connections },
+        { 'x-tenant-id': 'tenant-acme' }
+      )
+      const res = createMockResponse()
+
+      vi.mocked(enrichAndStoreConnections).mockRejectedValue(new Error('Enrichment failed'))
+
+      await postConnections(req as Request, res as Response)
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(storeRawConnections).toHaveBeenCalledWith(connections, { tenantId: 'tenant-acme' })
     })
   })
 })

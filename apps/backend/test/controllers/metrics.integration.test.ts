@@ -3,11 +3,7 @@ import request from 'supertest'
 import express, { type Express } from 'express'
 import { metricsStore } from '../../src/services/metrics.js'
 import { postMetrics } from '../../src/controllers/metrics.controller.js'
-
-/**
- * Integration tests for metrics API endpoint
- * Tests the full flow: HTTP request → controller → service → storage
- */
+import { DEFAULT_TENANT_ID } from '../../src/utils/tenant.js'
 
 const createTestApp = (): Express => {
   const app = express()
@@ -26,28 +22,22 @@ describe('Metrics API Integration', () => {
 
   describe('POST /api/metrics', () => {
     it('should accept and store metrics snapshots', async () => {
-      const snapshots = [
-        {
-          timestamp: new Date().toISOString(),
-          connections: 100,
-          bandwidthIn: 50000,
-          bandwidthOut: 30000,
-          inactive: 5
-        }
-      ]
+      const snapshots = [{
+        timestamp: new Date().toISOString(),
+        connections: 100,
+        bandwidthIn: 50000,
+        bandwidthOut: 30000,
+        inactive: 5
+      }]
 
       const response = await request(app)
         .post('/api/metrics')
         .send({ snapshots })
         .expect(202)
 
-      expect(response.body).toEqual({
-        received: 1,
-        status: 'processing'
-      })
+      expect(response.body).toEqual({ received: 1, status: 'processing' })
 
-      // Verify data was stored
-      const stored = metricsStore.getAllSnapshots()
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
       expect(stored).toHaveLength(1)
       expect(stored[0]!.connections).toBe(100)
     })
@@ -66,9 +56,9 @@ describe('Metrics API Integration', () => {
         .send({ snapshots })
         .expect(202)
 
-      const stored = metricsStore.getAllSnapshots()
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
       expect(stored).toHaveLength(5)
-      expect(stored.map(s => s.connections)).toEqual([10, 20, 30, 40, 50])
+      expect(stored.map((snapshot) => snapshot.connections)).toEqual([10, 20, 30, 40, 50])
     })
 
     it('should reject requests without snapshots field', async () => {
@@ -95,45 +85,41 @@ describe('Metrics API Integration', () => {
         .send({ snapshots: [] })
         .expect(202)
 
-      expect(metricsStore.getAllSnapshots()).toHaveLength(0)
+      expect(metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)).toHaveLength(0)
     })
 
     it('should preserve inactive count when provided', async () => {
-      const snapshots = [
-        {
-          timestamp: new Date().toISOString(),
-          connections: 50,
-          bandwidthIn: 25000,
-          bandwidthOut: 15000,
-          inactive: 12
-        }
-      ]
+      const snapshots = [{
+        timestamp: new Date().toISOString(),
+        connections: 50,
+        bandwidthIn: 25000,
+        bandwidthOut: 15000,
+        inactive: 12
+      }]
 
       await request(app)
         .post('/api/metrics')
         .send({ snapshots })
         .expect(202)
 
-      const stored = metricsStore.getAllSnapshots()
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
       expect(stored[0]!.inactive).toBe(12)
     })
 
     it('should default inactive to 0 when omitted', async () => {
-      const snapshots = [
-        {
-          timestamp: new Date().toISOString(),
-          connections: 50,
-          bandwidthIn: 25000,
-          bandwidthOut: 15000
-        }
-      ]
+      const snapshots = [{
+        timestamp: new Date().toISOString(),
+        connections: 50,
+        bandwidthIn: 25000,
+        bandwidthOut: 15000
+      }]
 
       await request(app)
         .post('/api/metrics')
         .send({ snapshots })
         .expect(202)
 
-      const stored = metricsStore.getAllSnapshots()
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
       expect(stored[0]!.inactive).toBe(0)
     })
   })
@@ -149,76 +135,24 @@ describe('Metrics API Integration', () => {
           inactive: 0
         }))
 
-      // First request
-      await request(app)
-        .post('/api/metrics')
-        .send({ snapshots: createSnapshots(3, 0) })
-        .expect(202)
+      await request(app).post('/api/metrics').send({ snapshots: createSnapshots(3, 0) }).expect(202)
+      expect(metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)).toHaveLength(3)
 
-      expect(metricsStore.getAllSnapshots()).toHaveLength(3)
-
-      // Second request
-      await request(app)
-        .post('/api/metrics')
-        .send({ snapshots: createSnapshots(2, 3) })
-        .expect(202)
-
-      const stored = metricsStore.getAllSnapshots()
+      await request(app).post('/api/metrics').send({ snapshots: createSnapshots(2, 3) }).expect(202)
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
       expect(stored).toHaveLength(5)
-      expect(stored.map(s => s.connections)).toEqual([0, 10, 20, 30, 40])
+      expect(stored.map((snapshot) => snapshot.connections)).toEqual([0, 10, 20, 30, 40])
     })
 
     it('should sort snapshots by timestamp across requests', async () => {
       const now = Date.now()
 
-      // Send snapshots out of order
-      await request(app)
-        .post('/api/metrics')
-        .send({
-          snapshots: [
-            {
-              timestamp: new Date(now + 2000).toISOString(),
-              connections: 300,
-              bandwidthIn: 10000,
-              bandwidthOut: 5000,
-              inactive: 0
-            }
-          ]
-        })
-        .expect(202)
+      await request(app).post('/api/metrics').send({ snapshots: [{ timestamp: new Date(now + 2000).toISOString(), connections: 300, bandwidthIn: 10000, bandwidthOut: 5000, inactive: 0 }] }).expect(202)
+      await request(app).post('/api/metrics').send({ snapshots: [{ timestamp: new Date(now).toISOString(), connections: 100, bandwidthIn: 10000, bandwidthOut: 5000, inactive: 0 }] }).expect(202)
+      await request(app).post('/api/metrics').send({ snapshots: [{ timestamp: new Date(now + 1000).toISOString(), connections: 200, bandwidthIn: 10000, bandwidthOut: 5000, inactive: 0 }] }).expect(202)
 
-      await request(app)
-        .post('/api/metrics')
-        .send({
-          snapshots: [
-            {
-              timestamp: new Date(now).toISOString(),
-              connections: 100,
-              bandwidthIn: 10000,
-              bandwidthOut: 5000,
-              inactive: 0
-            }
-          ]
-        })
-        .expect(202)
-
-      await request(app)
-        .post('/api/metrics')
-        .send({
-          snapshots: [
-            {
-              timestamp: new Date(now + 1000).toISOString(),
-              connections: 200,
-              bandwidthIn: 10000,
-              bandwidthOut: 5000,
-              inactive: 0
-            }
-          ]
-        })
-        .expect(202)
-
-      const stored = metricsStore.getAllSnapshots()
-      expect(stored.map(s => s.connections)).toEqual([100, 200, 300])
+      const stored = metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)
+      expect(stored.map((snapshot) => snapshot.connections)).toEqual([100, 200, 300])
     })
   })
 
@@ -237,9 +171,9 @@ describe('Metrics API Integration', () => {
         .send({ snapshots })
         .expect(202)
 
-      const last12 = metricsStore.getTimeSeries(12)
+      const last12 = metricsStore.getTimeSeries(DEFAULT_TENANT_ID, 12)
       expect(last12).toHaveLength(12)
-      expect(last12[0]!.connections).toBe(130) // 13th snapshot
+      expect(last12[0]!.connections).toBe(130)
     })
   })
 
@@ -257,7 +191,6 @@ describe('Metrics API Integration', () => {
         .post('/api/metrics')
         .send('plain text')
 
-      // Express will return 500 (error), 400 (bad request), or 202 (if parsed as empty)
       expect([400, 500, 202]).toContain(response.status)
     })
   })
@@ -279,8 +212,8 @@ describe('Metrics API Integration', () => {
         .expect(202)
       const duration = Date.now() - start
 
-      expect(duration).toBeLessThan(1000) // Should complete in under 1 second
-      expect(metricsStore.getAllSnapshots()).toHaveLength(100)
+      expect(duration).toBeLessThan(1000)
+      expect(metricsStore.getAllSnapshots(DEFAULT_TENANT_ID)).toHaveLength(100)
     })
   })
 })

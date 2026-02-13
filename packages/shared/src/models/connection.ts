@@ -2,7 +2,8 @@ import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const connectionSchema = new Schema(
   {
-    id: { type: String, required: true, unique: true, index: true, trim: true },
+    tenantId: { type: String, required: true, index: true, trim: true },
+    id: { type: String, required: true, index: true, trim: true },
     sourceIp: { type: String, required: true, trim: true },
     destIp: { type: String, required: true, trim: true },
     sourcePort: { type: Number, required: true },
@@ -37,8 +38,9 @@ const connectionSchema = new Schema(
   }
 );
 
+connectionSchema.index({ tenantId: 1, id: 1 }, { unique: true });
 connectionSchema.index({ lastActivity: -1 });
-connectionSchema.index({ sourceIp: 1, destIp: 1, lastActivity: -1 });
+connectionSchema.index({ tenantId: 1, sourceIp: 1, destIp: 1, lastActivity: -1 });
 
 export type ConnectionDoc = InferSchemaType<typeof connectionSchema>;
 

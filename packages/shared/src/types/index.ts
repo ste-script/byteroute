@@ -2,6 +2,7 @@
 
 export interface Connection {
   id: string
+  tenantId?: string
   sourceIp: string
   destIp: string
   sourcePort: number
@@ -134,5 +135,6 @@ export interface InterServerEvents {
 
 export interface SocketData {
   userId?: string
+  tenantId?: string
   subscribedRooms?: string[]
 }

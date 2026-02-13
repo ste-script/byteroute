@@ -20,6 +20,7 @@ type Config struct {
 	MaxBatchBytes int
 	BackendURL    string
 	HTTPTimeout   time.Duration
+	TenantID      string
 	HostID        string
 	DedupMode     string // "flow" or "ip"
 	IdleTTL       time.Duration
@@ -53,6 +54,7 @@ func Parse() Config {
 
 	flag.StringVar(&cfg.BackendURL, "backend", env("BYTEROUTE_BACKEND_URL", "http://localhost:4000"), "Backend base URL")
 	flag.DurationVar(&cfg.HTTPTimeout, "http-timeout", 5*time.Second, "HTTP request timeout")
+	flag.StringVar(&cfg.TenantID, "tenant-id", env("BYTEROUTE_TENANT_ID", "default"), "Tenant identifier used for multi-tenancy isolation")
 
 	flag.StringVar(&cfg.HostID, "host-id", env("BYTEROUTE_HOST_ID", ""), "Stable host identifier to help de-dup IDs across machines")
 	flag.StringVar(&cfg.DedupMode, "dedupe", env("BYTEROUTE_DEDUPE_MODE", "flow"), "Dedup mode: flow or ip")

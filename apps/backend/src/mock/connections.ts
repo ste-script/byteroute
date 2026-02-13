@@ -1,5 +1,6 @@
 import type { Connection, TrafficFlow, Statistics } from "@byteroute/shared";
 import { metricsStore } from "../services/metrics.js";
+import { DEFAULT_TENANT_ID } from "../utils/tenant.js";
 
 // Sample data for generating realistic mock connections
 const countries = [
@@ -64,6 +65,7 @@ export function generateConnection(overrides?: Partial<Connection>): Connection 
 
   return {
     id: `conn-${connectionIdCounter}-${Date.now()}`,
+    tenantId: DEFAULT_TENANT_ID,
     sourceIp: generateIp(),
     destIp: generateIp(),
     sourcePort: generatePort(),
@@ -186,7 +188,7 @@ export function generateTrafficFlows(connections: Connection[]): TrafficFlow[] {
     .map(c => generateTrafficFlow(c));
 }
 
-export function generateStatistics(connections: Connection[]): Statistics {
+export function generateStatistics(connections: Connection[], tenantId: string): Statistics {
   const activeConnections = connections.filter(c => c.status === "active").length;
   const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
@@ -254,7 +256,7 @@ export function generateStatistics(connections: Connection[]): Statistics {
   }));
 
   // Get real time series data from metrics store, fallback to mock if empty
-  let timeSeries = metricsStore.getTimeSeries(24);
+  let timeSeries = metricsStore.getTimeSeries(tenantId, 24);
 
   // If no real metrics yet, generate mock data
   if (timeSeries.length === 0) {

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "update:maxmind": "node scripts/download-maxmind.mjs",
     "test:watch": "vitest --watch",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "migrate:indexes": "node scripts/ensure-connection-indexes.mjs"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
