@@ -1,7 +1,7 @@
 {
   "name": "@byteroute/backend",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.5.1",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@byteroute/shared": "workspace:*",
     "@maxmind/geoip2-node": "^6.3.4",
-    "dotenv": "^17.2.4",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "ip": "^2.0.1",
     "mongoose": "^9.2.1",

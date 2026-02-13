@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/ste-script/byteroute/compare/v1.5.0...v1.5.1) (2026-02-12)
+
+### Bug Fixes
+
+* **backend:**  maxmind db update script ([0d33237](https://github.com/ste-script/byteroute/commit/0d3323750fe2d88ea54f4dd8d4b019b1c749a372))
+
 ## [1.5.0](https://github.com/ste-script/byteroute/compare/v1.4.2...v1.5.0) (2026-02-11)
 
 ### Features
