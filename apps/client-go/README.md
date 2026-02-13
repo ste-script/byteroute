@@ -5,7 +5,7 @@ A lightweight Linux client (Go + libpcap) that captures network packets, aggrega
 ## Requirements
 
 - Linux
-- Go (>= 1.19)
+- Go (>= 1.26)
 - libpcap headers (for gopacket/pcap): `libpcap-dev`
 
 ## Build
