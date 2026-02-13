@@ -123,6 +123,8 @@ func main() {
 			}
 		case t := <-ticker.C:
 			agg.Prune(t)
+			// Allow flows to be exported again for this interval.
+			agg.ResetPending()
 
 			for {
 				batch, keys := agg.ExportBatch(cfg.MaxBatchConns)
