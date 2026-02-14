@@ -225,7 +225,10 @@ function getConnectionAriaLabel(connection: Connection): string {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../assets/styles/tokens' as t;
+@use '../assets/styles/mixins' as m;
+
 .connection-list {
   display: flex;
   flex-direction: column;
@@ -282,28 +285,28 @@ function getConnectionAriaLabel(connection: Connection): string {
   border-bottom: 1px solid var(--p-surface-border);
   cursor: pointer;
   transition: background-color 0.15s;
-  height: 72px;
-}
+  height: t.$connections-item-height;
 
-.connection-item:hover {
-  background: var(--p-surface-hover);
+  &:hover {
+    background: var(--p-surface-hover);
+  }
 }
 
 .connection-status {
-  width: 8px;
-  height: 8px;
+  width: t.$status-dot-size;
+  height: t.$status-dot-size;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 6px;
-}
 
-.connection-status.active {
-  background: var(--p-green-500);
-  box-shadow: 0 0 8px var(--p-green-500);
-}
+  &.active {
+    background: var(--p-green-500);
+    box-shadow: 0 0 t.$status-dot-size var(--p-green-500);
+  }
 
-.connection-status.inactive {
-  background: var(--p-surface-400);
+  &.inactive {
+    background: var(--p-surface-400);
+  }
 }
 
 .connection-info {
@@ -358,13 +361,10 @@ function getConnectionAriaLabel(connection: Connection): string {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-}
 
-.location i,
-.category i,
-.duration i,
-.bandwidth i {
-  font-size: 0.625rem;
+  i {
+    font-size: 0.625rem;
+  }
 }
 
 .connection-stats {
@@ -402,7 +402,7 @@ function getConnectionAriaLabel(connection: Connection): string {
   font-size: 1.5rem;
 }
 
-@media (max-width: 640px) {
+@include m.max-width(t.$bp-sm) {
   .filters {
     padding: 0.5rem;
   }
@@ -413,7 +413,7 @@ function getConnectionAriaLabel(connection: Connection): string {
 
   .connection-item {
     height: auto;
-    min-height: 84px;
+    min-height: t.$connections-item-min-height-mobile;
   }
 
   .connection-header {

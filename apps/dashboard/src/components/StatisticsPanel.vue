@@ -295,7 +295,10 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../assets/styles/tokens' as t;
+@use '../assets/styles/mixins' as m;
+
 .statistics-panel {
   display: flex;
   flex-direction: column;
@@ -320,10 +323,10 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--p-primary-color);
-}
 
-.stat-value.active {
-  color: var(--p-green-500);
+  &.active {
+    color: var(--p-green-500);
+  }
 }
 
 .stat-label {
@@ -351,29 +354,29 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
   cursor: pointer;
   border-radius: calc(var(--p-border-radius) - 2px);
   transition: all 0.15s;
-}
 
-.tab-btn:hover {
-  color: var(--p-text-color);
-}
+  &:hover {
+    color: var(--p-text-color);
+  }
 
-.tab-btn.active {
-  background: var(--p-surface-card);
-  color: var(--p-primary-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  &.active {
+    background: var(--p-surface-card);
+    color: var(--p-primary-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
 }
 
 .chart-container {
   flex: 1;
   min-height: 200px;
+
+  > * {
+    width: 100%;
+    height: 100%;
+  }
 }
 
-.chart-container > * {
-  width: 100%;
-  height: 100%;
-}
-
-@media (max-width: 640px) {
+@include m.max-width(t.$bp-sm) {
   .stats-grid {
     grid-template-columns: 1fr;
   }

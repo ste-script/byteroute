@@ -41,25 +41,32 @@ const { statistics, darkMode } = storeToRefs(store)
   </div>
 </template>
 
-<style scoped>
-.statistics-view .view-content {
-  overflow: auto;
-}
+<style scoped lang="scss">
+@use '../assets/styles/tokens' as t;
+@use '../assets/styles/mixins' as m;
 
-.stats-panel {
-  max-width: 800px;
-  margin: 0 auto;
-  min-height: 600px;
-}
+.statistics-view {
+  .view-content {
+    overflow: auto;
+  }
 
-.panel-content {
-  padding: 1rem;
-  height: 100%;
-}
-
-@media (max-width: 640px) {
   .stats-panel {
-    min-height: 480px;
+    max-width: 800px;
+    margin: 0 auto;
+    min-height: 600px;
+  }
+
+  .panel-content {
+    padding: 1rem;
+    height: 100%;
+  }
+}
+
+@include m.max-width(t.$bp-sm) {
+  .statistics-view {
+    .stats-panel {
+      min-height: 480px;
+    }
   }
 }
 </style>

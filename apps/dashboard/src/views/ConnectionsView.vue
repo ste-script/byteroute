@@ -44,12 +44,14 @@ function handleSelect(connection: Connection) {
   </div>
 </template>
 
-<style scoped>
-.connections-view .view-content {
-  overflow: hidden;
-}
+<style scoped lang="scss">
+.connections-view {
+  .view-content {
+    overflow: hidden;
+  }
 
-.connections-panel {
-  height: 100%;
+  .connections-panel {
+    height: 100%;
+  }
 }
 </style>
