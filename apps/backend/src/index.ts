@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import express from "express";
 import { createServer } from "node:http";
+import passport from "passport";
 import { Server as SocketIOServer } from "socket.io";
 import {
   connectMongo,
@@ -21,6 +22,8 @@ import {
 } from "./services/connections.js";
 import routes from "./routes/index.js";
 import { handleConnection } from "./controllers/socket.controller.js";
+import { ensurePassportAuthInitialized } from "./auth/passport.js";
+import { socketAuthMiddleware } from "./middleware/socket-auth.middleware.js";
 
 const app = express();
 const server = createServer(app);
@@ -34,6 +37,9 @@ const io: TypedSocketServer = new SocketIOServer<
 });
 
 app.use(express.json({ limit: "2mb" }));
+ensurePassportAuthInitialized();
+app.use(passport.initialize());
+io.use(socketAuthMiddleware);
 app.set("io", io);
 
 // Register routes
