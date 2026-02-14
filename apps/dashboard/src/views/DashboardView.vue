@@ -289,10 +289,10 @@ onUnmounted(() => {
 <template>
   <div class="dashboard-layout">
     <!-- Header -->
-    <header class="dashboard-header">
+    <header class="dashboard-header" role="banner">
       <div class="header-left">
         <h1 class="logo">ByteRoute</h1>
-        <div class="connection-status">
+        <div class="header-connection-status">
           <Badge 
             :value="isConnected ? 'Connected' : 'Disconnected'" 
             :severity="isConnected ? 'success' : 'danger'"
@@ -305,6 +305,7 @@ onUnmounted(() => {
           :options="timeRangeOptions"
           optionLabel="label"
           optionValue="value"
+          aria-label="Select time range"
           @change="handleTimeRangeChange"
         />
       </div>
@@ -314,28 +315,32 @@ onUnmounted(() => {
           :options="tenantOptions"
           optionLabel="label"
           optionValue="value"
+          aria-label="Select tenant"
           class="tenant-select"
           @change="handleTenantChange"
         />
         <span class="version">v{{ version }}</span>
         <Button
           :icon="darkMode ? 'pi pi-sun' : 'pi pi-moon'"
+          :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+          :aria-pressed="darkMode"
           text
           rounded
           @click="store.toggleDarkMode"
         />
-        <Button icon="pi pi-cog" text rounded />
+        <Button icon="pi pi-cog" aria-label="Open settings" text rounded />
       </div>
     </header>
 
     <!-- Main Content -->
-    <main class="dashboard-grid">
+    <main id="main-content" class="dashboard-grid" tabindex="-1">
       <!-- Map Panel -->
-      <section class="panel map-panel">
+      <section class="panel map-panel" aria-labelledby="world-traffic-title">
         <div class="panel-header">
-          <span class="panel-title">World Traffic</span>
+          <h2 id="world-traffic-title" class="panel-title">World Traffic</h2>
           <Button
             icon="pi pi-refresh"
+            aria-label="Reset world map view"
             text
             size="small"
             @click="mapRef?.resetView()"
@@ -352,12 +357,12 @@ onUnmounted(() => {
       </section>
 
       <!-- Sidebar Panel -->
-      <aside class="panel sidebar-panel">
+      <aside class="panel sidebar-panel" aria-label="Statistics and live connections">
         <div class="sidebar-sections">
           <!-- Statistics -->
-          <div class="sidebar-section statistics-section">
+          <section class="sidebar-section statistics-section" aria-labelledby="statistics-title">
             <div class="panel-header">
-              <span class="panel-title">Statistics</span>
+              <h2 id="statistics-title" class="panel-title">Statistics</h2>
             </div>
             <div class="panel-content">
               <StatisticsPanel
@@ -365,13 +370,13 @@ onUnmounted(() => {
                 :dark-mode="darkMode"
               />
             </div>
-          </div>
+          </section>
 
           <!-- Connections -->
-          <div class="sidebar-section connections-section">
+          <section class="sidebar-section connections-section" aria-labelledby="connections-title">
             <div class="panel-header">
               <div class="connections-header-left">
-                <span class="panel-title">Live Connections</span>
+                <h2 id="connections-title" class="panel-title">Live Connections</h2>
                 <Badge :value="connections.length.toString()" severity="info" />
               </div>
               <div class="connections-header-right">
@@ -380,10 +385,13 @@ onUnmounted(() => {
                   :options="connectionLimitOptions"
                   optionLabel="label"
                   optionValue="value"
+                  aria-label="Select number of connections shown"
                   class="connections-limit"
                 />
                 <Button
                   :icon="connectionsPaused ? 'pi pi-play' : 'pi pi-pause'"
+                  :aria-label="connectionsPaused ? 'Resume live updates' : 'Pause live updates'"
+                  :aria-pressed="connectionsPaused"
                   text
                   size="small"
                   @click="toggleConnectionsPaused"
@@ -396,14 +404,14 @@ onUnmounted(() => {
                 @select="handleConnectionSelect"
               />
             </div>
-          </div>
+          </section>
         </div>
       </aside>
 
       <!-- Charts Panel -->
-      <section class="panel charts-panel">
+      <section class="panel charts-panel" aria-labelledby="timeline-title">
         <div class="panel-header">
-          <span class="panel-title">Traffic Timeline</span>
+          <h2 id="timeline-title" class="panel-title">Traffic Timeline</h2>
         </div>
         <div class="panel-content no-padding">
           <TrafficChart
@@ -421,7 +429,10 @@ onUnmounted(() => {
 .dashboard-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--p-surface-ground);
 }
 
@@ -440,6 +451,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
+}
+
+.header-connection-status {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .tenant-select {
@@ -474,8 +492,10 @@ onUnmounted(() => {
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  height: calc(100vh - var(--header-height));
-  grid-template-columns: 1fr 380px;
+  width: 100%;
+  max-width: 100%;
+  height: calc(100dvh - var(--header-height));
+  grid-template-columns: minmax(0, 1fr) 380px;
   grid-template-rows: 1fr 280px;
   overflow: hidden;
 }
@@ -505,6 +525,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .statistics-section {
@@ -528,6 +549,12 @@ onUnmounted(() => {
   min-width: 8.5rem;
 }
 
+.panel-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .sidebar-section .panel-content {
   flex: 1;
   overflow: auto;
@@ -536,7 +563,7 @@ onUnmounted(() => {
 /* Responsive */
 @media (max-width: 1200px) {
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 400px 280px auto;
   }
 
@@ -565,16 +592,81 @@ onUnmounted(() => {
     gap: 0.5rem;
   }
 
+  .header-left,
+  .header-right,
+  .header-center {
+    width: 100%;
+  }
+
+  .header-left,
+  .header-right {
+    justify-content: space-between;
+  }
+
+  .header-left {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-connection-status :deep(.p-badge) {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .header-center {
     order: 3;
-    width: 100%;
     justify-content: center;
   }
 
+  .tenant-select {
+    width: 100%;
+    max-width: 14rem;
+  }
+
   .dashboard-grid {
-    grid-template-rows: 300px 250px auto;
+    height: auto;
+    min-height: 0;
+    grid-template-rows: 280px 240px minmax(380px, auto);
     padding: 0.5rem;
     gap: 0.5rem;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .statistics-section {
+    max-height: none;
+  }
+
+  .connections-header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .header-left {
+    justify-content: flex-start;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .version {
+    flex-basis: 100%;
+  }
+
+  .connections-header-left,
+  .connections-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .connections-limit {
+    min-width: 7.5rem;
   }
 }
 </style>
