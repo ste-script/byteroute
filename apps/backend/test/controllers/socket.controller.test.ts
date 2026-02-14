@@ -6,11 +6,17 @@ import type { TypedSocketServer } from '../../src/services/connections.js'
 // Mock the connections service
 vi.mock('../../src/services/connections.js', () => ({
   getConnectionsForTenant: vi.fn(() => []),
+  getKnownTenantIds: vi.fn(() => ['default']),
   emitStatisticsUpdate: vi.fn(),
   emitTrafficFlows: vi.fn()
 }))
 
-import { getConnectionsForTenant, emitStatisticsUpdate, emitTrafficFlows } from '../../src/services/connections.js'
+import {
+  getConnectionsForTenant,
+  getKnownTenantIds,
+  emitStatisticsUpdate,
+  emitTrafficFlows
+} from '../../src/services/connections.js'
 
 const createMockSocket = (): TypedSocket => {
   const socket: any = {
@@ -66,11 +72,15 @@ describe('Socket Controller', () => {
         { id: 'conn2', sourceIp: '5.6.7.8' }
       ]
       vi.mocked(getConnectionsForTenant).mockReturnValue(mockConnections as any)
+      vi.mocked(getKnownTenantIds).mockReturnValue(['default', 'tenant-acme'])
 
       handleConnection(mockIo, mockSocket)
 
       expect(getConnectionsForTenant).toHaveBeenCalledWith('default')
       expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', mockConnections)
+      expect(mockSocket.emit).toHaveBeenCalledWith('tenants:list', {
+        tenants: ['default', 'tenant-acme']
+      })
     })
 
     it('should emit statistics update', () => {

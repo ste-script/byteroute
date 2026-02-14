@@ -115,6 +115,8 @@ export interface DashboardFilters {
 // Socket.IO typed events for type-safe communication
 
 export interface ServerToClientEvents {
+  'tenant:new': (data: { tenantId: string }) => void
+  'tenants:list': (data: { tenants: string[] }) => void
   'connection:new': (data: Connection) => void
   'connection:update': (data: Connection) => void
   'connection:remove': (data: { id: string }) => void

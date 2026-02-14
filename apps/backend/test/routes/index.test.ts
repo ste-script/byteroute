@@ -5,7 +5,8 @@ import request from "supertest";
 const mocks = vi.hoisted(() => ({
   healthCheck: vi.fn((req, res) => res.status(200).json({ ok: true })),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
-  postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 }))
+  postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 })),
+  getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] }))
 }));
 
 vi.mock("../../src/controllers/health.controller.js", () => ({
@@ -18,6 +19,10 @@ vi.mock("../../src/controllers/connections.controller.js", () => ({
 
 vi.mock("../../src/controllers/metrics.controller.js", () => ({
   postMetrics: mocks.postMetrics
+}));
+
+vi.mock("../../src/controllers/tenants.controller.js", () => ({
+  getTenants: mocks.getTenants
 }));
 
 import router from "../../src/routes/index.js";
@@ -47,5 +52,13 @@ describe("routes", () => {
 
     await request(app).post("/api/metrics").send({ snapshots: [] }).expect(202);
     expect(mocks.postMetrics).toHaveBeenCalled();
+  });
+
+  it("wires /api/tenants to getTenants", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app).get("/api/tenants").expect(200);
+    expect(mocks.getTenants).toHaveBeenCalled();
   });
 });
