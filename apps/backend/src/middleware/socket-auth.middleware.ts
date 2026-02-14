@@ -4,6 +4,7 @@ import {
   extractBearerTokenFromAuthorization,
   verifyBearerToken,
 } from "../auth/passport.js";
+import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
 
 type SocketHandshakeLike = {
   auth?: {
@@ -47,7 +48,16 @@ export function extractBearerTokenFromSocketHandshake(
     normalizeHeaderValue(handshake?.headers?.authorization)
   );
 
-  return headerAuthorization;
+  if (headerAuthorization) {
+    return headerAuthorization;
+  }
+
+  const cookieToken = getCookieValue(
+    normalizeHeaderValue(handshake?.headers?.cookie),
+    AUTH_COOKIE_NAME
+  );
+
+  return cookieToken;
 }
 
 export function socketAuthMiddleware(

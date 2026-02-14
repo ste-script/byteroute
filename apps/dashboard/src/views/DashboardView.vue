@@ -10,13 +10,17 @@ import TrafficChart from '@/components/TrafficChart.vue'
 import StatisticsPanel from '@/components/StatisticsPanel.vue'
 import ConnectionList from '@/components/ConnectionList.vue'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
 import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
+import { useRouter } from 'vue-router'
 
 // Version injected at build time via Vite define
 const version = __APP_VERSION__
 
 const store = useDashboardStore()
+const authStore = useAuthStore()
+const router = useRouter()
 const {
   connections,
   trafficFlows,
@@ -235,10 +239,9 @@ function handleFlowClick(flow: TrafficFlow) {
 async function loadDiscoveredTenants() {
   try {
     const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-    const apiAuthToken = (import.meta.env.VITE_API_AUTH_TOKEN || '').trim()
     const tenantsUrl = apiBase ? `${apiBase}/api/tenants` : '/api/tenants'
     const response = await fetch(tenantsUrl, {
-      headers: apiAuthToken ? { Authorization: `Bearer ${apiAuthToken}` } : undefined
+      credentials: 'include'
     })
     if (!response.ok) {
       return
@@ -262,6 +265,12 @@ function connectTenant(tenantId: string) {
   store.clearAll()
   socket.connect(undefined, tenantId)
   socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
+}
+
+async function handleLogout(): Promise<void> {
+  socket.disconnect()
+  await authStore.logout()
+  await router.push('/login')
 }
 
 function handleTenantChange() {
@@ -331,6 +340,7 @@ onUnmounted(() => {
           rounded
           @click="store.toggleDarkMode"
         />
+        <Button icon="pi pi-sign-out" aria-label="Sign out" text rounded @click="handleLogout" />
         <Button icon="pi pi-cog" aria-label="Open settings" text rounded />
       </div>
     </header>

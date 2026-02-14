@@ -3,6 +3,48 @@ import { UserModel } from "@byteroute/shared";
 import { signAuthToken } from "../auth/passport.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
+import { AUTH_COOKIE_NAME } from "../utils/cookie.js";
+import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
+
+const cookieIsSecure =
+  process.env.AUTH_COOKIE_SECURE === "true" ||
+  (process.env.AUTH_COOKIE_SECURE !== "false" && process.env.NODE_ENV === "production");
+
+function setAuthCookie(res: Response, token: string): void {
+  res.cookie(AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: cookieIsSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+}
+
+function clearAuthCookie(res: Response): void {
+  res.clearCookie(AUTH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: cookieIsSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+}
+
+function setCsrfCookie(res: Response, token: string): void {
+  res.cookie(CSRF_COOKIE_NAME, token, {
+    httpOnly: false,
+    secure: cookieIsSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+}
+
+function clearCsrfCookie(res: Response): void {
+  res.clearCookie(CSRF_COOKIE_NAME, {
+    httpOnly: false,
+    secure: cookieIsSecure,
+    sameSite: "lax",
+    path: "/",
+  });
+}
 
 export async function signUp(req: Request, res: Response): Promise<void> {
   const parsed = signUpRequestSchema.safeParse(req.body);
@@ -31,8 +73,12 @@ export async function signUp(req: Request, res: Response): Promise<void> {
     name: created.name,
   });
 
+  setAuthCookie(res, token);
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+
   res.status(201).json({
-    token,
+    csrfToken,
     user: {
       id: String(created._id),
       email: created.email,
@@ -62,12 +108,45 @@ export async function signIn(req: Request, res: Response): Promise<void> {
     name: user.name,
   });
 
+  setAuthCookie(res, token);
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+
   res.status(200).json({
-    token,
+    csrfToken,
     user: {
       id: String(user._id),
       email: user.email,
       name: user.name,
+    },
+  });
+}
+
+export function signOut(_req: Request, res: Response): void {
+  clearAuthCookie(res);
+  clearCsrfCookie(res);
+  res.status(204).send();
+}
+
+export function getCurrentUser(req: Request, res: Response): void {
+  const principal = req.user as
+    | { id: string; email: string; name?: string }
+    | undefined;
+
+  if (!principal) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+
+  res.status(200).json({
+    csrfToken,
+    user: {
+      id: principal.id,
+      email: principal.email,
+      name: principal.name,
     },
   });
 }

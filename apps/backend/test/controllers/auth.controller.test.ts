@@ -31,6 +31,9 @@ function createRes(): Response {
   const res: Partial<Response> = {};
   (res.status as unknown) = vi.fn(() => res);
   (res.json as unknown) = vi.fn(() => res);
+  (res.cookie as unknown) = vi.fn(() => res);
+  (res.clearCookie as unknown) = vi.fn(() => res);
+  (res.send as unknown) = vi.fn(() => res);
   return res as Response;
 }
 
@@ -39,7 +42,7 @@ describe("auth.controller", () => {
     vi.clearAllMocks();
   });
 
-  it("signUp creates user and returns token", async () => {
+  it("signUp creates user, sets cookie and returns user", async () => {
     mocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(null) });
     mocks.create.mockResolvedValue({
       _id: "user-1",
@@ -56,9 +59,10 @@ describe("auth.controller", () => {
 
     expect(mocks.hashPassword).toHaveBeenCalledWith("password123");
     expect(mocks.create).toHaveBeenCalled();
+    expect(res.cookie).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ token: "jwt-token" })
+      expect.objectContaining({ user: expect.any(Object) })
     );
   });
 
@@ -76,7 +80,7 @@ describe("auth.controller", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "User already exists" });
   });
 
-  it("signIn returns token for valid credentials", async () => {
+  it("signIn sets cookie for valid credentials", async () => {
     mocks.findOne.mockReturnValue({
       select: vi.fn().mockResolvedValue({
         _id: "user-1",
@@ -94,9 +98,10 @@ describe("auth.controller", () => {
     await signIn(req, res);
 
     expect(mocks.verifyPassword).toHaveBeenCalledWith("password123", "salt:hash");
+    expect(res.cookie).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ token: "jwt-token" })
+      expect.objectContaining({ user: expect.any(Object) })
     );
   });
 

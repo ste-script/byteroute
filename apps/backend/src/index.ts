@@ -33,7 +33,7 @@ const io: TypedSocketServer = new SocketIOServer<
   InterServerEvents,
   SocketData
 >(server, {
-  cors: { origin: true }
+  cors: { origin: true, credentials: true }
 });
 
 app.use(express.json({ limit: "2mb" }));

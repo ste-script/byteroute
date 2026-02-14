@@ -36,19 +36,15 @@ class SocketService {
     }
 
     const socketUrl = url || import.meta.env.VITE_SOCKET_URL || ''
-    const configuredSocketToken = (import.meta.env.VITE_SOCKET_AUTH_TOKEN || '').trim()
     const authPayload: Record<string, string> = {}
 
     if (tenantId) {
       authPayload.tenantId = tenantId
     }
 
-    if (configuredSocketToken) {
-      authPayload.token = configuredSocketToken
-    }
-
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,

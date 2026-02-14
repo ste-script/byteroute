@@ -4,8 +4,10 @@ import request from "supertest";
 
 const mocks = vi.hoisted(() => ({
   healthCheck: vi.fn((req, res) => res.status(200).json({ ok: true })),
-  signUp: vi.fn((req, res) => res.status(201).json({ token: "t", user: { id: "u1" } })),
-  signIn: vi.fn((req, res) => res.status(200).json({ token: "t", user: { id: "u1" } })),
+  signUp: vi.fn((req, res) => res.status(201).json({ user: { id: "u1" } })),
+  signIn: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
+  getCurrentUser: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
+  signOut: vi.fn((req, res) => res.status(204).send()),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
   postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 })),
   getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] }))
@@ -21,7 +23,9 @@ vi.mock("../../src/controllers/connections.controller.js", () => ({
 
 vi.mock("../../src/controllers/auth.controller.js", () => ({
   signUp: mocks.signUp,
-  signIn: mocks.signIn
+  signIn: mocks.signIn,
+  getCurrentUser: mocks.getCurrentUser,
+  signOut: mocks.signOut
 }));
 
 vi.mock("../../src/controllers/metrics.controller.js", () => ({
@@ -115,5 +119,26 @@ describe("routes", () => {
       .send({ email: "user@example.com", password: "password123" })
       .expect(200);
     expect(mocks.signIn).toHaveBeenCalled();
+  });
+
+  it("wires /auth/me to getCurrentUser", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .get("/auth/me")
+      .set("Authorization", `Bearer ${token()}`)
+      .expect(200);
+    expect(mocks.getCurrentUser).toHaveBeenCalled();
+  });
+
+  it("wires /auth/logout to signOut", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .post("/auth/logout")
+      .expect(204);
+    expect(mocks.signOut).toHaveBeenCalled();
   });
 });
