@@ -1,7 +1,9 @@
 # ByteRoute
 
 [![Release](https://github.com/ste-script/byteroute/actions/workflows/release.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/release.yml)
+[![Linting](https://github.com/ste-script/byteroute/actions/workflows/lint.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/lint.yml)
 [![Testing](https://github.com/ste-script/byteroute/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/build-and-test.yml)
+[![Coverage](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml)
 [![Version](https://img.shields.io/github/v/release/ste-script/byteroute)](https://github.com/ste-script/byteroute/releases)
 
 **University Project for SPE (Software Performance Engineering) and ASW (Architetture Software per il Web)**
@@ -30,6 +32,14 @@ The project consists of a system composed of:
 ## Releases
 
 This repo uses `semantic-release` to generate GitHub Releases and (via `@semantic-release/git`) commit release artifacts (changelog + workspace version bumps).
+
+## Coverage
+
+CI generates backend and Go client coverage and publishes a Markdown summary using the GitHub Marketplace action [`irongut/CodeCoverageSummary`](https://github.com/marketplace/actions/code-coverage-summary).
+
+- Workflow: [Coverage CI](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml)
+- Summary location: GitHub Actions job summary (`Code Coverage Summary` step output)
+- Artifact: `coverage-reports` (includes HTML report + `code-coverage-results.md`) and `coverage-go` (includes `coverage.out` + Cobertura XML)
 
 ## Quickstart (Docker Compose)
 
