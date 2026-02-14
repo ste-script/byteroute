@@ -31,7 +31,15 @@ const props = withDefaults(defineProps<Props>(), {
   darkMode: false
 })
 
-const activeTab = ref<'country' | 'category' | 'protocol'>('country')
+type TabId = 'country' | 'category' | 'protocol'
+
+const activeTab = ref<TabId>('country')
+
+const tabOptions: Array<{ id: TabId; label: string }> = [
+  { id: 'country', label: 'Countries' },
+  { id: 'category', label: 'Categories' },
+  { id: 'protocol', label: 'Protocols' }
+]
 
 const textColor = computed(() => props.darkMode ? '#e0e0e0' : '#333')
 
@@ -192,6 +200,33 @@ function formatNumber(num: number): string {
   if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K'
   return num.toString()
 }
+
+function setActiveTab(tab: TabId) {
+  activeTab.value = tab
+}
+
+function handleTabKeydown(event: KeyboardEvent, index: number) {
+  const key = event.key
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
+    return
+  }
+
+  event.preventDefault()
+  let nextIndex = index
+
+  if (key === 'ArrowRight') {
+    nextIndex = (index + 1) % tabOptions.length
+  } else if (key === 'ArrowLeft') {
+    nextIndex = (index - 1 + tabOptions.length) % tabOptions.length
+  } else if (key === 'Home') {
+    nextIndex = 0
+  } else if (key === 'End') {
+    nextIndex = tabOptions.length - 1
+  }
+
+  const nextTab = tabOptions[nextIndex]
+  activeTab.value = nextTab.id
+}
 </script>
 
 <template>
@@ -213,41 +248,46 @@ function formatNumber(num: number): string {
     </div>
 
     <!-- Chart Tabs -->
-    <div class="chart-tabs">
-      <button 
-        :class="['tab-btn', { active: activeTab === 'country' }]"
-        @click="activeTab = 'country'"
+    <div class="chart-tabs" role="tablist" aria-label="Statistics chart type">
+      <button
+        v-for="(tab, index) in tabOptions"
+        :id="`stats-tab-${tab.id}`"
+        :key="tab.id"
+        :class="['tab-btn', { active: activeTab === tab.id }]"
+        role="tab"
+        :aria-controls="`stats-panel-${tab.id}`"
+        :aria-selected="activeTab === tab.id"
+        :tabindex="activeTab === tab.id ? 0 : -1"
+        @click="setActiveTab(tab.id)"
+        @keydown="handleTabKeydown($event, index)"
       >
-        Countries
-      </button>
-      <button 
-        :class="['tab-btn', { active: activeTab === 'category' }]"
-        @click="activeTab = 'category'"
-      >
-        Categories
-      </button>
-      <button 
-        :class="['tab-btn', { active: activeTab === 'protocol' }]"
-        @click="activeTab = 'protocol'"
-      >
-        Protocols
+        {{ tab.label }}
       </button>
     </div>
 
     <!-- Charts -->
-    <div class="chart-container">
+    <div class="chart-container" role="region" aria-live="polite">
       <v-chart
         v-if="activeTab === 'country'"
+        id="stats-panel-country"
+        role="img"
+        aria-label="Bar chart of top countries by connections"
         :option="countryChartOption"
         autoresize
       />
       <v-chart
         v-else-if="activeTab === 'category'"
+        id="stats-panel-category"
+        role="img"
+        aria-label="Pie chart of traffic categories"
         :option="categoryChartOption"
         autoresize
       />
       <v-chart
         v-else
+        id="stats-panel-protocol"
+        role="img"
+        aria-label="Pie chart of network protocols"
         :option="protocolChartOption"
         autoresize
       />
@@ -331,5 +371,19 @@ function formatNumber(num: number): string {
 .chart-container > * {
   width: 100%;
   height: 100%;
+}
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    flex: 1 0 calc(50% - 0.25rem);
+  }
 }
 </style>

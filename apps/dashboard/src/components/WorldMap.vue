@@ -224,7 +224,12 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="mapContainer" class="world-map" />
+  <div
+    ref="mapContainer"
+    class="world-map"
+    role="img"
+    aria-label="World map showing live traffic flows"
+  />
 </template>
 
 <style scoped>

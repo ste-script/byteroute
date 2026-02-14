@@ -111,6 +111,11 @@ function calculateBandwidth(connection: Connection): number {
 function handleSelect(connection: Connection) {
   emit('select', connection)
 }
+
+function getConnectionAriaLabel(connection: Connection): string {
+  const country = connection.country ? `, ${connection.country}` : ''
+  return `${connection.status} connection from ${connection.sourceIp} to ${connection.destIp}, protocol ${connection.protocol}${country}`
+}
 </script>
 
 <template>
@@ -120,6 +125,7 @@ function handleSelect(connection: Connection) {
       <InputText
         v-model="searchQuery"
         placeholder="Search IP, country, category..."
+        aria-label="Search connections"
         class="search-input"
       />
       <div class="filter-row">
@@ -129,6 +135,7 @@ function handleSelect(connection: Connection) {
           optionLabel="label"
           optionValue="value"
           placeholder="Status"
+          aria-label="Filter by connection status"
           class="filter-dropdown"
         />
         <Select
@@ -137,13 +144,14 @@ function handleSelect(connection: Connection) {
           optionLabel="label"
           optionValue="value"
           placeholder="Protocol"
+          aria-label="Filter by protocol"
           class="filter-dropdown"
         />
       </div>
     </div>
 
     <!-- Connection count -->
-    <div class="list-header">
+    <div class="list-header" role="status" aria-live="polite">
       <span class="count">{{ filteredConnections.length }} connections</span>
     </div>
 
@@ -154,17 +162,20 @@ function handleSelect(connection: Connection) {
       :items="filteredConnections"
       :item-size="72"
       key-field="id"
+      role="list"
       v-slot="{ item }"
     >
-      <div 
+      <button
+        type="button"
         class="connection-item"
+        :aria-label="getConnectionAriaLabel(item)"
         @click="handleSelect(item)"
       >
-        <div :class="['connection-status', item.status]" />
+        <div :class="['connection-status', item.status]" aria-hidden="true" />
         <div class="connection-info">
           <div class="connection-header">
             <span class="connection-ip">{{ item.sourceIp }}</span>
-            <i class="pi pi-arrow-right arrow-icon" />
+            <i class="pi pi-arrow-right arrow-icon" aria-hidden="true" />
             <span class="connection-ip">{{ item.destIp }}</span>
           </div>
           <div class="connection-meta">
@@ -174,7 +185,7 @@ function handleSelect(connection: Connection) {
               class="protocol-tag"
             />
             <span v-if="item.country" class="location">
-              <i class="pi pi-map-marker" />
+              <i class="pi pi-map-marker" aria-hidden="true" />
               {{ item.country }}
             </span>
             <span v-if="item.category" class="category">
@@ -183,11 +194,11 @@ function handleSelect(connection: Connection) {
           </div>
           <div class="connection-stats">
             <span class="duration">
-              <i class="pi pi-clock" />
+              <i class="pi pi-clock" aria-hidden="true" />
               {{ formatDuration(item.startTime) }}
             </span>
             <span class="bandwidth">
-              <i class="pi pi-chart-line" />
+              <i class="pi pi-chart-line" aria-hidden="true" />
               {{ formatBandwidth(calculateBandwidth(item)) }}
             </span>
             <Tag 
@@ -197,18 +208,18 @@ function handleSelect(connection: Connection) {
             />
           </div>
         </div>
-      </div>
+      </button>
     </RecycleScroller>
 
     <!-- Empty state -->
-    <div v-else-if="!loading" class="empty-state">
-      <i class="pi pi-inbox empty-icon" />
+    <div v-else-if="!loading" class="empty-state" role="status" aria-live="polite">
+      <i class="pi pi-inbox empty-icon" aria-hidden="true" />
       <p>No connections found</p>
     </div>
 
     <!-- Loading state -->
-    <div v-if="loading" class="loading-state">
-      <i class="pi pi-spin pi-spinner" />
+    <div v-if="loading" class="loading-state" role="status" aria-live="polite">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true" />
       <p>Loading connections...</p>
     </div>
   </div>
@@ -219,6 +230,7 @@ function handleSelect(connection: Connection) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 .filters {
@@ -263,6 +275,10 @@ function handleSelect(connection: Connection) {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
   border-bottom: 1px solid var(--p-surface-border);
   cursor: pointer;
   transition: background-color 0.15s;
@@ -302,12 +318,18 @@ function handleSelect(connection: Connection) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .connection-ip {
   font-family: monospace;
   font-size: 0.8rem;
   font-weight: 500;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .arrow-icon {
@@ -321,6 +343,7 @@ function handleSelect(connection: Connection) {
   gap: 0.5rem;
   font-size: 0.7rem;
   color: var(--p-text-muted-color);
+  min-width: 0;
 }
 
 .protocol-tag {
@@ -344,6 +367,7 @@ function handleSelect(connection: Connection) {
   gap: 0.75rem;
   font-size: 0.7rem;
   color: var(--p-text-muted-color);
+  min-width: 0;
 }
 
 .duration, .bandwidth {
@@ -379,5 +403,38 @@ function handleSelect(connection: Connection) {
 
 .loading-state i {
   font-size: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .filters {
+    padding: 0.5rem;
+  }
+
+  .filter-row {
+    flex-direction: column;
+  }
+
+  .connection-item {
+    height: auto;
+    min-height: 84px;
+  }
+
+  .connection-header {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  .connection-ip {
+    max-width: calc(100vw - 8.5rem);
+  }
+
+  .connection-stats {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .status-tag {
+    margin-left: 0;
+  }
 }
 </style>
