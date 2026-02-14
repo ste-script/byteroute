@@ -1,3 +1,19 @@
+## [2.0.0](https://github.com/ste-script/byteroute/compare/v1.5.2...v2.0.0) (2026-02-14)
+
+### ⚠ BREAKING CHANGES
+
+* multi tenant
+
+### Features
+
+*  tenant switch ([cad5921](https://github.com/ste-script/byteroute/commit/cad5921a7fb8bb4ddc055aff8192c4b44fbbec1d))
+* mobile friendly ([13c0d38](https://github.com/ste-script/byteroute/commit/13c0d3866c27fe3fa2902d38911d0fff3c396600))
+* multi tenant ([d81605c](https://github.com/ste-script/byteroute/commit/d81605cf233f24442f6a2a544edf92bf8f9d66a7))
+
+### Bug Fixes
+
+* **client-go:** fixed a bug of sending interval ([01fb2eb](https://github.com/ste-script/byteroute/commit/01fb2eb398310ad20fd9c9a5c549d1b4bdb0907e))
+
 ## [1.5.2](https://github.com/ste-script/byteroute/compare/v1.5.1...v1.5.2) (2026-02-13)
 
 ### Bug Fixes
