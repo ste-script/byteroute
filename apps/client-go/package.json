@@ -1,7 +1,7 @@
 {
   "name": "@byteroute/client-go",
   "private": true,
-  "version": "1.5.1",
+  "version": "1.5.2",
   "scripts": {
     "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client",
     "build:docker": "docker build -f Dockerfile.static -t byteroute-client-builder . && docker create --name byteroute-temp byteroute-client-builder && mkdir -p build && docker cp byteroute-temp:/byteroute-client build/byteroute-client && docker rm byteroute-temp",
