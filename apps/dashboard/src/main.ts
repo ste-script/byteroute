@@ -13,6 +13,7 @@ import { queryClient } from './plugins/query'
 import 'primeicons/primeicons.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './assets/main.css'
+import './assets/view-layout.css'
 
 const app = createApp(App)
 

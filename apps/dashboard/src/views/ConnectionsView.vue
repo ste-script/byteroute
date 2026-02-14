@@ -14,7 +14,7 @@ function handleSelect(connection: Connection) {
 </script>
 
 <template>
-  <div class="connections-view">
+  <div class="connections-view standalone-view">
     <header class="view-header" role="banner">
       <div class="header-content">
         <router-link to="/" class="back-link">
@@ -45,67 +45,11 @@ function handleSelect(connection: Connection) {
 </template>
 
 <style scoped>
-.connections-view {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  background: var(--p-surface-ground);
-}
-
-.view-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--header-height);
-  padding: 0 1rem;
-  background: var(--p-surface-card);
-  border-bottom: 1px solid var(--p-surface-border);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.header-content h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.back-link {
-  text-decoration: none;
-}
-
-.view-content {
-  flex: 1;
-  padding: 1rem;
+.connections-view .view-content {
   overflow: hidden;
-  overflow-x: hidden;
 }
 
 .connections-panel {
   height: 100%;
-}
-
-@media (max-width: 640px) {
-  .view-header {
-    height: auto;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.75rem;
-  }
-
-  .header-content h1 {
-    font-size: 1.1rem;
-  }
-
-  .view-content {
-    padding: 0.5rem;
-  }
 }
 </style>

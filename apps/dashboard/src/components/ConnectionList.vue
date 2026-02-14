@@ -351,13 +351,19 @@ function getConnectionAriaLabel(connection: Connection): string {
   padding: 0.125rem 0.375rem;
 }
 
-.location, .category {
+.location,
+.category,
+.duration,
+.bandwidth {
   display: flex;
   align-items: center;
   gap: 0.25rem;
 }
 
-.location i, .category i {
+.location i,
+.category i,
+.duration i,
+.bandwidth i {
   font-size: 0.625rem;
 }
 
@@ -370,23 +376,14 @@ function getConnectionAriaLabel(connection: Connection): string {
   min-width: 0;
 }
 
-.duration, .bandwidth {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.duration i, .bandwidth i {
-  font-size: 0.625rem;
-}
-
 .status-tag {
   font-size: 0.625rem;
   padding: 0.125rem 0.375rem;
   margin-left: auto;
 }
 
-.empty-state, .loading-state {
+.empty-state,
+.loading-state {
   flex: 1;
   display: flex;
   flex-direction: column;
