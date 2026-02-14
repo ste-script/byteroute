@@ -100,23 +100,49 @@ jobs:
           cd apps/client-go
           pnpm coverage
 
+      - name: Convert Go coverage to Cobertura
+        run: |
+          go install github.com/boumenot/gocover-cobertura@v1.2.0
+          cd apps/client-go
+          "$(go env GOPATH)/bin/gocover-cobertura" < coverage.out > coverage.cobertura.xml
+
       - name: Upload Go coverage
         uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-go
-          path: apps/client-go/coverage.out
+          path: |
+            apps/client-go/coverage.out
+            apps/client-go/coverage.cobertura.xml
           retention-days: 30
 
       - name: Test
         run: pnpm -w coverage
+
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage/apps-backend/cobertura-coverage.xml,apps/client-go/coverage.cobertura.xml
+          badge: true
+          format: markdown
+          indicators: true
+          output: both
+
+      - name: Add coverage summary to workflow summary
+        if: always()
+        run: |
+          if [ -f code-coverage-results.md ]; then
+            cat code-coverage-results.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-reports
-          path: coverage/
+          path: |
+            coverage/
+            code-coverage-results.md
           retention-days: 30
 
 
