@@ -3,6 +3,8 @@ import { ref, readonly } from 'vue'
 import type { Connection, TrafficFlow, Statistics } from '@/types'
 
 export interface SocketEvents {
+  'tenant:new': { tenantId: string }
+  'tenants:list': { tenants: string[] }
   'connection:new': Connection
   'connection:update': Connection
   'connection:remove': { id: string }

@@ -36,6 +36,32 @@ const timeRangeOptions = [
   { label: '7D', value: '7d' }
 ]
 
+const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
+const initialTenant = import.meta.env.VITE_TENANT_ID || 'default'
+const configuredTenants = (import.meta.env.VITE_TENANTS || '')
+  .split(',')
+  .map((tenant) => tenant.trim())
+  .filter(Boolean)
+
+const savedTenant = typeof window !== 'undefined'
+  ? window.localStorage.getItem(TENANT_STORAGE_KEY)?.trim()
+  : undefined
+const defaultTenant = savedTenant || initialTenant
+const discoveredTenants = ref<string[]>([])
+
+const tenantOptions = computed(() => {
+  const uniqueTenants = Array.from(new Set([
+    defaultTenant,
+    initialTenant,
+    'default',
+    ...configuredTenants,
+    ...discoveredTenants.value
+  ]))
+  return uniqueTenants.map((tenant) => ({ label: tenant, value: tenant }))
+})
+
+const selectedTenant = ref(defaultTenant)
+
 const connectionLimit = ref<5 | 10 | 20>(10)
 const connectionLimitOptions: Array<{ label: string; value: 5 | 10 | 20 }> = [
   { label: 'Last 5', value: 5 },
@@ -153,6 +179,18 @@ const unsubscribers: (() => void)[] = []
 
 function setupSocketListeners() {
   unsubscribers.push(
+    socket.on('tenant:new', ({ tenantId }) => {
+      const nextTenant = tenantId.trim()
+      if (!nextTenant) return
+      if (discoveredTenants.value.includes(nextTenant)) return
+      discoveredTenants.value = [...discoveredTenants.value, nextTenant]
+    }),
+    socket.on('tenants:list', ({ tenants }) => {
+      const cleaned = tenants
+        .map((tenant) => tenant.trim())
+        .filter((tenant) => tenant.length > 0)
+      discoveredTenants.value = Array.from(new Set([...discoveredTenants.value, ...cleaned]))
+    }),
     socket.on('connection:new', (conn) => {
       if (connectionsPaused.value) return
       store.addConnection(conn)
@@ -194,16 +232,52 @@ function handleFlowClick(flow: TrafficFlow) {
   console.log('Clicked flow:', flow)
 }
 
+async function loadDiscoveredTenants() {
+  try {
+    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const tenantsUrl = apiBase ? `${apiBase}/api/tenants` : '/api/tenants'
+    const response = await fetch(tenantsUrl)
+    if (!response.ok) {
+      return
+    }
+
+    const payload = await response.json() as { tenants?: unknown }
+    if (!Array.isArray(payload.tenants)) {
+      return
+    }
+
+    discoveredTenants.value = payload.tenants
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => value.trim())
+  } catch (error) {
+    console.warn('[Dashboard] Failed to load tenants:', error)
+  }
+}
+
+function connectTenant(tenantId: string) {
+  socket.disconnect()
+  store.clearAll()
+  socket.connect(undefined, tenantId)
+  socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
+}
+
+function handleTenantChange() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(TENANT_STORAGE_KEY, selectedTenant.value)
+  }
+  connectTenant(selectedTenant.value)
+}
+
 onMounted(() => {
   // Generate mock data for demo
   generateMockData()
-  
-  // Connect to socket
-  socket.connect(undefined, import.meta.env.VITE_TENANT_ID)
+
+  void loadDiscoveredTenants()
+
   setupSocketListeners()
   
-  // Subscribe to initial data
-  socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
+  // Connect to socket
+  connectTenant(selectedTenant.value)
 })
 
 onUnmounted(() => {
@@ -235,6 +309,14 @@ onUnmounted(() => {
         />
       </div>
       <div class="header-right">
+        <Select
+          v-model="selectedTenant"
+          :options="tenantOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="tenant-select"
+          @change="handleTenantChange"
+        />
         <span class="version">v{{ version }}</span>
         <Button
           :icon="darkMode ? 'pi pi-sun' : 'pi pi-moon'"
@@ -358,6 +440,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.tenant-select {
+  width: 10rem;
 }
 
 .logo {

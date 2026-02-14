@@ -8,6 +8,7 @@ import type {
 import {
   type TypedSocketServer,
   getConnectionsForTenant,
+  getKnownTenantIds,
   emitStatisticsUpdate,
   emitTrafficFlows,
 } from "../services/connections.js";
@@ -33,6 +34,7 @@ export function handleConnection(io: TypedSocketServer, socket: TypedSocket): vo
   // Send initial data to client
   const connections = getConnectionsForTenant(tenantId);
   socket.emit("connections:batch", connections);
+  socket.emit("tenants:list", { tenants: getKnownTenantIds() });
   emitStatisticsUpdate(io, tenantId);
   emitTrafficFlows(io, tenantId);
 
