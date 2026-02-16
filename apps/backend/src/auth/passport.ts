@@ -95,7 +95,10 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
 }
 
 export function signAuthToken(claims: AuthTokenClaims): string {
-  const ttl = process.env.AUTH_TOKEN_TTL ?? "1d";
+  return signAuthTokenWithTtl(claims, process.env.AUTH_TOKEN_TTL ?? "1d");
+}
+
+export function signAuthTokenWithTtl(claims: AuthTokenClaims, ttl: string): string {
   const options: SignOptions = {
     expiresIn: ttl as SignOptions["expiresIn"],
   };

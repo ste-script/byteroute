@@ -58,7 +58,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	bc, err := backend.NewClient(cfg.BackendURL, cfg.HTTPTimeout, cfg.TenantID)
+	bc, err := backend.NewClient(cfg.BackendURL, cfg.HTTPTimeout, cfg.TenantID, cfg.AuthToken)
 	if err != nil {
 		log.Fatalf("backend client: %v", err)
 	}

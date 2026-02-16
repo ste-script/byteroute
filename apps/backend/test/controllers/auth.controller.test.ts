@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   findOne: vi.fn(),
   create: vi.fn(),
   signAuthToken: vi.fn(() => "jwt-token"),
+  signAuthTokenWithTtl: vi.fn(() => "client-token"),
   hashPassword: vi.fn(() => "salt:hash"),
   verifyPassword: vi.fn(() => true),
 }));
@@ -18,6 +19,7 @@ vi.mock("@byteroute/shared", () => ({
 
 vi.mock("../../src/auth/passport.js", () => ({
   signAuthToken: mocks.signAuthToken,
+  signAuthTokenWithTtl: mocks.signAuthTokenWithTtl,
 }));
 
 vi.mock("../../src/services/password.js", () => ({
@@ -25,7 +27,7 @@ vi.mock("../../src/services/password.js", () => ({
   verifyPassword: mocks.verifyPassword,
 }));
 
-import { signIn, signUp } from "../../src/controllers/auth.controller.js";
+import { createClientToken, signIn, signUp } from "../../src/controllers/auth.controller.js";
 
 function createRes(): Response {
   const res: Partial<Response> = {};
@@ -131,5 +133,25 @@ describe("auth.controller", () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials" });
+  });
+
+  it("createClientToken returns a token for authenticated user", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: ["tenant-a"],
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    createClientToken(req, res);
+
+    expect(mocks.signAuthTokenWithTtl).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(String) })
+    );
   });
 });

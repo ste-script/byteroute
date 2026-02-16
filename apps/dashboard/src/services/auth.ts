@@ -88,3 +88,30 @@ export async function signOut(csrfToken?: string | null): Promise<void> {
     throw new Error(payload.error || 'Logout failed')
   }
 }
+
+export async function createClientToken(csrfToken?: string | null): Promise<string> {
+  const apiBase = getApiBase()
+  const url = apiBase ? `${apiBase}/auth/client-token` : '/auth/client-token'
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: csrfToken
+      ? {
+          'x-csrf-token': csrfToken
+        }
+      : undefined
+  })
+
+  const payload = await response.json().catch(() => ({})) as { token?: string; error?: string }
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Failed to create client token')
+  }
+
+  if (!payload.token) {
+    throw new Error('Token response is missing token')
+  }
+
+  return payload.token
+}

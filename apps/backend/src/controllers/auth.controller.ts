@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { UserModel } from "@byteroute/shared";
-import { signAuthToken } from "../auth/passport.js";
+import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
 import { AUTH_COOKIE_NAME } from "../utils/cookie.js";
@@ -173,4 +173,34 @@ export function getCurrentUser(req: Request, res: Response): void {
       tenantIds: principal.tenantIds ?? [],
     },
   });
+}
+
+export function createClientToken(req: Request, res: Response): void {
+  const principal = req.user as
+    | { id: string; email: string; name?: string; tenantIds?: string[] }
+    | undefined;
+
+  if (!principal) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const tenantIds = normalizeTenantIds(principal.tenantIds);
+  if (tenantIds.length === 0) {
+    res.status(403).json({ error: "Forbidden: no authorized tenants" });
+    return;
+  }
+
+  const ttl = process.env.AUTH_CLIENT_TOKEN_TTL ?? "12h";
+  const token = signAuthTokenWithTtl(
+    {
+      sub: principal.id,
+      email: principal.email,
+      name: principal.name,
+      tenantIds,
+    },
+    ttl
+  );
+
+  res.status(200).json({ token, expiresIn: ttl });
 }

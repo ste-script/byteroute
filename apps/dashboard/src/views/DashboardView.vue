@@ -63,6 +63,9 @@ const tenantOptions = computed(() => {
 })
 
 const selectedTenant = ref(defaultTenant)
+const copyClientTokenPending = ref(false)
+const copyClientTokenMessage = ref<string | null>(null)
+let copyClientTokenTimer: ReturnType<typeof setTimeout> | undefined
 
 const connectionLimit = ref<5 | 10 | 20>(10)
 const connectionLimitOptions: Array<{ label: string; value: 5 | 10 | 20 }> = [
@@ -275,6 +278,55 @@ async function handleLogout(): Promise<void> {
   await router.push('/login')
 }
 
+async function copyTextToClipboard(value: string): Promise<void> {
+  const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined
+  if (clipboard?.writeText) {
+    await clipboard.writeText(value)
+    return
+  }
+
+  if (typeof document === 'undefined') {
+    throw new Error('Clipboard is not available in this environment')
+  }
+
+  const textArea = document.createElement('textarea')
+  textArea.value = value
+  textArea.setAttribute('readonly', '')
+  textArea.style.position = 'fixed'
+  textArea.style.opacity = '0'
+  textArea.style.pointerEvents = 'none'
+  document.body.appendChild(textArea)
+  textArea.select()
+
+  const copied = document.execCommand('copy')
+  document.body.removeChild(textArea)
+
+  if (!copied) {
+    throw new Error('Failed to copy token')
+  }
+}
+
+async function handleCopyClientToken(): Promise<void> {
+  copyClientTokenPending.value = true
+  copyClientTokenMessage.value = null
+
+  try {
+    const token = await authStore.createClientToken()
+    await copyTextToClipboard(token)
+    copyClientTokenMessage.value = 'Token copied'
+  } catch (error) {
+    copyClientTokenMessage.value = error instanceof Error ? error.message : 'Copy failed'
+  } finally {
+    copyClientTokenPending.value = false
+    if (copyClientTokenTimer) {
+      clearTimeout(copyClientTokenTimer)
+    }
+    copyClientTokenTimer = setTimeout(() => {
+      copyClientTokenMessage.value = null
+    }, 3000)
+  }
+}
+
 function handleTenantChange() {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(TENANT_STORAGE_KEY, selectedTenant.value)
@@ -299,6 +351,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  if (copyClientTokenTimer) {
+    clearTimeout(copyClientTokenTimer)
+  }
   unsubscribers.forEach(unsub => unsub())
   socket.disconnect()
 })
@@ -346,8 +401,17 @@ onUnmounted(() => {
           rounded
           @click="store.toggleDarkMode"
         />
+        <Button
+          icon="pi pi-copy"
+          aria-label="Copy client token"
+          text
+          rounded
+          :loading="copyClientTokenPending"
+          @click="handleCopyClientToken"
+        />
         <Button icon="pi pi-sign-out" aria-label="Sign out" text rounded @click="handleLogout" />
         <Button icon="pi pi-cog" aria-label="Open settings" text rounded />
+        <span v-if="copyClientTokenMessage" class="copy-token-message">{{ copyClientTokenMessage }}</span>
       </div>
     </header>
 
@@ -530,6 +594,11 @@ onUnmounted(() => {
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
     font-weight: 500;
+  }
+
+  .copy-token-message {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
   }
 
   .tenant-select {

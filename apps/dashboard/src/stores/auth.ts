@@ -80,6 +80,24 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  async function createClientToken(): Promise<string> {
+    let token = csrfToken.value
+
+    if (!token) {
+      const current = await authApi.getCurrentUser()
+      if (current?.user && current.csrfToken) {
+        setAuth(current.user, current.csrfToken)
+        token = current.csrfToken
+      }
+    }
+
+    if (!token) {
+      throw new Error('Missing CSRF token')
+    }
+
+    return authApi.createClientToken(token)
+  }
+
   return {
     user,
     csrfToken,
@@ -90,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
     signIn,
     signUp,
     restoreSession,
-    logout
+    logout,
+    createClientToken
   }
 })

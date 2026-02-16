@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   healthCheck: vi.fn((req, res) => res.status(200).json({ ok: true })),
   signUp: vi.fn((req, res) => res.status(201).json({ user: { id: "u1" } })),
   signIn: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
+  createClientToken: vi.fn((req, res) => res.status(200).json({ token: "client-token", expiresIn: "12h" })),
   getCurrentUser: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
   signOut: vi.fn((req, res) => res.status(204).send()),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
@@ -34,6 +35,7 @@ vi.mock("../../src/controllers/connections.controller.js", () => ({
 vi.mock("../../src/controllers/auth.controller.js", () => ({
   signUp: mocks.signUp,
   signIn: mocks.signIn,
+  createClientToken: mocks.createClientToken,
   getCurrentUser: mocks.getCurrentUser,
   signOut: mocks.signOut
 }));
@@ -149,6 +151,19 @@ describe("routes", () => {
       .set("Authorization", `Bearer ${token()}`)
       .expect(200);
     expect(mocks.getCurrentUser).toHaveBeenCalled();
+  });
+
+  it("wires /auth/client-token to createClientToken", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .post("/auth/client-token")
+      .set("Authorization", `Bearer ${token()}`)
+      .set("x-csrf-token", "csrf")
+      .set("cookie", "byteroute_csrf=csrf")
+      .expect(200);
+    expect(mocks.createClientToken).toHaveBeenCalled();
   });
 
   it("wires /auth/logout to signOut", async () => {
