@@ -1,18 +1,14 @@
 import { io, Socket } from 'socket.io-client'
 import { ref, readonly } from 'vue'
-import type { Connection, TrafficFlow, Statistics } from '@/types'
 
-export interface SocketEvents {
-  'tenant:new': { tenantId: string }
-  'tenants:list': { tenants: string[] }
-  'connection:new': Connection
-  'connection:update': Connection
-  'connection:remove': { id: string }
-  'connections:batch': Connection[]
-  'traffic:flows': TrafficFlow[]
-  'statistics:update': Statistics
-  'error': { message: string; code?: string }
+import type { ServerToClientEvents } from '@byteroute/shared'
+import { sanitizeTenantId } from '@byteroute/shared/common'
+
+type SharedServerPayloads = {
+  [K in keyof ServerToClientEvents]: Parameters<ServerToClientEvents[K]>[0]
 }
+
+export type SocketEvents = SharedServerPayloads
 
 class SocketService {
   private socket: Socket | null = null
@@ -37,9 +33,9 @@ class SocketService {
 
     const socketUrl = url || import.meta.env.VITE_SOCKET_URL || ''
     const authPayload: Record<string, string> = {}
-
-    if (tenantId) {
-      authPayload.tenantId = tenantId
+    const normalizedTenantId = sanitizeTenantId(tenantId)
+    if (normalizedTenantId) {
+      authPayload.tenantId = normalizedTenantId
     }
 
     this.socket = io(socketUrl, {
@@ -51,7 +47,7 @@ class SocketService {
       reconnectionDelayMax: 5000,
       timeout: 20000,
       auth: Object.keys(authPayload).length > 0 ? authPayload : undefined,
-      query: tenantId ? { tenantId } : undefined
+      query: normalizedTenantId ? { tenantId: normalizedTenantId } : undefined
     })
 
     this.setupEventHandlers()

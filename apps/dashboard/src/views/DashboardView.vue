@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
 import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
 import { useRouter } from 'vue-router'
+import { DEFAULT_TENANT_ID, ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
 
 // Version injected at build time via Vite define
 const version = __APP_VERSION__
@@ -41,26 +42,23 @@ const timeRangeOptions = [
 ]
 
 const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
-const initialTenant = import.meta.env.VITE_TENANT_ID || 'default'
-const configuredTenants = (import.meta.env.VITE_TENANTS || '')
-  .split(',')
-  .map((tenant) => tenant.trim())
-  .filter(Boolean)
+const initialTenant = ensureTenantId(import.meta.env.VITE_TENANT_ID)
+const configuredTenants = normalizeTenantIds((import.meta.env.VITE_TENANTS || '').split(','))
 
 const savedTenant = typeof window !== 'undefined'
-  ? window.localStorage.getItem(TENANT_STORAGE_KEY)?.trim()
+  ? sanitizeTenantId(window.localStorage.getItem(TENANT_STORAGE_KEY))
   : undefined
-const defaultTenant = savedTenant || initialTenant
+const defaultTenant = savedTenant ?? initialTenant
 const discoveredTenants = ref<string[]>([])
 
 const tenantOptions = computed(() => {
-  const uniqueTenants = Array.from(new Set([
+  const uniqueTenants = Array.from(new Set(normalizeTenantIds([
     defaultTenant,
     initialTenant,
-    'default',
+    DEFAULT_TENANT_ID,
     ...configuredTenants,
     ...discoveredTenants.value
-  ]))
+  ])))
   return uniqueTenants.map((tenant) => ({ label: tenant, value: tenant }))
 })
 

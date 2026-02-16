@@ -140,3 +140,5 @@ export interface SocketData {
   tenantId?: string
   subscribedRooms?: string[]
 }
+
+export * from "./auth.js";
