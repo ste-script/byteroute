@@ -27,7 +27,13 @@ vi.mock("../../src/services/password.js", () => ({
   verifyPassword: mocks.verifyPassword,
 }));
 
-import { createClientToken, signIn, signUp } from "../../src/controllers/auth.controller.js";
+import {
+  createClientToken,
+  getCurrentUser,
+  signIn,
+  signOut,
+  signUp,
+} from "../../src/controllers/auth.controller.js";
 
 function createRes(): Response {
   const res: Partial<Response> = {};
@@ -84,6 +90,17 @@ describe("auth.controller", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "User already exists" });
   });
 
+  it("signUp rejects invalid payload", async () => {
+    const req = {
+      body: { email: "user@example.com", password: "short" },
+    } as Request;
+    const res = createRes();
+
+    await signUp(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
   it("signIn sets cookie for valid credentials", async () => {
     mocks.findOne.mockReturnValue({
       select: vi.fn().mockResolvedValue({
@@ -111,6 +128,32 @@ describe("auth.controller", () => {
     );
   });
 
+  it("signIn backfills tenant when user has none", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    mocks.findOne.mockReturnValue({
+      select: vi.fn().mockResolvedValue({
+        _id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        passwordHash: "salt:hash",
+        tenantIds: [],
+        save,
+      }),
+    });
+
+    const req = {
+      body: { email: "user@example.com", password: "password123" },
+    } as Request;
+    const res = createRes();
+
+    await signIn(req, res);
+
+    expect(save).toHaveBeenCalled();
+    expect(mocks.signAuthToken).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantIds: expect.any(Array) })
+    );
+  });
+
   it("signIn rejects invalid credentials", async () => {
     mocks.findOne.mockReturnValue({
       select: vi.fn().mockResolvedValue({
@@ -133,6 +176,113 @@ describe("auth.controller", () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: "Invalid credentials" });
+  });
+
+  it("signIn rejects invalid payload", async () => {
+    const req = {
+      body: { email: "", password: "" },
+    } as Request;
+    const res = createRes();
+
+    await signIn(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("getCurrentUser returns unauthorized when principal missing", () => {
+    const req = {} as Request;
+    const res = createRes();
+
+    getCurrentUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized" });
+  });
+
+  it("getCurrentUser returns principal data", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: ["tenant-a"],
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    getCurrentUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.cookie).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({
+          id: "user-1",
+          email: "user@example.com",
+          tenantIds: ["tenant-a"],
+        }),
+      })
+    );
+  });
+
+  it("getCurrentUser defaults tenantIds to empty array", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    getCurrentUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({
+          tenantIds: [],
+        }),
+      })
+    );
+  });
+
+  it("signOut clears cookies and returns 204", () => {
+    const req = {} as Request;
+    const res = createRes();
+
+    signOut(req, res);
+
+    expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.send).toHaveBeenCalled();
+  });
+
+  it("createClientToken returns unauthorized without principal", () => {
+    const req = {} as Request;
+    const res = createRes();
+
+    createClientToken(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized" });
+  });
+
+  it("createClientToken returns forbidden without tenants", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: [],
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    createClientToken(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Forbidden: no authorized tenants" });
   });
 
   it("createClientToken returns a token for authenticated user", () => {
