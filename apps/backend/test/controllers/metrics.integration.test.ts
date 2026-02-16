@@ -1,4 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const sharedMocks = vi.hoisted(() => ({
+  findById: vi.fn()
+}))
+
+vi.mock('@byteroute/shared', () => ({
+  UserModel: {
+    findById: sharedMocks.findById
+  }
+}))
 import request from 'supertest'
 import express, { type Express } from 'express'
 import passport from 'passport'
@@ -10,7 +20,7 @@ import { DEFAULT_TENANT_ID } from '../../src/utils/tenant.js'
 
 const TEST_SECRET = 'test-jwt-secret'
 
-const createTestToken = () => signAuthToken({ sub: 'user-1', email: 'user@example.com', name: 'User' })
+const createTestToken = () => signAuthToken({ sub: 'user-1', email: 'user@example.com', name: 'User', tenantIds: ['default'] })
 
 const createTestApp = (): Express => {
   const app = express()
@@ -31,6 +41,15 @@ describe('Metrics API Integration', () => {
   let app: Express
 
   beforeEach(() => {
+    const lean = vi.fn().mockResolvedValue({
+      _id: 'user-1',
+      email: 'user@example.com',
+      name: 'User',
+      tenantIds: ['default']
+    })
+    const select = vi.fn().mockReturnValue({ lean })
+    sharedMocks.findById.mockReturnValue({ select })
+
     process.env.JWT_SECRET = TEST_SECRET
     app = createTestApp()
     metricsStore.clear()

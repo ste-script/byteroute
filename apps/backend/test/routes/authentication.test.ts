@@ -1,13 +1,33 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import router from "../../src/routes/index.js";
 import { signAuthToken } from "../../src/auth/passport.js";
 
+const sharedMocks = vi.hoisted(() => ({
+  findById: vi.fn(),
+}));
+
+vi.mock("@byteroute/shared", () => ({
+  UserModel: {
+    findById: sharedMocks.findById,
+  },
+  mongoReadyState: vi.fn(() => 0),
+}));
+
 const originalEnv = { ...process.env };
 
 describe("api authentication", () => {
   beforeEach(() => {
+    const lean = vi.fn().mockResolvedValue({
+      _id: "user-1",
+      email: "user@example.com",
+      name: "User",
+      tenantIds: ["default"],
+    });
+    const select = vi.fn().mockReturnValue({ lean });
+    sharedMocks.findById.mockReturnValue({ select });
+
     process.env = { ...originalEnv, JWT_SECRET: "test-jwt-secret" };
   });
 
@@ -44,7 +64,7 @@ describe("api authentication", () => {
     app.use(express.json());
     app.use(router);
 
-    const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User" });
+    const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
 
     const response = await request(app)
       .post("/api/metrics")

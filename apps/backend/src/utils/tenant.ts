@@ -31,6 +31,22 @@ export function ensureTenantId(value: unknown): string {
   return sanitizeTenantId(value) ?? DEFAULT_TENANT_ID;
 }
 
+export function normalizeTenantIds(values: unknown): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const cleaned = values
+    .map((value) => sanitizeTenantId(value))
+    .filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(cleaned));
+}
+
+export function userHasTenantAccess(userTenantIds: unknown, tenantId: string): boolean {
+  return normalizeTenantIds(userTenantIds).includes(ensureTenantId(tenantId));
+}
+
 export function getTenantRoom(tenantId: string): string {
   return `tenant:${tenantId}`;
 }

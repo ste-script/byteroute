@@ -2,9 +2,11 @@ import type { ExtendedError } from "socket.io";
 import type { Socket } from "socket.io";
 import {
   extractBearerTokenFromAuthorization,
-  verifyBearerToken,
+  verifyAuthToken,
 } from "../auth/passport.js";
+import { hydratePrincipalFromDatabase } from "../auth/principal.js";
 import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
+import { resolveTenantContextFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
 
 type SocketHandshakeLike = {
   auth?: {
@@ -64,17 +66,33 @@ export function socketAuthMiddleware(
   socket: Socket,
   next: (err?: ExtendedError | undefined) => void
 ): void {
-  try {
-    const providedToken = extractBearerTokenFromSocketHandshake(socket.handshake);
+  void (async () => {
+    try {
+      const providedToken = extractBearerTokenFromSocketHandshake(socket.handshake);
+      const principal = verifyAuthToken(providedToken);
 
-    if (!verifyBearerToken(providedToken)) {
-      next(new Error("Unauthorized"));
-      return;
+      if (!principal) {
+        next(new Error("Unauthorized"));
+        return;
+      }
+
+      const hydratedPrincipal = await hydratePrincipalFromDatabase(principal);
+      if (!hydratedPrincipal) {
+        next(new Error("Unauthorized"));
+        return;
+      }
+
+      const { tenantId } = resolveTenantContextFromSocketHandshake(socket.handshake);
+      if (!userHasTenantAccess(hydratedPrincipal.tenantIds, tenantId)) {
+        next(new Error("Forbidden: no access to tenant"));
+        return;
+      }
+
+      (socket.data as Record<string, unknown>).principal = hydratedPrincipal;
+      next();
+    } catch (error) {
+      console.error("Socket authentication misconfigured:", error);
+      next(new Error("Authentication misconfigured"));
     }
-
-    next();
-  } catch (error) {
-    console.error("Socket authentication misconfigured:", error);
-    next(new Error("Authentication misconfigured"));
-  }
+  })();
 }

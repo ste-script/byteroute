@@ -48,6 +48,8 @@ describe("auth.controller", () => {
       _id: "user-1",
       email: "user@example.com",
       name: "User",
+      tenantIds: [],
+      save: vi.fn().mockResolvedValue(undefined),
     });
 
     const req = {
@@ -87,6 +89,8 @@ describe("auth.controller", () => {
         email: "user@example.com",
         name: "User",
         passwordHash: "salt:hash",
+        tenantIds: ["owned:user-1"],
+        save: vi.fn().mockResolvedValue(undefined),
       }),
     });
 
@@ -112,6 +116,8 @@ describe("auth.controller", () => {
         email: "user@example.com",
         name: "User",
         passwordHash: "salt:hash",
+        tenantIds: ["owned:user-1"],
+        save: vi.fn().mockResolvedValue(undefined),
       }),
     });
     mocks.verifyPassword.mockReturnValue(false);

@@ -69,15 +69,22 @@ export async function getCurrentUser(): Promise<AuthResponse | null> {
   }
 }
 
-export async function signOut(csrfToken: string): Promise<void> {
+export async function signOut(csrfToken?: string | null): Promise<void> {
   const apiBase = getApiBase()
   const url = apiBase ? `${apiBase}/auth/logout` : '/auth/logout'
 
-  await fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: {
-      'x-csrf-token': csrfToken
-    }
+    headers: csrfToken
+      ? {
+          'x-csrf-token': csrfToken
+        }
+      : undefined
   })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ error: 'Logout failed' })) as { error?: string }
+    throw new Error(payload.error || 'Logout failed')
+  }
 }

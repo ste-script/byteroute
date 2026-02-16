@@ -13,6 +13,16 @@ const mocks = vi.hoisted(() => ({
   getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] }))
 }));
 
+const sharedMocks = vi.hoisted(() => ({
+  findById: vi.fn(),
+}));
+
+vi.mock("@byteroute/shared", () => ({
+  UserModel: {
+    findById: sharedMocks.findById,
+  },
+}));
+
 vi.mock("../../src/controllers/health.controller.js", () => ({
   healthCheck: mocks.healthCheck
 }));
@@ -42,9 +52,18 @@ import { signAuthToken } from "../../src/auth/passport.js";
 const originalEnv = { ...process.env };
 
 describe("routes", () => {
-  const token = () => signAuthToken({ sub: "user-1", email: "user@example.com", name: "User" });
+  const token = () => signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
 
   beforeEach(() => {
+    const lean = vi.fn().mockResolvedValue({
+      _id: "user-1",
+      email: "user@example.com",
+      name: "User",
+      tenantIds: ["default"],
+    });
+    const select = vi.fn().mockReturnValue({ lean });
+    sharedMocks.findById.mockReturnValue({ select });
+
     process.env = { ...originalEnv, JWT_SECRET: "test-jwt-secret" };
   });
 

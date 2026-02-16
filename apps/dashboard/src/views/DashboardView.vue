@@ -236,7 +236,7 @@ function handleFlowClick(flow: TrafficFlow) {
   console.log('Clicked flow:', flow)
 }
 
-async function loadDiscoveredTenants() {
+async function loadDiscoveredTenants(): Promise<string[]> {
   try {
     const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
     const tenantsUrl = apiBase ? `${apiBase}/api/tenants` : '/api/tenants'
@@ -244,19 +244,23 @@ async function loadDiscoveredTenants() {
       credentials: 'include'
     })
     if (!response.ok) {
-      return
+      return []
     }
 
     const payload = await response.json() as { tenants?: unknown }
     if (!Array.isArray(payload.tenants)) {
-      return
+      return []
     }
 
-    discoveredTenants.value = payload.tenants
+    const tenants = payload.tenants
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
       .map((value) => value.trim())
+
+    discoveredTenants.value = tenants
+    return tenants
   } catch (error) {
     console.warn('[Dashboard] Failed to load tenants:', error)
+    return []
   }
 }
 
@@ -280,11 +284,15 @@ function handleTenantChange() {
   connectTenant(selectedTenant.value)
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Generate mock data for demo
   generateMockData()
 
-  void loadDiscoveredTenants()
+  const tenants = await loadDiscoveredTenants()
+
+  if (tenants.length > 0 && !tenants.includes(selectedTenant.value)) {
+    selectedTenant.value = tenants[0]!
+  }
 
   setupSocketListeners()
   

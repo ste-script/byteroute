@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { ensurePassportAuthInitialized } from "../auth/passport.js";
+import { hydratePrincipalFromDatabase } from "../auth/principal.js";
 import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
 
 function firstHeaderValue(value: string | string[] | undefined): string | undefined {
@@ -27,7 +28,7 @@ export function requireApiAuth(req: Request, res: Response, next: NextFunction):
     }
   }
 
-  passport.authenticate("bearer", { session: false }, (error: unknown, user: Express.User | false) => {
+  passport.authenticate("bearer", { session: false }, async (error: unknown, user: Express.User | false) => {
     if (error) {
       console.error("Authentication error:", error);
       res.status(500).json({ error: "Authentication failed" });
@@ -39,7 +40,18 @@ export function requireApiAuth(req: Request, res: Response, next: NextFunction):
       return;
     }
 
-    req.user = user;
-    next();
+    try {
+      const hydratedUser = await hydratePrincipalFromDatabase(user);
+      if (!hydratedUser) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      req.user = hydratedUser;
+      next();
+    } catch (dbError) {
+      console.error("Authentication DB lookup failed:", dbError);
+      res.status(500).json({ error: "Authentication failed" });
+    }
   })(req, res, next);
 }

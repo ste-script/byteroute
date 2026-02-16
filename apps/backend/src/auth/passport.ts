@@ -6,6 +6,7 @@ type AuthenticatedPrincipal = {
   id: string;
   email: string;
   name?: string;
+  tenantIds: string[];
   scopes: string[];
 };
 
@@ -13,6 +14,7 @@ type AuthTokenClaims = {
   sub: string;
   email: string;
   name?: string;
+  tenantIds: string[];
 };
 
 function getJwtSecret(): string {
@@ -76,8 +78,11 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
   const sub = typeof payload.sub === "string" ? payload.sub : undefined;
   const email = typeof payload.email === "string" ? payload.email : undefined;
   const name = typeof payload.name === "string" ? payload.name : undefined;
+  const tenantIds = Array.isArray(payload.tenantIds)
+    ? payload.tenantIds.filter((value): value is string => typeof value === "string")
+    : [];
 
-  if (!sub || !email) {
+  if (!sub || !email || tenantIds.length === 0) {
     return undefined;
   }
 
@@ -85,6 +90,7 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
     sub,
     email,
     name,
+    tenantIds,
   };
 }
 
@@ -115,6 +121,7 @@ export function verifyAuthToken(token: string | undefined): AuthenticatedPrincip
       id: claims.sub,
       email: claims.email,
       name: claims.name,
+      tenantIds: claims.tenantIds,
       scopes: ["api"],
     };
   } catch {

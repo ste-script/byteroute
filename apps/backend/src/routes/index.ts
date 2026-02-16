@@ -16,7 +16,7 @@ router.get("/health", healthCheck);
 router.post("/auth/signup", signUp);
 router.post("/auth/signin", signIn);
 router.get("/auth/me", requireApiAuth, getCurrentUser);
-router.post("/auth/logout", requireCsrfForCookieAuth, signOut);
+router.post("/auth/logout", signOut);
 
 // Protect API endpoints
 router.use("/api", requireApiAuth);

@@ -62,9 +62,20 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(): Promise<void> {
-    if (csrfToken.value) {
-      await authApi.signOut(csrfToken.value)
+    let token = csrfToken.value
+
+    if (!token) {
+      const current = await authApi.getCurrentUser()
+      if (current?.user && current.csrfToken) {
+        setAuth(current.user, current.csrfToken)
+        token = current.csrfToken
+      }
     }
+
+    if (token) {
+      await authApi.signOut(token)
+    }
+
     setAuth(null, null)
     error.value = null
   }
