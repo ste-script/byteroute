@@ -389,4 +389,18 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
     flex: 1 0 calc(50% - 0.25rem);
   }
 }
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    flex: 1 0 calc(50% - 0.25rem);
+  }
+}
 </style>

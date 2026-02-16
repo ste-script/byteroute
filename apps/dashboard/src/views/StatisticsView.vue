@@ -69,4 +69,10 @@ const { statistics, darkMode } = storeToRefs(store)
     }
   }
 }
+
+@media (max-width: 640px) {
+  .stats-panel {
+    min-height: 480px;
+  }
+}
 </style>

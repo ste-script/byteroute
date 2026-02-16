@@ -486,6 +486,29 @@ onUnmounted(() => {
     margin: 0;
   }
 
+  .header-left,
+  .header-right,
+  .header-center {
+    width: 100%;
+  }
+
+  .header-left,
+  .header-right {
+    justify-content: space-between;
+  }
+
+  .header-left {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-connection-status :deep(.p-badge) {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .header-center {
     display: flex;
     align-items: center;
@@ -501,6 +524,11 @@ onUnmounted(() => {
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
     font-weight: 500;
+  }
+
+  .tenant-select {
+    width: 100%;
+    max-width: 14rem;
   }
 
   .dashboard-grid {
@@ -563,6 +591,42 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .statistics-section {
+    max-height: none;
+  }
+
+  .connections-header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .header-left {
+    justify-content: flex-start;
+  }
+
+  .header-right {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .version {
+    flex-basis: 100%;
+  }
+
+  .connections-header-left,
+  .connections-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .connections-limit {
+    min-width: 7.5rem;
   }
 
   .connections-limit {
