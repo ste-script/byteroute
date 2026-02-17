@@ -170,7 +170,7 @@ describe("auth/passport", () => {
     const useSpy = vi.spyOn(passport, "use");
 
     ensurePassportAuthInitialized();
-    const strategy = useSpy.mock.calls[0]?.[1] as { _verify: (token: string, done: (...args: unknown[]) => void) => void };
+    const strategy = useSpy.mock.calls[0]?.[1] as unknown as { _verify: (token: string, done: (...args: unknown[]) => void) => void };
 
     const invalidDone = vi.fn();
     strategy._verify("invalid-token", invalidDone);
