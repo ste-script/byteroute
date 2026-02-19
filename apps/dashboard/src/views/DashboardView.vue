@@ -57,7 +57,7 @@ async function handleCreateTenant(payload: { name: string; tenantId?: string }):
   newTenantError.value = null
   newTenantPending.value = true
   try {
-    const tenant = await createTenant(payload, authStore.csrfToken)
+    const tenant = await createTenant(payload)
     discoveredTenants.value = Array.from(new Set([...discoveredTenants.value, tenant.tenantId]))
     selectedTenant.value = tenant.tenantId
     if (typeof window !== 'undefined') {

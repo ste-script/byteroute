@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { useSocket } from '@/services/socket'
 import { useDashboardStore } from '@/stores/dashboard'
 import { ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
+import { listTenants } from '@/services/tenants'
 
 export const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
 
@@ -28,15 +29,7 @@ export function useTenantManager() {
 
   async function loadDiscoveredTenants(): Promise<string[]> {
     try {
-      const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-      const tenantsUrl = apiBase ? `${apiBase}/api/tenants` : '/api/tenants'
-      const response = await fetch(tenantsUrl, { credentials: 'include' })
-      if (!response.ok) return []
-      const payload = (await response.json()) as { tenants?: unknown }
-      if (!Array.isArray(payload.tenants)) return []
-      const tenants = payload.tenants
-        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
-        .map((v) => v.trim())
+      const tenants = await listTenants()
       discoveredTenants.value = tenants
       return tenants
     } catch (error) {

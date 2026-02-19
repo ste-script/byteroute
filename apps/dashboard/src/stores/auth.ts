@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import * as authApi from '@/services/auth'
+import { setCsrfToken } from '@/api/client'
 import type { AuthUser, SignInPayload, SignUpPayload } from '@/types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -15,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   function setAuth(nextUser: AuthUser | null, nextCsrfToken: string | null): void {
     user.value = nextUser
     csrfToken.value = nextCsrfToken
+    setCsrfToken(nextCsrfToken)  // keep axios interceptor in sync
     error.value = null
   }
 
@@ -62,40 +64,33 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(): Promise<void> {
-    let token = csrfToken.value
-
-    if (!token) {
+    // If we somehow lost the token, refresh session first so the
+    // interceptor has something to attach before the logout POST
+    if (!csrfToken.value) {
       const current = await authApi.getCurrentUser()
       if (current?.user && current.csrfToken) {
         setAuth(current.user, current.csrfToken)
-        token = current.csrfToken
       }
     }
 
-    if (token) {
-      await authApi.signOut(token)
-    }
-
+    await authApi.signOut()
     setAuth(null, null)
     error.value = null
   }
 
   async function createClientToken(): Promise<string> {
-    let token = csrfToken.value
-
-    if (!token) {
+    if (!csrfToken.value) {
       const current = await authApi.getCurrentUser()
       if (current?.user && current.csrfToken) {
         setAuth(current.user, current.csrfToken)
-        token = current.csrfToken
       }
     }
 
-    if (!token) {
+    if (!csrfToken.value) {
       throw new Error('Missing CSRF token')
     }
 
-    return authApi.createClientToken(token)
+    return authApi.createClientToken()
   }
 
   return {
