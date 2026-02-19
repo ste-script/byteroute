@@ -2,7 +2,7 @@ import { Router } from "express";
 import { healthCheck } from "../controllers/health.controller.js";
 import { postConnections } from "../controllers/connections.controller.js";
 import { postMetrics } from "../controllers/metrics.controller.js";
-import { getTenants } from "../controllers/tenants.controller.js";
+import { getTenants, createTenant, deleteTenant } from "../controllers/tenants.controller.js";
 import { createClientToken, getCurrentUser, signIn, signOut, signUp } from "../controllers/auth.controller.js";
 import { requireApiAuth } from "../middleware/auth.middleware.js";
 import { requireCsrfForCookieAuth } from "../middleware/csrf.middleware.js";
@@ -29,7 +29,9 @@ router.post("/api/connections", postConnections);
 // Ingest metrics (client -> backend)
 router.post("/api/metrics", postMetrics);
 
-// Tenant discovery (dashboard)
+// Tenant management (dashboard)
 router.get("/api/tenants", getTenants);
+router.post("/api/tenants", createTenant);
+router.delete("/api/tenants/:tenantId", deleteTenant);
 
 export default router;

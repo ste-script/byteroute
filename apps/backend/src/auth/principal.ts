@@ -47,21 +47,11 @@ export async function hydratePrincipalFromDatabase(
     .lean<{ tenantId: string }[]>();
   const tenantIds = normalizeTenantIds(tenantDocs.map((doc) => doc.tenantId));
 
-  // Fall back to User.tenantIds for legacy accounts that pre-date the Tenant collection
-  const fallbackTenantIds =
-    tenantIds.length === 0
-      ? normalizeTenantIds((user as { tenantIds?: unknown }).tenantIds)
-      : tenantIds;
-
-  if (fallbackTenantIds.length === 0) {
-    return undefined;
-  }
-
   return {
     id: String(user._id),
     email: user.email,
     name: typeof user.name === "string" ? user.name : undefined,
-    tenantIds: fallbackTenantIds,
+    tenantIds,
     scopes: normalizeScopes(principal.scopes),
   };
 }

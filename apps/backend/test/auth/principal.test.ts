@@ -49,13 +49,15 @@ describe("auth/principal", () => {
     await expect(hydratePrincipalFromDatabase({ id: "user-1" })).resolves.toBeUndefined();
   });
 
-  it("returns undefined when user has no tenant access", async () => {
+  it("returns a principal with empty tenantIds when user has no tenants", async () => {
     const lean = vi.fn().mockResolvedValue({ _id: "user-1", email: "user@example.com", tenantIds: [] });
     const select = vi.fn().mockReturnValue({ lean });
     mocks.findById.mockReturnValue({ select });
     mockTenants([]);
 
-    await expect(hydratePrincipalFromDatabase({ id: "user-1" })).resolves.toBeUndefined();
+    await expect(hydratePrincipalFromDatabase({ id: "user-1" })).resolves.toEqual(
+      expect.objectContaining({ id: "user-1", email: "user@example.com", tenantIds: [] })
+    );
   });
 
   it("hydrates principal with normalized scopes and tenant ids", async () => {

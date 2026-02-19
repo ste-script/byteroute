@@ -11,7 +11,9 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn((req, res) => res.status(204).send()),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
   postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 })),
-  getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] }))
+  getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] })),
+  createTenant: vi.fn((req, res) => res.status(201).json({ tenant: { tenantId: "new-tenant", name: "New Tenant" } })),
+  deleteTenant: vi.fn((req, res) => res.status(204).send())
 }));
 
 const sharedMocks = vi.hoisted(() => ({
@@ -49,7 +51,9 @@ vi.mock("../../src/controllers/metrics.controller.js", () => ({
 }));
 
 vi.mock("../../src/controllers/tenants.controller.js", () => ({
-  getTenants: mocks.getTenants
+  getTenants: mocks.getTenants,
+  createTenant: mocks.createTenant,
+  deleteTenant: mocks.deleteTenant
 }));
 
 import router from "../../src/routes/index.js";
@@ -123,6 +127,32 @@ describe("routes", () => {
       .set("Authorization", `Bearer ${token()}`)
       .expect(200);
     expect(mocks.getTenants).toHaveBeenCalled();
+  });
+
+  it("wires POST /api/tenants to createTenant", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    await request(app)
+      .post("/api/tenants")
+      .set("Authorization", `Bearer ${token()}`)
+      .send({ name: "New Tenant" })
+      .expect(201);
+    expect(mocks.createTenant).toHaveBeenCalled();
+  });
+
+  it("wires DELETE /api/tenants/:tenantId to deleteTenant", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .delete("/api/tenants/my-tenant")
+      .set("Authorization", `Bearer ${token()}`)
+      .set("x-csrf-token", "csrf")
+      .set("cookie", "byteroute_auth=token; byteroute_csrf=csrf")
+      .expect(204);
+    expect(mocks.deleteTenant).toHaveBeenCalled();
   });
 
   it("wires /auth/signup to signUp", async () => {
