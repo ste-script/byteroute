@@ -35,15 +35,10 @@ export function addConnection(
   connection?: Partial<Connection>
 ): Connection {
   const resolvedTenantId = ensureTenantId(tenantId);
-  const knownBefore = getKnownTenantIds().includes(resolvedTenantId);
   const newConnection = setConnection(
     generateConnection({ ...connection, tenantId: resolvedTenantId }),
     resolvedTenantId
   );
-
-  if (!knownBefore) {
-    io.emit("tenant:new", { tenantId: resolvedTenantId });
-  }
 
   emitToTenant(io, resolvedTenantId, "connection:new", newConnection);
   emitStatisticsUpdate(io, resolvedTenantId);
@@ -57,7 +52,6 @@ export function upsertConnectionsLocal(
   batch: Connection[]
 ): void {
   const resolvedTenantId = ensureTenantId(tenantId);
-  const knownBefore = getKnownTenantIds().includes(resolvedTenantId);
 
   for (const connection of batch) {
     const { connection: normalized, existed } = upsertConnection(connection, resolvedTenantId);
@@ -69,9 +63,6 @@ export function upsertConnectionsLocal(
     }
   }
 
-  if (!knownBefore && batch.length > 0) {
-    io.emit("tenant:new", { tenantId: resolvedTenantId });
-  }
 }
 
 export function updateConnection(

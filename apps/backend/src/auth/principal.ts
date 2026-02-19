@@ -1,4 +1,4 @@
-import { UserModel } from "@byteroute/shared";
+import { UserModel, TenantModel } from "@byteroute/shared";
 import { normalizeTenantIds } from "../utils/tenant.js";
 
 type PrincipalLike = {
@@ -34,15 +34,26 @@ export async function hydratePrincipalFromDatabase(
   }
 
   const user = await UserModel.findById(principal.id)
-    .select("email name tenantIds")
+    .select("email name")
     .lean();
 
   if (!user || typeof user.email !== "string") {
     return undefined;
   }
 
-  const tenantIds = normalizeTenantIds(user.tenantIds);
-  if (tenantIds.length === 0) {
+  // Derive tenant IDs from the Tenant collection (authoritative source)
+  const tenantDocs = await TenantModel.find({ ownerId: principal.id })
+    .select("tenantId")
+    .lean<{ tenantId: string }[]>();
+  const tenantIds = normalizeTenantIds(tenantDocs.map((doc) => doc.tenantId));
+
+  // Fall back to User.tenantIds for legacy accounts that pre-date the Tenant collection
+  const fallbackTenantIds =
+    tenantIds.length === 0
+      ? normalizeTenantIds((user as { tenantIds?: unknown }).tenantIds)
+      : tenantIds;
+
+  if (fallbackTenantIds.length === 0) {
     return undefined;
   }
 
@@ -50,7 +61,7 @@ export async function hydratePrincipalFromDatabase(
     id: String(user._id),
     email: user.email,
     name: typeof user.name === "string" ? user.name : undefined,
-    tenantIds,
+    tenantIds: fallbackTenantIds,
     scopes: normalizeScopes(principal.scopes),
   };
 }

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { UserModel } from "@byteroute/shared";
+import { UserModel, TenantModel } from "@byteroute/shared";
 import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
@@ -77,6 +77,12 @@ export async function signUp(req: Request, res: Response): Promise<void> {
   created.tenantIds = [ownedTenantId];
   await created.save();
 
+  await TenantModel.create({
+    tenantId: ownedTenantId,
+    ownerId: created._id,
+    name: ownedTenantId,
+  });
+
   const token = signAuthToken({
     sub: String(created._id),
     email: created.email,
@@ -119,6 +125,11 @@ export async function signIn(req: Request, res: Response): Promise<void> {
     const fallbackTenantId = createOwnedTenantId(String(user._id));
     user.tenantIds = [fallbackTenantId];
     await user.save();
+    await TenantModel.findOneAndUpdate(
+      { tenantId: fallbackTenantId, ownerId: user._id },
+      { $setOnInsert: { tenantId: fallbackTenantId, ownerId: user._id, name: fallbackTenantId } },
+      { upsert: true, new: true }
+    );
   }
 
   const tenantIds = normalizeTenantIds(user.tenantIds);

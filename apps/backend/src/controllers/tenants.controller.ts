@@ -1,9 +1,17 @@
 import type { Request, Response } from "express";
-import { normalizeTenantIds } from "../utils/tenant.js";
+import { TenantModel } from "@byteroute/shared";
 
-export function getTenants(req: Request, res: Response): void {
-  const principal = req.user as { tenantIds?: unknown } | undefined;
-  const ownedTenantIds = normalizeTenantIds(principal?.tenantIds);
-  const tenants = Array.from(new Set(ownedTenantIds)).sort();
+export async function getTenants(req: Request, res: Response): Promise<void> {
+  const principal = req.user as { id?: string } | undefined;
+  if (!principal?.id) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const docs = await TenantModel.find({ ownerId: principal.id })
+    .select("tenantId name")
+    .lean<{ tenantId: string; name?: string }[]>();
+
+  const tenants = docs.map((doc) => doc.tenantId).sort();
   res.json({ tenants });
 }

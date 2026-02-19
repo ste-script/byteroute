@@ -139,6 +139,7 @@ export interface SocketData {
   userId?: string
   tenantId?: string
   subscribedRooms?: string[]
+  principal?: Record<string, unknown>
 }
 
 export * from "./auth.js";

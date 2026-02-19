@@ -274,6 +274,9 @@ function connectTenant(tenantId: string) {
 
 async function handleLogout(): Promise<void> {
   socket.disconnect()
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(TENANT_STORAGE_KEY)
+  }
   await authStore.logout()
   await router.push('/login')
 }
