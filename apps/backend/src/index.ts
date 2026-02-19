@@ -22,6 +22,7 @@ import routes from "./routes/index.js";
 import { handleConnection } from "./controllers/socket.controller.js";
 import { ensurePassportAuthInitialized } from "./auth/passport.js";
 import { socketAuthMiddleware } from "./middleware/socket-auth.middleware.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 const server = createServer(app);
@@ -42,6 +43,7 @@ app.set("io", io);
 
 // Register routes
 app.use(routes);
+app.use(errorHandler);
 
 // Socket.IO connection handler
 io.on("connection", (socket) => handleConnection(io, socket));

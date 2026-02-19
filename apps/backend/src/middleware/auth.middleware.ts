@@ -3,14 +3,7 @@ import passport from "passport";
 import { ensurePassportAuthInitialized } from "../auth/passport.js";
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
 import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
-
-function firstHeaderValue(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-  return value;
-}
-
+import { firstHeaderValue } from "../utils/request.js";
 export function requireApiAuth(req: Request, res: Response, next: NextFunction): void {
   try {
     ensurePassportAuthInitialized();

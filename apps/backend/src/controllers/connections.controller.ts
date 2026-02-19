@@ -4,6 +4,7 @@ import type { TypedSocketServer } from "../services/connections.js";
 import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
 import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
 import { resolveTenantContextFromRequest, userHasTenantAccess } from "../utils/tenant.js";
+import { getPrincipal } from "../auth/principal.js";
 
 type ConnectionsBody = {
   connections?: Partial<Connection>[];
@@ -20,7 +21,7 @@ export async function postConnections(req: Request, res: Response): Promise<void
 
   const io = req.app.get("io") as TypedSocketServer | undefined;
   const { tenantId } = resolveTenantContextFromRequest(req);
-  const principal = req.user as { tenantIds?: unknown } | undefined;
+  const principal = getPrincipal(req);
 
   if (!principal || !userHasTenantAccess(principal.tenantIds, tenantId)) {
     res.status(403).json({ error: "Forbidden: no access to tenant" });

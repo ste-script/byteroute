@@ -7,6 +7,7 @@ import {
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
 import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
 import { resolveTenantContextFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
+import { firstHeaderValue } from "../utils/request.js";
 
 type SocketHandshakeLike = {
   auth?: {
@@ -16,13 +17,6 @@ type SocketHandshakeLike = {
   };
   headers?: Record<string, string | string[] | undefined>;
 };
-
-function normalizeHeaderValue(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-  return value;
-}
 
 export function extractBearerTokenFromSocketHandshake(
   handshake: SocketHandshakeLike | undefined
@@ -47,7 +41,7 @@ export function extractBearerTokenFromSocketHandshake(
   }
 
   const headerAuthorization = extractBearerTokenFromAuthorization(
-    normalizeHeaderValue(handshake?.headers?.authorization)
+    firstHeaderValue(handshake?.headers?.authorization)
   );
 
   if (headerAuthorization) {
@@ -55,7 +49,7 @@ export function extractBearerTokenFromSocketHandshake(
   }
 
   const cookieToken = getCookieValue(
-    normalizeHeaderValue(handshake?.headers?.cookie),
+    firstHeaderValue(handshake?.headers?.cookie),
     AUTH_COOKIE_NAME
   );
 

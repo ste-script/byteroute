@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import { UserModel, TenantModel } from "@byteroute/shared";
 import { normalizeTenantIds } from "../utils/tenant.js";
 
@@ -54,4 +55,11 @@ export async function hydratePrincipalFromDatabase(
     tenantIds,
     scopes: normalizeScopes(principal.scopes),
   };
+}
+
+/**
+ * Typed accessor for the authenticated principal attached by requireApiAuth.
+ */
+export function getPrincipal(req: Request): HydratedPrincipal | undefined {
+  return req.user as HydratedPrincipal | undefined;
 }

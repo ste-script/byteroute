@@ -1,51 +1,17 @@
 import type { Request, Response } from "express";
 import { UserModel } from "@byteroute/shared";
 import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
+import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
-import { AUTH_COOKIE_NAME } from "../utils/cookie.js";
-import { CSRF_COOKIE_NAME, generateCsrfToken } from "../utils/csrf.js";
+import {
+  setAuthCookie,
+  clearAuthCookie,
+  setCsrfCookie,
+  clearCsrfCookie,
+} from "../utils/cookie.js";
+import { generateCsrfToken } from "../utils/csrf.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
-
-const cookieIsSecure =
-  process.env.AUTH_COOKIE_SECURE === "true" ||
-  (process.env.AUTH_COOKIE_SECURE !== "false" && process.env.NODE_ENV === "production");
-
-function setAuthCookie(res: Response, token: string): void {
-  res.cookie(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: cookieIsSecure,
-    sameSite: "lax",
-    path: "/",
-  });
-}
-
-function clearAuthCookie(res: Response): void {
-  res.clearCookie(AUTH_COOKIE_NAME, {
-    httpOnly: true,
-    secure: cookieIsSecure,
-    sameSite: "lax",
-    path: "/",
-  });
-}
-
-function setCsrfCookie(res: Response, token: string): void {
-  res.cookie(CSRF_COOKIE_NAME, token, {
-    httpOnly: false,
-    secure: cookieIsSecure,
-    sameSite: "lax",
-    path: "/",
-  });
-}
-
-function clearCsrfCookie(res: Response): void {
-  res.clearCookie(CSRF_COOKIE_NAME, {
-    httpOnly: false,
-    secure: cookieIsSecure,
-    sameSite: "lax",
-    path: "/",
-  });
-}
 
 export async function signUp(req: Request, res: Response): Promise<void> {
   const parsed = signUpRequestSchema.safeParse(req.body);
@@ -137,9 +103,7 @@ export function signOut(_req: Request, res: Response): void {
 }
 
 export function getCurrentUser(req: Request, res: Response): void {
-  const principal = req.user as
-    | { id: string; email: string; name?: string; tenantIds?: string[] }
-    | undefined;
+  const principal = getPrincipal(req);
 
   if (!principal) {
     res.status(401).json({ error: "Unauthorized" });
@@ -161,9 +125,7 @@ export function getCurrentUser(req: Request, res: Response): void {
 }
 
 export function createClientToken(req: Request, res: Response): void {
-  const principal = req.user as
-    | { id: string; email: string; name?: string; tenantIds?: string[] }
-    | undefined;
+  const principal = getPrincipal(req);
 
   if (!principal) {
     res.status(401).json({ error: "Unauthorized" });

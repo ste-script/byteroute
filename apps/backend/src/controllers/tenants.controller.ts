@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
 import { TenantModel } from "@byteroute/shared";
+import { getPrincipal } from "../auth/principal.js";
 
 export async function getTenants(req: Request, res: Response): Promise<void> {
-  const principal = req.user as { id?: string } | undefined;
+  const principal = getPrincipal(req);
   if (!principal?.id) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -17,7 +18,7 @@ export async function getTenants(req: Request, res: Response): Promise<void> {
 }
 
 export async function createTenant(req: Request, res: Response): Promise<void> {
-  const principal = req.user as { id?: string } | undefined;
+  const principal = getPrincipal(req);
   if (!principal?.id) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -59,7 +60,7 @@ export async function createTenant(req: Request, res: Response): Promise<void> {
 }
 
 export async function deleteTenant(req: Request, res: Response): Promise<void> {
-  const principal = req.user as { id?: string } | undefined;
+  const principal = getPrincipal(req);
   if (!principal?.id) {
     res.status(401).json({ error: "Unauthorized" });
     return;
