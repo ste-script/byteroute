@@ -63,17 +63,10 @@ describe("auth.middleware", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("injects bearer token from cookie when authorization header missing", () => {
-    mocks.getCookieValue.mockReturnValue("cookie-token");
-    mocks.hydratePrincipalFromDatabase.mockResolvedValue({
-      id: "user-1",
-      email: "user@example.com",
-      tenantIds: ["tenant-a"],
-      scopes: ["api"],
-    });
+  it("does not inject bearer token from cookie (Bearer-only mode)", () => {
     mocks.passportAuthenticate.mockImplementation(
-      (_strategy, _options, callback: (error: unknown, user: unknown) => void) => {
-        callback(null, { id: "user-1" });
+      (_strategy: string, _options: unknown, callback: (error: unknown, user: unknown) => void) => {
+        callback(null, null);
       }
     );
 
@@ -83,7 +76,8 @@ describe("auth.middleware", () => {
 
     requireApiAuth(req, res, next);
 
-    expect(req.headers.authorization).toBe("Bearer cookie-token");
+    expect(req.headers.authorization).toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(401);
   });
 
   it("uses first authorization header value when header is an array", async () => {

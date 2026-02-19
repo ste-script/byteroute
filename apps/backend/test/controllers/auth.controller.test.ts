@@ -50,7 +50,7 @@ describe("auth.controller", () => {
     vi.clearAllMocks();
   });
 
-  it("signUp creates user, sets cookie and returns user", async () => {
+  it("signUp creates user and returns token and user", async () => {
     mocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(null) });
     mocks.create.mockResolvedValue({
       _id: "user-1",
@@ -69,10 +69,9 @@ describe("auth.controller", () => {
 
     expect(mocks.hashPassword).toHaveBeenCalledWith("password123");
     expect(mocks.create).toHaveBeenCalled();
-    expect(res.cookie).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ user: expect.any(Object) })
+      expect.objectContaining({ token: "jwt-token", user: expect.any(Object) })
     );
   });
 
@@ -101,7 +100,7 @@ describe("auth.controller", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it("signIn sets cookie for valid credentials", async () => {
+  it("signIn returns token and user for valid credentials", async () => {
     mocks.findOne.mockReturnValue({
       select: vi.fn().mockResolvedValue({
         _id: "user-1",
@@ -121,10 +120,9 @@ describe("auth.controller", () => {
     await signIn(req, res);
 
     expect(mocks.verifyPassword).toHaveBeenCalledWith("password123", "salt:hash");
-    expect(res.cookie).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ user: expect.any(Object) })
+      expect.objectContaining({ token: "jwt-token", user: expect.any(Object) })
     );
   });
 
@@ -187,7 +185,6 @@ describe("auth.controller", () => {
     getCurrentUser(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.cookie).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         user: expect.objectContaining({
@@ -221,13 +218,13 @@ describe("auth.controller", () => {
     );
   });
 
-  it("signOut clears cookies and returns 204", () => {
+  it("signOut returns 204 without clearing cookies", () => {
     const req = {} as Request;
     const res = createRes();
 
     signOut(req, res);
 
-    expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    expect(res.clearCookie).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.send).toHaveBeenCalled();
   });
