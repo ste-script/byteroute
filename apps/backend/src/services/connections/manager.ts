@@ -1,10 +1,9 @@
 import type { Connection } from "@byteroute/shared";
 import {
-  generateConnection,
   generateTrafficFlows,
   generateStatistics,
 } from "../../mock/connections.js";
-import { DEFAULT_TENANT_ID, ensureTenantId } from "../../utils/tenant.js";
+import { ensureTenantId } from "../../utils/tenant.js";
 import { emitToTenant } from "./emitter.js";
 import {
   getAllConnections,
@@ -27,23 +26,6 @@ export function getAllConnectionsSnapshot(): Connection[] {
 
 export function getConnectionById(tenantId: string, id: string): Connection | undefined {
   return getTenantConnection(ensureTenantId(tenantId), id);
-}
-
-export function addConnection(
-  io: TypedSocketServer,
-  tenantId: string,
-  connection?: Partial<Connection>
-): Connection {
-  const resolvedTenantId = ensureTenantId(tenantId);
-  const newConnection = setConnection(
-    generateConnection({ ...connection, tenantId: resolvedTenantId }),
-    resolvedTenantId
-  );
-
-  emitToTenant(io, resolvedTenantId, "connection:new", newConnection);
-  emitStatisticsUpdate(io, resolvedTenantId);
-
-  return newConnection;
 }
 
 export function upsertConnectionsLocal(
@@ -140,40 +122,4 @@ export function emitStatisticsUpdateAllTenants(io: TypedSocketServer): void {
 
 export function emitError(io: TypedSocketServer, message: string, code?: string): void {
   io.emit("error", { message, code });
-}
-
-export function startDemoMode(io: TypedSocketServer, intervalMs = 5000): NodeJS.Timeout {
-  const demoTenantId = DEFAULT_TENANT_ID;
-
-  return setInterval(() => {
-    const action = Math.random();
-
-    if (action < 0.4) {
-      addConnection(io, demoTenantId);
-    } else if (action < 0.7) {
-      const allConnections = getTenantConnections(demoTenantId);
-      if (allConnections.length > 0) {
-        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)]!;
-        const statuses: Connection["status"][] = ["active", "inactive"];
-        updateConnection(io, demoTenantId, randomConn.id, {
-          status: statuses[Math.floor(Math.random() * statuses.length)],
-          bandwidth: Math.floor(Math.random() * 100000),
-          bytesIn: (randomConn.bytesIn ?? 0) + Math.floor(Math.random() * 10000),
-          bytesOut: (randomConn.bytesOut ?? 0) + Math.floor(Math.random() * 10000),
-        });
-      }
-    } else if (action < 0.85) {
-      const allConnections = getTenantConnections(demoTenantId);
-      if (allConnections.length > 10) {
-        const randomConn = allConnections[Math.floor(Math.random() * allConnections.length)]!;
-        removeConnection(io, demoTenantId, randomConn.id);
-      }
-    }
-
-    emitTrafficFlows(io, demoTenantId);
-  }, intervalMs);
-}
-
-export function stopDemoMode(timer: NodeJS.Timeout): void {
-  clearInterval(timer);
 }

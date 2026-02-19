@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sharedMocks = vi.hoisted(() => ({
   findById: vi.fn(),
+  findTenants: vi.fn(),
 }));
 
 vi.mock("@byteroute/shared", () => ({
   UserModel: {
     findById: sharedMocks.findById,
+  },
+  TenantModel: {
+    find: sharedMocks.findTenants,
   },
 }));
 
@@ -39,10 +43,13 @@ function mockUserLookup(tenantIds: string[] = ["default"]): void {
     _id: "user-1",
     email: "user@example.com",
     name: "User",
-    tenantIds,
   });
   const select = vi.fn().mockReturnValue({ lean });
   sharedMocks.findById.mockReturnValue({ select });
+
+  const tenantLean = vi.fn().mockResolvedValue(tenantIds.map((t) => ({ tenantId: t })));
+  const tenantSelect = vi.fn().mockReturnValue({ lean: tenantLean });
+  sharedMocks.findTenants.mockReturnValue({ select: tenantSelect });
 }
 
 describe("socketAuthMiddleware", () => {

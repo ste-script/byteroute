@@ -12,10 +12,9 @@ import ConnectionList from '@/components/ConnectionList.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
-import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
+import type { Connection, TrafficFlow } from '@/types'
 import { useRouter } from 'vue-router'
-import { DEFAULT_TENANT_ID, ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
-
+import { ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
 // Version injected at build time via Vite define
 const version = __APP_VERSION__
 
@@ -43,7 +42,6 @@ const timeRangeOptions = [
 
 const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
 const initialTenant = ensureTenantId(import.meta.env.VITE_TENANT_ID)
-const configuredTenants = normalizeTenantIds((import.meta.env.VITE_TENANTS || '').split(','))
 
 const savedTenant = typeof window !== 'undefined'
   ? sanitizeTenantId(window.localStorage.getItem(TENANT_STORAGE_KEY))
@@ -54,9 +52,6 @@ const discoveredTenants = ref<string[]>([])
 const tenantOptions = computed(() => {
   const uniqueTenants = Array.from(new Set(normalizeTenantIds([
     defaultTenant,
-    initialTenant,
-    DEFAULT_TENANT_ID,
-    ...configuredTenants,
     ...discoveredTenants.value
   ])))
   return uniqueTenants.map((tenant) => ({ label: tenant, value: tenant }))
@@ -81,99 +76,10 @@ function toggleConnectionsPaused() {
   socket.emit(connectionsPaused.value ? 'unsubscribe' : 'subscribe', { rooms: ['connections'] })
 }
 
-// Mock data for demo (remove when backend is connected)
-const mockTimeSeriesData = ref<TimeSeriesData[]>([])
-const mockStatistics = ref<Statistics | null>(null)
-const mockFlows = ref<TrafficFlow[]>([])
-
-function generateMockData() {
-  // Generate time series
-  const now = Date.now()
-  mockTimeSeriesData.value = Array.from({ length: 24 }, (_, i) => ({
-    timestamp: new Date(now - (23 - i) * 3600000),
-    connections: Math.floor(Math.random() * 500) + 100,
-    bandwidthIn: Math.floor(Math.random() * 100000000) + 10000000,
-    bandwidthOut: Math.floor(Math.random() * 80000000) + 8000000,
-    inactive: Math.floor(Math.random() * 50)
-  }))
-
-  // Generate statistics
-  mockStatistics.value = {
-    totalConnections: 1247,
-    activeConnections: 892,
-    totalBandwidth: 847293847,
-    bandwidthIn: 523948234,
-    bandwidthOut: 323345613,
-    byCountry: [
-      { country: 'United States', countryCode: 'US', connections: 423, bandwidth: 234829384, percentage: 33.9 },
-      { country: 'Germany', countryCode: 'DE', connections: 187, bandwidth: 123948234, percentage: 15.0 },
-      { country: 'United Kingdom', countryCode: 'GB', connections: 156, bandwidth: 98234823, percentage: 12.5 },
-      { country: 'France', countryCode: 'FR', connections: 98, bandwidth: 67234823, percentage: 7.9 },
-      { country: 'Japan', countryCode: 'JP', connections: 87, bandwidth: 54234823, percentage: 7.0 },
-      { country: 'Canada', countryCode: 'CA', connections: 76, bandwidth: 43234823, percentage: 6.1 },
-      { country: 'Australia', countryCode: 'AU', connections: 65, bandwidth: 32234823, percentage: 5.2 },
-      { country: 'Netherlands', countryCode: 'NL', connections: 54, bandwidth: 28234823, percentage: 4.3 },
-      { country: 'Brazil', countryCode: 'BR', connections: 43, bandwidth: 21234823, percentage: 3.4 },
-      { country: 'India', countryCode: 'IN', connections: 38, bandwidth: 18234823, percentage: 3.0 }
-    ],
-    byCategory: [
-      { category: 'Web Traffic', connections: 523, bandwidth: 234829384, percentage: 41.9, color: '#3b82f6' },
-      { category: 'API Calls', connections: 287, bandwidth: 123948234, percentage: 23.0, color: '#10b981' },
-      { category: 'Streaming', connections: 198, bandwidth: 198234823, percentage: 15.9, color: '#f59e0b' },
-      { category: 'File Transfer', connections: 132, bandwidth: 187234823, percentage: 10.6, color: '#8b5cf6' },
-      { category: 'Other', connections: 107, bandwidth: 45234823, percentage: 8.6, color: '#6b7280' }
-    ],
-    byProtocol: [
-      { protocol: 'TCP', connections: 987, percentage: 79.1 },
-      { protocol: 'UDP', connections: 198, percentage: 15.9 },
-      { protocol: 'ICMP', connections: 42, percentage: 3.4 },
-      { protocol: 'OTHER', connections: 20, percentage: 1.6 }
-    ],
-    timeSeries: mockTimeSeriesData.value
-  }
-
-  // Generate traffic flows
-  mockFlows.value = [
-    { id: '1', source: { lat: 40.7128, lng: -74.0060, country: 'US', city: 'New York' }, target: { lat: 51.5074, lng: -0.1278, country: 'GB', city: 'London' }, value: 450 },
-    { id: '2', source: { lat: 37.7749, lng: -122.4194, country: 'US', city: 'San Francisco' }, target: { lat: 35.6762, lng: 139.6503, country: 'JP', city: 'Tokyo' }, value: 320 },
-    { id: '3', source: { lat: 52.5200, lng: 13.4050, country: 'DE', city: 'Berlin' }, target: { lat: 48.8566, lng: 2.3522, country: 'FR', city: 'Paris' }, value: 280 },
-    { id: '4', source: { lat: 40.7128, lng: -74.0060, country: 'US', city: 'New York' }, target: { lat: 52.5200, lng: 13.4050, country: 'DE', city: 'Berlin' }, value: 210 },
-    { id: '5', source: { lat: 51.5074, lng: -0.1278, country: 'GB', city: 'London' }, target: { lat: -33.8688, lng: 151.2093, country: 'AU', city: 'Sydney' }, value: 180 },
-    { id: '6', source: { lat: 35.6762, lng: 139.6503, country: 'JP', city: 'Tokyo' }, target: { lat: 22.3193, lng: 114.1694, country: 'HK', city: 'Hong Kong' }, value: 150 },
-    { id: '7', source: { lat: 37.7749, lng: -122.4194, country: 'US', city: 'San Francisco' }, target: { lat: 49.2827, lng: -123.1207, country: 'CA', city: 'Vancouver' }, value: 140 },
-    { id: '8', source: { lat: 48.8566, lng: 2.3522, country: 'FR', city: 'Paris' }, target: { lat: 52.3676, lng: 4.9041, country: 'NL', city: 'Amsterdam' }, value: 120 }
-  ]
-
-  // Generate mock connections
-  const mockConnections: Connection[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `conn-${i}`,
-    sourceIp: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-    destIp: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-    sourcePort: Math.floor(Math.random() * 60000) + 1024,
-    destPort: [80, 443, 8080, 3000, 5432, 27017][Math.floor(Math.random() * 6)],
-    protocol: ['TCP', 'UDP', 'ICMP', 'OTHER'][Math.floor(Math.random() * 4)] as Connection['protocol'],
-    status: ['active', 'active', 'active', 'inactive'][Math.floor(Math.random() * 4)] as Connection['status'],
-    country: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].country,
-    countryCode: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].countryCode,
-    category: mockStatistics.value!.byCategory[Math.floor(Math.random() * 5)].category,
-    bandwidth: Math.floor(Math.random() * 10000000),
-    startTime: new Date(Date.now() - Math.floor(Math.random() * 86400000)),
-    lastActivity: new Date(Date.now() - Math.floor(Math.random() * 60000))
-  }))
-
-  store.setConnections(mockConnections)
-  store.setTrafficFlows(mockFlows.value)
-  store.setStatistics(mockStatistics.value!)
-}
-
-// Computed display values with mock data fallback
-const displayStatistics = computed(() => statistics.value || mockStatistics.value)
-const displayTimeSeries = computed(() => 
-  statistics.value?.timeSeries || mockTimeSeriesData.value
-)
-const displayFlows = computed(() => 
-  trafficFlows.value.length > 0 ? trafficFlows.value : mockFlows.value
-)
+// Computed display values
+const displayStatistics = computed(() => statistics.value)
+const displayTimeSeries = computed(() => statistics.value?.timeSeries ?? [])
+const displayFlows = computed(() => trafficFlows.value)
 
 const limitedConnections = computed(() => {
   return connections.value.slice(0, connectionLimit.value)
@@ -338,9 +244,6 @@ function handleTenantChange() {
 }
 
 onMounted(async () => {
-  // Generate mock data for demo
-  generateMockData()
-
   const tenants = await loadDiscoveredTenants()
 
   if (tenants.length > 0 && !tenants.includes(selectedTenant.value)) {

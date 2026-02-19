@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const sharedMocks = vi.hoisted(() => ({
-  findById: vi.fn()
+  findById: vi.fn(),
+  findTenants: vi.fn(),
 }))
 
 vi.mock('@byteroute/shared', () => ({
   UserModel: {
     findById: sharedMocks.findById
+  },
+  TenantModel: {
+    find: sharedMocks.findTenants
   }
 }))
 import request from 'supertest'
@@ -45,10 +49,13 @@ describe('Metrics API Integration', () => {
       _id: 'user-1',
       email: 'user@example.com',
       name: 'User',
-      tenantIds: ['default']
     })
     const select = vi.fn().mockReturnValue({ lean })
     sharedMocks.findById.mockReturnValue({ select })
+
+    const tenantLean = vi.fn().mockResolvedValue([{ tenantId: 'default' }])
+    const tenantSelect = vi.fn().mockReturnValue({ lean: tenantLean })
+    sharedMocks.findTenants.mockReturnValue({ select: tenantSelect })
 
     process.env.JWT_SECRET = TEST_SECRET
     app = createTestApp()

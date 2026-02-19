@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { UserModel, TenantModel } from "@byteroute/shared";
+import { UserModel } from "@byteroute/shared";
 import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
@@ -47,10 +47,6 @@ function clearCsrfCookie(res: Response): void {
   });
 }
 
-function createOwnedTenantId(userId: string): string {
-  return `tenant-${userId.slice(-8)}`;
-}
-
 export async function signUp(req: Request, res: Response): Promise<void> {
   const parsed = signUpRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -73,21 +69,11 @@ export async function signUp(req: Request, res: Response): Promise<void> {
     tenantIds: [],
   });
 
-  const ownedTenantId = createOwnedTenantId(String(created._id));
-  created.tenantIds = [ownedTenantId];
-  await created.save();
-
-  await TenantModel.create({
-    tenantId: ownedTenantId,
-    ownerId: created._id,
-    name: ownedTenantId,
-  });
-
   const token = signAuthToken({
     sub: String(created._id),
     email: created.email,
     name: created.name,
-    tenantIds: [ownedTenantId],
+    tenantIds: [],
   });
 
   setAuthCookie(res, token);
@@ -100,7 +86,7 @@ export async function signUp(req: Request, res: Response): Promise<void> {
       id: String(created._id),
       email: created.email,
       name: created.name,
-      tenantIds: [ownedTenantId],
+      tenantIds: [],
     },
   });
 }
@@ -118,18 +104,6 @@ export async function signIn(req: Request, res: Response): Promise<void> {
   if (!user || typeof user.passwordHash !== "string" || ! await verifyPassword(password, user.passwordHash)) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
-  }
-
-  const ownedTenantIds = normalizeTenantIds(user.tenantIds);
-  if (ownedTenantIds.length === 0) {
-    const fallbackTenantId = createOwnedTenantId(String(user._id));
-    user.tenantIds = [fallbackTenantId];
-    await user.save();
-    await TenantModel.findOneAndUpdate(
-      { tenantId: fallbackTenantId, ownerId: user._id },
-      { $setOnInsert: { tenantId: fallbackTenantId, ownerId: user._id, name: fallbackTenantId } },
-      { upsert: true, new: true }
-    );
   }
 
   const tenantIds = normalizeTenantIds(user.tenantIds);

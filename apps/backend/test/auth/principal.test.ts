@@ -2,19 +2,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
+  findTenants: vi.fn(),
 }));
 
 vi.mock("@byteroute/shared", () => ({
   UserModel: {
     findById: mocks.findById,
   },
+  TenantModel: {
+    find: mocks.findTenants,
+  },
 }));
 
 import { hydratePrincipalFromDatabase } from "../../src/auth/principal.js";
 
+function mockTenants(tenantIds: string[]): void {
+  const lean = vi.fn().mockResolvedValue(tenantIds.map((t) => ({ tenantId: t })));
+  const select = vi.fn().mockReturnValue({ lean });
+  mocks.findTenants.mockReturnValue({ select });
+}
+
 describe("auth/principal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTenants([]);
   });
 
   it("returns undefined for missing principal id", async () => {
@@ -42,6 +53,7 @@ describe("auth/principal", () => {
     const lean = vi.fn().mockResolvedValue({ _id: "user-1", email: "user@example.com", tenantIds: [] });
     const select = vi.fn().mockReturnValue({ lean });
     mocks.findById.mockReturnValue({ select });
+    mockTenants([]);
 
     await expect(hydratePrincipalFromDatabase({ id: "user-1" })).resolves.toBeUndefined();
   });
@@ -51,10 +63,10 @@ describe("auth/principal", () => {
       _id: "user-1",
       email: "user@example.com",
       name: "User",
-      tenantIds: ["tenant-a", "tenant-a", "", " tenant-b "],
     });
     const select = vi.fn().mockReturnValue({ lean });
     mocks.findById.mockReturnValue({ select });
+    mockTenants(["tenant-a", "tenant-a", "", " tenant-b "]);
 
     await expect(
       hydratePrincipalFromDatabase({ id: "user-1", scopes: ["api", 123, "ws"] })
@@ -71,10 +83,10 @@ describe("auth/principal", () => {
     const lean = vi.fn().mockResolvedValue({
       _id: "user-1",
       email: "user@example.com",
-      tenantIds: ["tenant-a"],
     });
     const select = vi.fn().mockReturnValue({ lean });
     mocks.findById.mockReturnValue({ select });
+    mockTenants(["tenant-a"]);
 
     await expect(hydratePrincipalFromDatabase({ id: "user-1", scopes: [] })).resolves.toEqual(
       expect.objectContaining({ scopes: ["api"] })
@@ -85,10 +97,10 @@ describe("auth/principal", () => {
     const lean = vi.fn().mockResolvedValue({
       _id: "user-1",
       email: "user@example.com",
-      tenantIds: ["tenant-a"],
     });
     const select = vi.fn().mockReturnValue({ lean });
     mocks.findById.mockReturnValue({ select });
+    mockTenants(["tenant-a"]);
 
     await expect(hydratePrincipalFromDatabase({ id: "user-1", scopes: "api" })).resolves.toEqual(
       expect.objectContaining({ scopes: ["api"] })

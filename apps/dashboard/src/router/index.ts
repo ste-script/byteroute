@@ -1,19 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
-async function hasActiveSession(): Promise<boolean> {
-  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-  const url = apiBase ? `${apiBase}/auth/me` : '/auth/me'
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'include'
-    })
-    return response.ok
-  } catch {
-    return false
-  }
-}
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,7 +35,13 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const authenticated = await hasActiveSession()
+  const authStore = useAuthStore()
+
+  if (!authStore.hydrated && !authStore.isAuthenticated) {
+    await authStore.restoreSession()
+  }
+
+  const authenticated = authStore.isAuthenticated
   const isPublic = Boolean(to.meta.public)
 
   if (!isPublic && !authenticated) {

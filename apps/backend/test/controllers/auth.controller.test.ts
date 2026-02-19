@@ -128,32 +128,6 @@ describe("auth.controller", () => {
     );
   });
 
-  it("signIn backfills tenant when user has none", async () => {
-    const save = vi.fn().mockResolvedValue(undefined);
-    mocks.findOne.mockReturnValue({
-      select: vi.fn().mockResolvedValue({
-        _id: "user-1",
-        email: "user@example.com",
-        name: "User",
-        passwordHash: "salt:hash",
-        tenantIds: [],
-        save,
-      }),
-    });
-
-    const req = {
-      body: { email: "user@example.com", password: "password123" },
-    } as Request;
-    const res = createRes();
-
-    await signIn(req, res);
-
-    expect(save).toHaveBeenCalled();
-    expect(mocks.signAuthToken).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantIds: expect.any(Array) })
-    );
-  });
-
   it("signIn rejects invalid credentials", async () => {
     mocks.findOne.mockReturnValue({
       select: vi.fn().mockResolvedValue({
