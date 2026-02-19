@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, toRef } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -8,225 +8,36 @@ import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  GridComponent
+  GridComponent,
 } from 'echarts/components'
 import type { Statistics } from '@/types'
+import { useStatisticsCharts } from '@/composables/useStatisticsCharts'
+import { useTabs } from '@/composables/useTabs'
+import { formatBytes, formatNumber } from '@/utils/formatters'
 
-use([
-  CanvasRenderer,
-  PieChart,
-  BarChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent
-])
+use([CanvasRenderer, PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
 interface Props {
   statistics: Statistics | null
   darkMode?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  darkMode: false
-})
+const props = withDefaults(defineProps<Props>(), { darkMode: false })
 
 type TabId = 'country' | 'category' | 'protocol'
-
-const activeTab = ref<TabId>('country')
 
 const tabOptions: Array<{ id: TabId; label: string }> = [
   { id: 'country', label: 'Countries' },
   { id: 'category', label: 'Categories' },
-  { id: 'protocol', label: 'Protocols' }
+  { id: 'protocol', label: 'Protocols' },
 ]
 
-const textColor = computed(() => props.darkMode ? '#e0e0e0' : '#333')
+const { activeTab, setActiveTab, handleTabKeydown } = useTabs(tabOptions)
 
-const categoryColors = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-]
-
-const countryChartOption = computed(() => {
-  const data = props.statistics?.byCountry || []
-  const topCountries = data.slice(0, 10)
-
-  return {
-    backgroundColor: 'transparent',
-    title: {
-      text: 'Top Countries',
-      left: 'center',
-      textStyle: { color: textColor.value, fontSize: 14, fontWeight: 600 }
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: { name: string; value: number; dataIndex: number }[]) => {
-        const item = params[0]
-        const country = topCountries[item.dataIndex]
-        return `${country?.country || item.name}<br/>
-          Connections: ${country?.connections || 0}<br/>
-          Bandwidth: ${formatBandwidth(country?.bandwidth || 0)}<br/>
-          ${country?.percentage?.toFixed(1) || 0}%`
-      }
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '20%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'value',
-      axisLabel: { color: textColor.value, fontSize: 10 },
-      splitLine: { lineStyle: { color: props.darkMode ? '#333' : '#e0e0e0', type: 'dashed' } }
-    },
-    yAxis: {
-      type: 'category',
-      data: topCountries.map(c => c.countryCode || c.country).reverse(),
-      axisLabel: { color: textColor.value, fontSize: 10 }
-    },
-    series: [{
-      type: 'bar',
-      data: topCountries.map(c => c.connections).reverse(),
-      itemStyle: {
-        color: (params: { dataIndex: number }) => categoryColors[params.dataIndex % categoryColors.length]
-      },
-      barMaxWidth: 30
-    }]
-  }
-})
-
-const categoryChartOption = computed(() => {
-  const data = props.statistics?.byCategory || []
-
-  return {
-    backgroundColor: 'transparent',
-    title: {
-      text: 'By Category',
-      left: 'center',
-      textStyle: { color: textColor.value, fontSize: 14, fontWeight: 600 }
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: (params: { name: string; value: number; percent: number }) => 
-        `${params.name}<br/>
-        Connections: ${params.value}<br/>
-        ${params.percent?.toFixed(1)}%`
-    },
-    legend: {
-      orient: 'vertical',
-      right: '5%',
-      top: 'middle',
-      textStyle: { color: textColor.value, fontSize: 10 }
-    },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['35%', '55%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 4,
-        borderColor: props.darkMode ? '#1f2937' : '#fff',
-        borderWidth: 2
-      },
-      label: { show: false },
-      emphasis: {
-        label: {
-          show: true,
-          fontSize: 12,
-          fontWeight: 'bold'
-        }
-      },
-      data: data.map((c, i) => ({
-        name: c.category,
-        value: c.connections,
-        itemStyle: { color: c.color || categoryColors[i % categoryColors.length] }
-      }))
-    }]
-  }
-})
-
-const protocolChartOption = computed(() => {
-  const data = props.statistics?.byProtocol || []
-
-  return {
-    backgroundColor: 'transparent',
-    title: {
-      text: 'By Protocol',
-      left: 'center',
-      textStyle: { color: textColor.value, fontSize: 14, fontWeight: 600 }
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: (params: { name: string; value: number; percent: number }) => 
-        `${params.name}: ${params.value} (${params.percent?.toFixed(1)}%)`
-    },
-    series: [{
-      type: 'pie',
-      radius: '65%',
-      center: ['50%', '55%'],
-      data: data.map((p, i) => ({
-        name: p.protocol,
-        value: p.connections,
-        itemStyle: { color: categoryColors[i % categoryColors.length] }
-      })),
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
-        }
-      },
-      label: {
-        color: textColor.value,
-        fontSize: 11
-      }
-    }]
-  }
-})
-
-function formatBandwidth(bytes: number): string {
-  if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB'
-  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB'
-  if (bytes >= 1e3) return (bytes / 1e3).toFixed(1) + ' KB'
-  return bytes + ' B'
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M'
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K'
-  return num.toString()
-}
-
-function setActiveTab(tab: TabId) {
-  activeTab.value = tab
-}
-
-function handleTabKeydown(event: KeyboardEvent, index: number) {
-  const key = event.key
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
-    return
-  }
-
-  event.preventDefault()
-  let nextIndex = index
-
-  if (key === 'ArrowRight') {
-    nextIndex = (index + 1) % tabOptions.length
-  } else if (key === 'ArrowLeft') {
-    nextIndex = (index - 1 + tabOptions.length) % tabOptions.length
-  } else if (key === 'Home') {
-    nextIndex = 0
-  } else if (key === 'End') {
-    nextIndex = tabOptions.length - 1
-  }
-
-  const nextTab = tabOptions[nextIndex]
-  activeTab.value = nextTab.id
-}
+const statisticsRef = computed(() => props.statistics)
+const darkModeRef = toRef(props, 'darkMode')
+const { countryChartOption, categoryChartOption, protocolChartOption } =
+  useStatisticsCharts(statisticsRef, darkModeRef)
 </script>
 
 <template>
@@ -242,7 +53,7 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
         <div class="stat-label">Active</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">{{ formatBandwidth(statistics?.totalBandwidth || 0) }}</div>
+        <div class="stat-value">{{ formatBytes(statistics?.totalBandwidth || 0) }}</div>
         <div class="stat-label">Bandwidth</div>
       </div>
     </div>
@@ -377,20 +188,6 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
 }
 
 @include m.max-width(t.$bp-sm) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-tabs {
-    flex-wrap: wrap;
-  }
-
-  .tab-btn {
-    flex: 1 0 calc(50% - 0.25rem);
-  }
-}
-
-@media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }

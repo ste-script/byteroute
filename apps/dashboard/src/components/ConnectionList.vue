@@ -6,6 +6,7 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import type { Connection } from '@/types'
+import { formatBandwidth, formatDuration, calculateBandwidth } from '@/utils/formatters'
 
 interface Props {
   connections: Connection[]
@@ -69,43 +70,6 @@ function getStatusSeverity(status: Connection['status']): 'success' | 'secondary
     case 'active': return 'success'
     default: return 'secondary'
   }
-}
-
-function formatDuration(startTime: Date | string): string {
-  const start = new Date(startTime)
-  const diff = Date.now() - start.getTime()
-  
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) return `${days}d ${hours % 24}h`
-  if (hours > 0) return `${hours}h ${minutes % 60}m`
-  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
-  return `${seconds}s`
-}
-
-function formatBandwidth(bytes?: number): string {
-  if (!bytes) return '0 B/s'
-  if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB/s'
-  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB/s'
-  if (bytes >= 1e3) return (bytes / 1e3).toFixed(1) + ' KB/s'
-  return bytes + ' B/s'
-}
-
-function calculateBandwidth(connection: Connection): number {
-  // Calculate bandwidth from bytesIn, bytesOut, and duration
-  const bytesIn = connection.bytesIn ?? 0
-  const bytesOut = connection.bytesOut ?? 0
-  const durationMs = connection.duration ?? 0
-
-  if (durationMs === 0) return 0
-
-  const totalBytes = bytesIn + bytesOut
-  const durationSeconds = durationMs / 1000
-
-  return Math.round(totalBytes / durationSeconds)
 }
 
 function handleSelect(connection: Connection) {
@@ -199,7 +163,7 @@ function getConnectionAriaLabel(connection: Connection): string {
             </span>
             <span class="bandwidth">
               <i class="pi pi-chart-line" aria-hidden="true" />
-              {{ formatBandwidth(calculateBandwidth(item)) }}
+              {{ formatBandwidth(calculateBandwidth(item)) || '0 B/s' }}
             </span>
             <Tag 
               :value="item.status" 
