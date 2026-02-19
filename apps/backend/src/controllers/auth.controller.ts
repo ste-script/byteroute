@@ -4,13 +4,6 @@ import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
-import {
-  setAuthCookie,
-  clearAuthCookie,
-  setCsrfCookie,
-  clearCsrfCookie,
-} from "../utils/cookie.js";
-import { generateCsrfToken } from "../utils/csrf.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
 
 export async function signUp(req: Request, res: Response): Promise<void> {
@@ -42,12 +35,8 @@ export async function signUp(req: Request, res: Response): Promise<void> {
     tenantIds: [],
   });
 
-  setAuthCookie(res, token);
-  const csrfToken = generateCsrfToken();
-  setCsrfCookie(res, csrfToken);
-
   res.status(201).json({
-    csrfToken,
+    token,
     user: {
       id: String(created._id),
       email: created.email,
@@ -81,12 +70,8 @@ export async function signIn(req: Request, res: Response): Promise<void> {
     tenantIds,
   });
 
-  setAuthCookie(res, token);
-  const csrfToken = generateCsrfToken();
-  setCsrfCookie(res, csrfToken);
-
   res.status(200).json({
-    csrfToken,
+    token,
     user: {
       id: String(user._id),
       email: user.email,
@@ -97,8 +82,6 @@ export async function signIn(req: Request, res: Response): Promise<void> {
 }
 
 export function signOut(_req: Request, res: Response): void {
-  clearAuthCookie(res);
-  clearCsrfCookie(res);
   res.status(204).send();
 }
 
@@ -110,11 +93,7 @@ export function getCurrentUser(req: Request, res: Response): void {
     return;
   }
 
-  const csrfToken = generateCsrfToken();
-  setCsrfCookie(res, csrfToken);
-
   res.status(200).json({
-    csrfToken,
     user: {
       id: principal.id,
       email: principal.email,

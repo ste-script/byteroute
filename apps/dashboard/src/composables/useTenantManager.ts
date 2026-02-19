@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useSocket } from '@/services/socket'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useAuthStore } from '@/stores/auth'
 import { ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
 import { listTenants } from '@/services/tenants'
 
@@ -9,6 +10,7 @@ export const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
 export function useTenantManager() {
   const store = useDashboardStore()
   const socket = useSocket()
+  const authStore = useAuthStore()
 
   const initialTenant = ensureTenantId(import.meta.env.VITE_TENANT_ID)
   const savedTenant =
@@ -41,7 +43,7 @@ export function useTenantManager() {
   function connectTenant(tenantId: string) {
     socket.disconnect()
     store.clearAll()
-    socket.connect(undefined, tenantId)
+    socket.connect(undefined, tenantId, authStore.token ?? undefined)
     socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
   }
 

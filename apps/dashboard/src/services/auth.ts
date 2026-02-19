@@ -5,11 +5,11 @@ import type { AuthResponse, SignInPayload, SignUpPayload } from '@/types/auth'
 async function postAuth<TPayload>(path: string, payload: TPayload): Promise<AuthResponse> {
   const { data } = await client.post<Partial<AuthResponse> & { error?: string }>(path, payload)
 
-  if (!data.user || !data.csrfToken) {
-    throw new Error('Authentication response is missing user or csrfToken')
+  if (!data.user || !data.token) {
+    throw new Error('Authentication response is missing user or token')
   }
 
-  return { user: data.user, csrfToken: data.csrfToken }
+  return { user: data.user, token: data.token }
 }
 
 export function signIn(payload: SignInPayload): Promise<AuthResponse> {
@@ -20,11 +20,11 @@ export function signUp(payload: SignUpPayload): Promise<AuthResponse> {
   return postAuth('/auth/signup', payload)
 }
 
-export async function getCurrentUser(): Promise<AuthResponse | null> {
+export async function getCurrentUser(): Promise<{ user: AuthResponse['user'] } | null> {
   try {
-    const { data } = await client.get<Partial<AuthResponse>>('/auth/me')
-    if (!data.user || !data.csrfToken) return null
-    return { user: data.user, csrfToken: data.csrfToken }
+    const { data } = await client.get<{ user?: AuthResponse['user'] }>('/auth/me')
+    if (!data.user) return null
+    return { user: data.user }
   } catch (error) {
     if ((error as AxiosError).response?.status === 401) return null
     throw error
@@ -32,7 +32,6 @@ export async function getCurrentUser(): Promise<AuthResponse | null> {
 }
 
 export async function signOut(): Promise<void> {
-  // CSRF token is automatically injected by the axios interceptor
   await client.post('/auth/logout')
 }
 

@@ -7,26 +7,23 @@ import type { AxiosError } from 'axios'
  */
 const client = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || '').replace(/\/$/, ''),
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// ── CSRF token ────────────────────────────────────────────────────────────────
-// Stored at module level; updated by the auth store via setCsrfToken() whenever
-// a new session is established (sign-in, sign-up, session restore).
-let _csrfToken: string | null = null
+// ── Bearer token ─────────────────────────────────────────────────────────────
+// Stored at module level; updated by the auth store via setAuthToken() whenever
+// a session is established (sign-in, sign-up) or restored.
+let _authToken: string | null = null
 
-export function setCsrfToken(token: string | null): void {
-  _csrfToken = token
+export function setAuthToken(token: string | null): void {
+  _authToken = token
 }
 
-const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete'])
-
 client.interceptors.request.use((config) => {
-  if (_csrfToken && config.method && MUTATING_METHODS.has(config.method.toLowerCase())) {
-    config.headers['x-csrf-token'] = _csrfToken
+  if (_authToken) {
+    config.headers['Authorization'] = `Bearer ${_authToken}`
   }
   return config
 })

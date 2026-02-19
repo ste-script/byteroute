@@ -5,7 +5,6 @@ import {
   verifyAuthToken,
 } from "../auth/passport.js";
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
-import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
 import { resolveTenantContextFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
 import { firstHeaderValue } from "../utils/request.js";
 
@@ -44,16 +43,7 @@ export function extractBearerTokenFromSocketHandshake(
     firstHeaderValue(handshake?.headers?.authorization)
   );
 
-  if (headerAuthorization) {
-    return headerAuthorization;
-  }
-
-  const cookieToken = getCookieValue(
-    firstHeaderValue(handshake?.headers?.cookie),
-    AUTH_COOKIE_NAME
-  );
-
-  return cookieToken;
+  return headerAuthorization;
 }
 
 export function socketAuthMiddleware(

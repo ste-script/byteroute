@@ -26,7 +26,7 @@ class SocketService {
     return readonly(this._connectionError)
   }
 
-  connect(url?: string, tenantId?: string): void {
+  connect(url?: string, tenantId?: string, token?: string): void {
     if (this.socket?.connected) {
       return
     }
@@ -37,10 +37,12 @@ class SocketService {
     if (normalizedTenantId) {
       authPayload.tenantId = normalizedTenantId
     }
+    if (token) {
+      authPayload.token = token
+    }
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
@@ -158,7 +160,7 @@ export function useSocket() {
   return {
     isConnected: socketService.isConnected,
     connectionError: socketService.connectionError,
-    connect: (url?: string, tenantId?: string) => socketService.connect(url, tenantId),
+    connect: (url?: string, tenantId?: string, token?: string) => socketService.connect(url, tenantId, token),
     disconnect: () => socketService.disconnect(),
     reconnect: () => socketService.reconnect(),
     on: <K extends keyof SocketEvents>(
