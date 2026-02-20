@@ -8,12 +8,14 @@
     "build": "pnpm typecheck && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint --fix --config eslint.config.ts",
-    "test": "vitest run",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
     "update:maxmind": "node scripts/download-maxmind.mjs",
     "test:watch": "vitest --watch",
-    "coverage": "vitest run --coverage",
+    "coverage:unit": "vitest run --coverage",
+    "coverage": "pnpm coverage:unit",
     "migrate:indexes": "node scripts/ensure-connection-indexes.mjs",
-    "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js --import 'features/step_definitions/**/*.ts'"
+    "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
