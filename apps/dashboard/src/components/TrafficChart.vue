@@ -202,7 +202,7 @@ defineExpose({
   />
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .traffic-chart {
   width: 100%;
   height: 100%;

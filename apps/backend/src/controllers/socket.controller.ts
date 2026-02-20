@@ -8,11 +8,11 @@ import type {
 import {
   type TypedSocketServer,
   getConnectionsForTenant,
-  getKnownTenantIds,
   emitStatisticsUpdate,
   emitTrafficFlows,
 } from "../services/connections.js";
 import { resolveTenantContextFromSocketHandshake } from "../utils/tenant.js";
+import type { HydratedPrincipal } from "../auth/principal.js";
 
 export type TypedSocket = Socket<
   ClientToServerEvents,
@@ -23,6 +23,7 @@ export type TypedSocket = Socket<
 
 export function handleConnection(io: TypedSocketServer, socket: TypedSocket): void {
   const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(socket.handshake);
+  const principal = socket.data.principal as HydratedPrincipal | undefined;
 
   console.log(`Client connected: ${socket.id}`);
 
@@ -31,10 +32,10 @@ export function handleConnection(io: TypedSocketServer, socket: TypedSocket): vo
   socket.data.subscribedRooms = [];
   void socket.join(tenantRoom);
 
-  // Send initial data to client
+  // Send initial data to client — only the tenants this user owns
   const connections = getConnectionsForTenant(tenantId);
   socket.emit("connections:batch", connections);
-  socket.emit("tenants:list", { tenants: getKnownTenantIds() });
+  socket.emit("tenants:list", { tenants: principal?.tenantIds ?? [] });
   emitStatisticsUpdate(io, tenantId);
   emitTrafficFlows(io, tenantId);
 

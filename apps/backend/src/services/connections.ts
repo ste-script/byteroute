@@ -7,7 +7,6 @@ export {
   getConnectionsForTenant,
   getAllConnectionsSnapshot,
   getConnectionById,
-  addConnection,
   upsertConnectionsLocal,
   updateConnection,
   removeConnection,
@@ -17,8 +16,6 @@ export {
   emitStatisticsUpdate,
   emitStatisticsUpdateAllTenants,
   emitError,
-  startDemoMode,
-  stopDemoMode,
 } from "./connections/manager.js";
 
 export { getKnownTenantIds } from "./connections/store.js";

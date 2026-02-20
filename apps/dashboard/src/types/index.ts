@@ -15,3 +15,10 @@ export {
   type InterServerEvents,
   type SocketData,
 } from '@byteroute/shared'
+
+export type {
+  AuthUser,
+  AuthResponse,
+  SignInPayload,
+  SignUpPayload
+} from './auth'

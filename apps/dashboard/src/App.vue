@@ -13,7 +13,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
   </div>
 </template>
 
-<style>
+<style lang="scss">
 :root {
   --header-height: 60px;
   --sidebar-width: 280px;

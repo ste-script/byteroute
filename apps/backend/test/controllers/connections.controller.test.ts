@@ -29,6 +29,9 @@ const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Requ
   body: body ?? {},
   headers: headers ?? {},
   ip: ip ?? '127.0.0.1',
+  user: {
+    tenantIds: ['default']
+  },
   socket: {
     remoteAddress: '127.0.0.1'
   },
@@ -40,7 +43,7 @@ const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Requ
       return undefined
     })
   }
-} as Partial<Request> & { app: any; socket: any })
+} as unknown as Partial<Request> & { app: any; socket: any })
 
 const createMockResponse = (): Partial<Response> & {
   statusCode?: number
@@ -264,6 +267,7 @@ describe('Connections Controller', () => {
         { connections },
         { 'x-tenant-id': 'tenant-acme' }
       )
+      req.user = { tenantIds: ['tenant-acme'] }
       const res = createMockResponse()
 
       vi.mocked(enrichAndStoreConnections).mockRejectedValue(new Error('Enrichment failed'))

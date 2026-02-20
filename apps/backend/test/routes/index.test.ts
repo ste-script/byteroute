@@ -1,12 +1,33 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 
 const mocks = vi.hoisted(() => ({
   healthCheck: vi.fn((req, res) => res.status(200).json({ ok: true })),
+  signUp: vi.fn((req, res) => res.status(201).json({ user: { id: "u1" } })),
+  signIn: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
+  createClientToken: vi.fn((req, res) => res.status(200).json({ token: "client-token", expiresIn: "12h" })),
+  getCurrentUser: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
+  signOut: vi.fn((req, res) => res.status(204).send()),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
   postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 })),
-  getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] }))
+  getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] })),
+  createTenant: vi.fn((req, res) => res.status(201).json({ tenant: { tenantId: "new-tenant", name: "New Tenant" } })),
+  deleteTenant: vi.fn((req, res) => res.status(204).send())
+}));
+
+const sharedMocks = vi.hoisted(() => ({
+  findById: vi.fn(),
+  findTenants: vi.fn(),
+}));
+
+vi.mock("@byteroute/shared", () => ({
+  UserModel: {
+    findById: sharedMocks.findById,
+  },
+  TenantModel: {
+    find: sharedMocks.findTenants,
+  },
 }));
 
 vi.mock("../../src/controllers/health.controller.js", () => ({
@@ -17,17 +38,52 @@ vi.mock("../../src/controllers/connections.controller.js", () => ({
   postConnections: mocks.postConnections
 }));
 
+vi.mock("../../src/controllers/auth.controller.js", () => ({
+  signUp: mocks.signUp,
+  signIn: mocks.signIn,
+  createClientToken: mocks.createClientToken,
+  getCurrentUser: mocks.getCurrentUser,
+  signOut: mocks.signOut
+}));
+
 vi.mock("../../src/controllers/metrics.controller.js", () => ({
   postMetrics: mocks.postMetrics
 }));
 
 vi.mock("../../src/controllers/tenants.controller.js", () => ({
-  getTenants: mocks.getTenants
+  getTenants: mocks.getTenants,
+  createTenant: mocks.createTenant,
+  deleteTenant: mocks.deleteTenant
 }));
 
 import router from "../../src/routes/index.js";
+import { signAuthToken } from "../../src/auth/passport.js";
+
+const originalEnv = { ...process.env };
 
 describe("routes", () => {
+  const token = () => signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
+
+  beforeEach(() => {
+    const lean = vi.fn().mockResolvedValue({
+      _id: "user-1",
+      email: "user@example.com",
+      name: "User",
+    });
+    const select = vi.fn().mockReturnValue({ lean });
+    sharedMocks.findById.mockReturnValue({ select });
+
+    const tenantLean = vi.fn().mockResolvedValue([{ tenantId: "default" }]);
+    const tenantSelect = vi.fn().mockReturnValue({ lean: tenantLean });
+    sharedMocks.findTenants.mockReturnValue({ select: tenantSelect });
+
+    process.env = { ...originalEnv, JWT_SECRET: "test-jwt-secret" };
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   it("wires /health to healthCheck", async () => {
     const app = express();
     app.use(router);
@@ -41,7 +97,11 @@ describe("routes", () => {
     app.use(express.json());
     app.use(router);
 
-    await request(app).post("/api/connections").send({ connections: [] }).expect(202);
+    await request(app)
+      .post("/api/connections")
+      .set("Authorization", `Bearer ${token()}`)
+      .send({ connections: [] })
+      .expect(202);
     expect(mocks.postConnections).toHaveBeenCalled();
   });
 
@@ -50,7 +110,11 @@ describe("routes", () => {
     app.use(express.json());
     app.use(router);
 
-    await request(app).post("/api/metrics").send({ snapshots: [] }).expect(202);
+    await request(app)
+      .post("/api/metrics")
+      .set("Authorization", `Bearer ${token()}`)
+      .send({ snapshots: [] })
+      .expect(202);
     expect(mocks.postMetrics).toHaveBeenCalled();
   });
 
@@ -58,7 +122,94 @@ describe("routes", () => {
     const app = express();
     app.use(router);
 
-    await request(app).get("/api/tenants").expect(200);
+    await request(app)
+      .get("/api/tenants")
+      .set("Authorization", `Bearer ${token()}`)
+      .expect(200);
     expect(mocks.getTenants).toHaveBeenCalled();
+  });
+
+  it("wires POST /api/tenants to createTenant", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    await request(app)
+      .post("/api/tenants")
+      .set("Authorization", `Bearer ${token()}`)
+      .send({ name: "New Tenant" })
+      .expect(201);
+    expect(mocks.createTenant).toHaveBeenCalled();
+  });
+
+  it("wires DELETE /api/tenants/:tenantId to deleteTenant", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .delete("/api/tenants/my-tenant")
+      .set("Authorization", `Bearer ${token()}`)
+      .set("x-csrf-token", "csrf")
+      .set("cookie", "byteroute_auth=token; byteroute_csrf=csrf")
+      .expect(204);
+    expect(mocks.deleteTenant).toHaveBeenCalled();
+  });
+
+  it("wires /auth/signup to signUp", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    await request(app)
+      .post("/auth/signup")
+      .send({ email: "user@example.com", name: "User", password: "password123" })
+      .expect(201);
+    expect(mocks.signUp).toHaveBeenCalled();
+  });
+
+  it("wires /auth/signin to signIn", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    await request(app)
+      .post("/auth/signin")
+      .send({ email: "user@example.com", password: "password123" })
+      .expect(200);
+    expect(mocks.signIn).toHaveBeenCalled();
+  });
+
+  it("wires /auth/me to getCurrentUser", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .get("/auth/me")
+      .set("Authorization", `Bearer ${token()}`)
+      .expect(200);
+    expect(mocks.getCurrentUser).toHaveBeenCalled();
+  });
+
+  it("wires /auth/client-token to createClientToken", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .post("/auth/client-token")
+      .set("Authorization", `Bearer ${token()}`)
+      .set("x-csrf-token", "csrf")
+      .set("cookie", "byteroute_csrf=csrf")
+      .expect(200);
+    expect(mocks.createClientToken).toHaveBeenCalled();
+  });
+
+  it("wires /auth/logout to signOut", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .post("/auth/logout")
+      .expect(204);
+    expect(mocks.signOut).toHaveBeenCalled();
   });
 });

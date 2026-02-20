@@ -1,18 +1,14 @@
 import { io, Socket } from 'socket.io-client'
 import { ref, readonly } from 'vue'
-import type { Connection, TrafficFlow, Statistics } from '@/types'
 
-export interface SocketEvents {
-  'tenant:new': { tenantId: string }
-  'tenants:list': { tenants: string[] }
-  'connection:new': Connection
-  'connection:update': Connection
-  'connection:remove': { id: string }
-  'connections:batch': Connection[]
-  'traffic:flows': TrafficFlow[]
-  'statistics:update': Statistics
-  'error': { message: string; code?: string }
+import type { ServerToClientEvents } from '@byteroute/shared'
+import { sanitizeTenantId } from '@byteroute/shared/common'
+
+type SharedServerPayloads = {
+  [K in keyof ServerToClientEvents]: Parameters<ServerToClientEvents[K]>[0]
 }
+
+export type SocketEvents = SharedServerPayloads
 
 class SocketService {
   private socket: Socket | null = null
@@ -30,12 +26,20 @@ class SocketService {
     return readonly(this._connectionError)
   }
 
-  connect(url?: string, tenantId?: string): void {
+  connect(url?: string, tenantId?: string, token?: string): void {
     if (this.socket?.connected) {
       return
     }
 
     const socketUrl = url || import.meta.env.VITE_SOCKET_URL || ''
+    const authPayload: Record<string, string> = {}
+    const normalizedTenantId = sanitizeTenantId(tenantId)
+    if (normalizedTenantId) {
+      authPayload.tenantId = normalizedTenantId
+    }
+    if (token) {
+      authPayload.token = token
+    }
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
@@ -44,8 +48,8 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
-      auth: tenantId ? { tenantId } : undefined,
-      query: tenantId ? { tenantId } : undefined
+      auth: Object.keys(authPayload).length > 0 ? authPayload : undefined,
+      query: normalizedTenantId ? { tenantId: normalizedTenantId } : undefined
     })
 
     this.setupEventHandlers()
@@ -156,7 +160,7 @@ export function useSocket() {
   return {
     isConnected: socketService.isConnected,
     connectionError: socketService.connectionError,
-    connect: (url?: string, tenantId?: string) => socketService.connect(url, tenantId),
+    connect: (url?: string, tenantId?: string, token?: string) => socketService.connect(url, tenantId, token),
     disconnect: () => socketService.disconnect(),
     reconnect: () => socketService.reconnect(),
     on: <K extends keyof SocketEvents>(

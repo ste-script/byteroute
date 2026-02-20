@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,9 +16,10 @@ type Client struct {
 	baseURL  *url.URL
 	hc       *http.Client
 	tenantID string
+	authToken string
 }
 
-func NewClient(baseURL string, timeout time.Duration, tenantID string) (*Client, error) {
+func NewClient(baseURL string, timeout time.Duration, tenantID string, authToken string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -29,10 +31,60 @@ func NewClient(baseURL string, timeout time.Duration, tenantID string) (*Client,
 			Timeout: timeout,
 		},
 		tenantID: tenantID,
+		authToken: strings.TrimSpace(authToken),
 	}, nil
 }
 
+func (c *Client) applyAuth(req *http.Request) {
+	if c.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.authToken)
+	}
+}
+
+func (c *Client) authorizedForTenant(ctx context.Context) error {
+	if c.tenantID == "" {
+		return nil
+	}
+
+	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/tenants"})
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return err
+	}
+	c.applyAuth(req)
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("tenant authorization check failed: backend returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var payload struct {
+		Tenants []string `json:"tenants"`
+	}
+	if err := json.Unmarshal(respBody, &payload); err != nil {
+		return fmt.Errorf("tenant authorization check failed: invalid response: %w", err)
+	}
+
+	for _, tenantID := range payload.Tenants {
+		if strings.TrimSpace(tenantID) == c.tenantID {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("tenant %q is not authorized for current identity", c.tenantID)
+}
+
 func (c *Client) PostConnections(ctx context.Context, connections []Connection) (*AcceptedResponse, error) {
+	if err := c.authorizedForTenant(ctx); err != nil {
+		return nil, err
+	}
+
 	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/connections"})
 
 	payload := ConnectionsPayload{Connections: connections}
@@ -46,6 +98,7 @@ func (c *Client) PostConnections(ctx context.Context, connections []Connection) 
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	c.applyAuth(req)
 	if c.tenantID != "" {
 		req.Header.Set("X-Tenant-ID", c.tenantID)
 	}
@@ -72,6 +125,10 @@ func (c *Client) PostConnections(ctx context.Context, connections []Connection) 
 }
 
 func (c *Client) PostMetrics(ctx context.Context, snapshots []MetricsSnapshot) (*AcceptedResponse, error) {
+	if err := c.authorizedForTenant(ctx); err != nil {
+		return nil, err
+	}
+
 	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/metrics"})
 
 	payload := MetricsPayload{Snapshots: snapshots}
@@ -85,6 +142,7 @@ func (c *Client) PostMetrics(ctx context.Context, snapshots []MetricsSnapshot) (
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	c.applyAuth(req)
 	if c.tenantID != "" {
 		req.Header.Set("X-Tenant-ID", c.tenantID)
 	}
