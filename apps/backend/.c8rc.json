@@ -1,0 +1,11 @@
+{
+  "include": ["src/**"],
+  "exclude": [
+    "src/**/*.d.ts",
+    "src/index.ts",
+    "src/mock/**"
+  ],
+  "reporter": ["text", "lcov", "html", "json"],
+  "reportsDir": "coverage/e2e",
+  "all": true
+}
