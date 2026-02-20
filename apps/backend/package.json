@@ -12,10 +12,12 @@
     "update:maxmind": "node scripts/download-maxmind.mjs",
     "test:watch": "vitest --watch",
     "coverage": "vitest run --coverage",
-    "migrate:indexes": "node scripts/ensure-connection-indexes.mjs"
+    "migrate:indexes": "node scripts/ensure-connection-indexes.mjs",
+    "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js --import 'features/step_definitions/**/*.ts'"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
+    "@cucumber/cucumber": "^12.6.0",
     "@eslint/js": "^9.39.2",
     "@types/express": "^5.0.6",
     "@types/ip": "^1.1.3",

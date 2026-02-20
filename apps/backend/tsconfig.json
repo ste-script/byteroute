@@ -5,7 +5,8 @@
     },
     "include": [
         "src",
-        "test"
+        "test",
+        "features"
     ],
     "exclude": [
         "node_modules",
