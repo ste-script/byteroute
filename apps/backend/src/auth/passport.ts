@@ -82,7 +82,7 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
     ? payload.tenantIds.filter((value): value is string => typeof value === "string")
     : [];
 
-  if (!sub || !email || tenantIds.length === 0) {
+  if (!sub || !email) {
     return undefined;
   }
 

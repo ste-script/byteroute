@@ -45,12 +45,11 @@ services:
       # Required by the backend entrypoint (downloads GeoLite2 databases on start)
       MAXMIND_USER_ID: ${MAXMIND_USER_ID:?set in .env}
       MAXMIND_API_KEY: ${MAXMIND_API_KEY:?set in .env}
-      # Optional
-      DEMO_MODE: ${DEMO_MODE:-false}
+      JWT_SECRET: ${JWT_SECRET:?set in .env}
     labels:
       - traefik.enable=true
       # Route REST API + Socket.IO to backend
-      - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`) || Path(`/health`)
+      - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`) || PathPrefix(`/auth`) || Path(`/health`)
       - traefik.http.routers.byteroute-api.entrypoints=web
       - traefik.http.routers.byteroute-api.priority=100
       - traefik.http.routers.byteroute-api.service=byteroute-backend
