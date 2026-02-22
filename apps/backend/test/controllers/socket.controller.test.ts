@@ -6,14 +6,12 @@ import type { TypedSocketServer } from '../../src/services/connections.js'
 // Mock the connections service
 vi.mock('../../src/services/connections.js', () => ({
   getConnectionsForTenant: vi.fn(() => []),
-  getKnownTenantIds: vi.fn(() => ['default']),
   emitStatisticsUpdate: vi.fn(),
   emitTrafficFlows: vi.fn()
 }))
 
 import {
   getConnectionsForTenant,
-  getKnownTenantIds,
   emitStatisticsUpdate,
   emitTrafficFlows
 } from '../../src/services/connections.js'
@@ -72,7 +70,7 @@ describe('Socket Controller', () => {
         { id: 'conn2', sourceIp: '5.6.7.8' }
       ]
       vi.mocked(getConnectionsForTenant).mockReturnValue(mockConnections as any)
-      vi.mocked(getKnownTenantIds).mockReturnValue(['default', 'tenant-acme'])
+      mockSocket.data.principal = { tenantIds: ['default', 'tenant-acme'] }
 
       handleConnection(mockIo, mockSocket)
 

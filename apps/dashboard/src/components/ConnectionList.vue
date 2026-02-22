@@ -6,6 +6,7 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import type { Connection } from '@/types'
+import { formatBandwidth, formatDuration, calculateBandwidth } from '@/utils/formatters'
 
 interface Props {
   connections: Connection[]
@@ -69,43 +70,6 @@ function getStatusSeverity(status: Connection['status']): 'success' | 'secondary
     case 'active': return 'success'
     default: return 'secondary'
   }
-}
-
-function formatDuration(startTime: Date | string): string {
-  const start = new Date(startTime)
-  const diff = Date.now() - start.getTime()
-  
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) return `${days}d ${hours % 24}h`
-  if (hours > 0) return `${hours}h ${minutes % 60}m`
-  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
-  return `${seconds}s`
-}
-
-function formatBandwidth(bytes?: number): string {
-  if (!bytes) return '0 B/s'
-  if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB/s'
-  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB/s'
-  if (bytes >= 1e3) return (bytes / 1e3).toFixed(1) + ' KB/s'
-  return bytes + ' B/s'
-}
-
-function calculateBandwidth(connection: Connection): number {
-  // Calculate bandwidth from bytesIn, bytesOut, and duration
-  const bytesIn = connection.bytesIn ?? 0
-  const bytesOut = connection.bytesOut ?? 0
-  const durationMs = connection.duration ?? 0
-
-  if (durationMs === 0) return 0
-
-  const totalBytes = bytesIn + bytesOut
-  const durationSeconds = durationMs / 1000
-
-  return Math.round(totalBytes / durationSeconds)
 }
 
 function handleSelect(connection: Connection) {
@@ -199,7 +163,7 @@ function getConnectionAriaLabel(connection: Connection): string {
             </span>
             <span class="bandwidth">
               <i class="pi pi-chart-line" aria-hidden="true" />
-              {{ formatBandwidth(calculateBandwidth(item)) }}
+              {{ formatBandwidth(calculateBandwidth(item)) || '0 B/s' }}
             </span>
             <Tag 
               :value="item.status" 
@@ -225,7 +189,10 @@ function getConnectionAriaLabel(connection: Connection): string {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../assets/styles/tokens' as t;
+@use '../assets/styles/mixins' as m;
+
 .connection-list {
   display: flex;
   flex-direction: column;
@@ -282,28 +249,28 @@ function getConnectionAriaLabel(connection: Connection): string {
   border-bottom: 1px solid var(--p-surface-border);
   cursor: pointer;
   transition: background-color 0.15s;
-  height: 72px;
-}
+  height: t.$connections-item-height;
 
-.connection-item:hover {
-  background: var(--p-surface-hover);
+  &:hover {
+    background: var(--p-surface-hover);
+  }
 }
 
 .connection-status {
-  width: 8px;
-  height: 8px;
+  width: t.$status-dot-size;
+  height: t.$status-dot-size;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 6px;
-}
 
-.connection-status.active {
-  background: var(--p-green-500);
-  box-shadow: 0 0 8px var(--p-green-500);
-}
+  &.active {
+    background: var(--p-green-500);
+    box-shadow: 0 0 t.$status-dot-size var(--p-green-500);
+  }
 
-.connection-status.inactive {
-  background: var(--p-surface-400);
+  &.inactive {
+    background: var(--p-surface-400);
+  }
 }
 
 .connection-info {
@@ -358,13 +325,10 @@ function getConnectionAriaLabel(connection: Connection): string {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-}
 
-.location i,
-.category i,
-.duration i,
-.bandwidth i {
-  font-size: 0.625rem;
+  i {
+    font-size: 0.625rem;
+  }
 }
 
 .connection-stats {
@@ -402,7 +366,7 @@ function getConnectionAriaLabel(connection: Connection): string {
   font-size: 1.5rem;
 }
 
-@media (max-width: 640px) {
+@include m.max-width(t.$bp-sm) {
   .filters {
     padding: 0.5rem;
   }
@@ -413,7 +377,7 @@ function getConnectionAriaLabel(connection: Connection): string {
 
   .connection-item {
     height: auto;
-    min-height: 84px;
+    min-height: t.$connections-item-min-height-mobile;
   }
 
   .connection-header {

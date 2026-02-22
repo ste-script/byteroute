@@ -1,29 +1,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import Button from 'primevue/button'
-import SelectButton from 'primevue/selectbutton'
 import Badge from 'primevue/badge'
+import Button from 'primevue/button'
 import Select from 'primevue/select'
 import WorldMap from '@/components/WorldMap.vue'
 import TrafficChart from '@/components/TrafficChart.vue'
 import StatisticsPanel from '@/components/StatisticsPanel.vue'
 import ConnectionList from '@/components/ConnectionList.vue'
+import DashboardHeader from '@/components/DashboardHeader.vue'
+import NewTenantDialog from '@/components/NewTenantDialog.vue'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
-import type { Connection, TrafficFlow, Statistics, TimeSeriesData } from '@/types'
+import { useTenantManager } from '@/composables/useTenantManager'
+import { useClientToken } from '@/composables/useClientToken'
+import { createTenant } from '@/services/tenants'
+import type { Connection, TrafficFlow } from '@/types'
+import { useRouter } from 'vue-router'
 
 // Version injected at build time via Vite define
 const version = __APP_VERSION__
 
 const store = useDashboardStore()
-const {
-  connections,
-  trafficFlows,
-  statistics,
-  darkMode,
-  selectedTimeRange
-} = storeToRefs(store)
+const authStore = useAuthStore()
+const router = useRouter()
+const { connections, trafficFlows, statistics, darkMode, selectedTimeRange } = storeToRefs(store)
 
 const socket = useSocket()
 const { isConnected } = socket
@@ -33,42 +35,57 @@ const timeRangeOptions = [
   { label: '1H', value: '1h' },
   { label: '6H', value: '6h' },
   { label: '24H', value: '24h' },
-  { label: '7D', value: '7d' }
+  { label: '7D', value: '7d' },
 ]
 
-const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
-const initialTenant = import.meta.env.VITE_TENANT_ID || 'default'
-const configuredTenants = (import.meta.env.VITE_TENANTS || '')
-  .split(',')
-  .map((tenant) => tenant.trim())
-  .filter(Boolean)
+// ── Tenant management ─────────────────────────────────────────────────────────
+const {
+  selectedTenant,
+  tenantOptions,
+  discoveredTenants,
+  loadDiscoveredTenants,
+  connectTenant,
+  handleTenantChange,
+} = useTenantManager()
 
-const savedTenant = typeof window !== 'undefined'
-  ? window.localStorage.getItem(TENANT_STORAGE_KEY)?.trim()
-  : undefined
-const defaultTenant = savedTenant || initialTenant
-const discoveredTenants = ref<string[]>([])
+// ── New Tenant dialog ─────────────────────────────────────────────────────────
+const showNewTenantDialog = ref(false)
+const newTenantError = ref<string | null>(null)
+const newTenantPending = ref(false)
 
-const tenantOptions = computed(() => {
-  const uniqueTenants = Array.from(new Set([
-    defaultTenant,
-    initialTenant,
-    'default',
-    ...configuredTenants,
-    ...discoveredTenants.value
-  ]))
-  return uniqueTenants.map((tenant) => ({ label: tenant, value: tenant }))
-})
+async function handleCreateTenant(payload: { name: string; tenantId?: string }): Promise<void> {
+  newTenantError.value = null
+  newTenantPending.value = true
+  try {
+    const tenant = await createTenant(payload)
+    discoveredTenants.value = Array.from(new Set([...discoveredTenants.value, tenant.tenantId]))
+    selectedTenant.value = tenant.tenantId
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('byteroute:selected-tenant', tenant.tenantId)
+    }
+    connectTenant(tenant.tenantId)
+    showNewTenantDialog.value = false
+  } catch (error) {
+    newTenantError.value = error instanceof Error ? error.message : 'Failed to create tenant'
+  } finally {
+    newTenantPending.value = false
+  }
+}
 
-const selectedTenant = ref(defaultTenant)
+// ── Client token copy ─────────────────────────────────────────────────────────
+const {
+  pending: copyTokenPending,
+  message: copyTokenMessage,
+  handleCopy: handleCopyToken,
+} = useClientToken()
 
+// ── Connection list controls ──────────────────────────────────────────────────
 const connectionLimit = ref<5 | 10 | 20>(10)
 const connectionLimitOptions: Array<{ label: string; value: 5 | 10 | 20 }> = [
   { label: 'Last 5', value: 5 },
   { label: 'Last 10', value: 10 },
-  { label: 'Last 20', value: 20 }
+  { label: 'Last 20', value: 20 },
 ]
-
 const connectionsPaused = ref(false)
 
 function toggleConnectionsPaused() {
@@ -76,136 +93,38 @@ function toggleConnectionsPaused() {
   socket.emit(connectionsPaused.value ? 'unsubscribe' : 'subscribe', { rooms: ['connections'] })
 }
 
-// Mock data for demo (remove when backend is connected)
-const mockTimeSeriesData = ref<TimeSeriesData[]>([])
-const mockStatistics = ref<Statistics | null>(null)
-const mockFlows = ref<TrafficFlow[]>([])
+const limitedConnections = computed(() => connections.value.slice(0, connectionLimit.value))
 
-function generateMockData() {
-  // Generate time series
-  const now = Date.now()
-  mockTimeSeriesData.value = Array.from({ length: 24 }, (_, i) => ({
-    timestamp: new Date(now - (23 - i) * 3600000),
-    connections: Math.floor(Math.random() * 500) + 100,
-    bandwidthIn: Math.floor(Math.random() * 100000000) + 10000000,
-    bandwidthOut: Math.floor(Math.random() * 80000000) + 8000000,
-    inactive: Math.floor(Math.random() * 50)
-  }))
+// ── Computed display aliases ──────────────────────────────────────────────────
+const displayStatistics = computed(() => statistics.value)
+const displayTimeSeries = computed(() => statistics.value?.timeSeries ?? [])
+const displayFlows = computed(() => trafficFlows.value)
 
-  // Generate statistics
-  mockStatistics.value = {
-    totalConnections: 1247,
-    activeConnections: 892,
-    totalBandwidth: 847293847,
-    bandwidthIn: 523948234,
-    bandwidthOut: 323345613,
-    byCountry: [
-      { country: 'United States', countryCode: 'US', connections: 423, bandwidth: 234829384, percentage: 33.9 },
-      { country: 'Germany', countryCode: 'DE', connections: 187, bandwidth: 123948234, percentage: 15.0 },
-      { country: 'United Kingdom', countryCode: 'GB', connections: 156, bandwidth: 98234823, percentage: 12.5 },
-      { country: 'France', countryCode: 'FR', connections: 98, bandwidth: 67234823, percentage: 7.9 },
-      { country: 'Japan', countryCode: 'JP', connections: 87, bandwidth: 54234823, percentage: 7.0 },
-      { country: 'Canada', countryCode: 'CA', connections: 76, bandwidth: 43234823, percentage: 6.1 },
-      { country: 'Australia', countryCode: 'AU', connections: 65, bandwidth: 32234823, percentage: 5.2 },
-      { country: 'Netherlands', countryCode: 'NL', connections: 54, bandwidth: 28234823, percentage: 4.3 },
-      { country: 'Brazil', countryCode: 'BR', connections: 43, bandwidth: 21234823, percentage: 3.4 },
-      { country: 'India', countryCode: 'IN', connections: 38, bandwidth: 18234823, percentage: 3.0 }
-    ],
-    byCategory: [
-      { category: 'Web Traffic', connections: 523, bandwidth: 234829384, percentage: 41.9, color: '#3b82f6' },
-      { category: 'API Calls', connections: 287, bandwidth: 123948234, percentage: 23.0, color: '#10b981' },
-      { category: 'Streaming', connections: 198, bandwidth: 198234823, percentage: 15.9, color: '#f59e0b' },
-      { category: 'File Transfer', connections: 132, bandwidth: 187234823, percentage: 10.6, color: '#8b5cf6' },
-      { category: 'Other', connections: 107, bandwidth: 45234823, percentage: 8.6, color: '#6b7280' }
-    ],
-    byProtocol: [
-      { protocol: 'TCP', connections: 987, percentage: 79.1 },
-      { protocol: 'UDP', connections: 198, percentage: 15.9 },
-      { protocol: 'ICMP', connections: 42, percentage: 3.4 },
-      { protocol: 'OTHER', connections: 20, percentage: 1.6 }
-    ],
-    timeSeries: mockTimeSeriesData.value
-  }
-
-  // Generate traffic flows
-  mockFlows.value = [
-    { id: '1', source: { lat: 40.7128, lng: -74.0060, country: 'US', city: 'New York' }, target: { lat: 51.5074, lng: -0.1278, country: 'GB', city: 'London' }, value: 450 },
-    { id: '2', source: { lat: 37.7749, lng: -122.4194, country: 'US', city: 'San Francisco' }, target: { lat: 35.6762, lng: 139.6503, country: 'JP', city: 'Tokyo' }, value: 320 },
-    { id: '3', source: { lat: 52.5200, lng: 13.4050, country: 'DE', city: 'Berlin' }, target: { lat: 48.8566, lng: 2.3522, country: 'FR', city: 'Paris' }, value: 280 },
-    { id: '4', source: { lat: 40.7128, lng: -74.0060, country: 'US', city: 'New York' }, target: { lat: 52.5200, lng: 13.4050, country: 'DE', city: 'Berlin' }, value: 210 },
-    { id: '5', source: { lat: 51.5074, lng: -0.1278, country: 'GB', city: 'London' }, target: { lat: -33.8688, lng: 151.2093, country: 'AU', city: 'Sydney' }, value: 180 },
-    { id: '6', source: { lat: 35.6762, lng: 139.6503, country: 'JP', city: 'Tokyo' }, target: { lat: 22.3193, lng: 114.1694, country: 'HK', city: 'Hong Kong' }, value: 150 },
-    { id: '7', source: { lat: 37.7749, lng: -122.4194, country: 'US', city: 'San Francisco' }, target: { lat: 49.2827, lng: -123.1207, country: 'CA', city: 'Vancouver' }, value: 140 },
-    { id: '8', source: { lat: 48.8566, lng: 2.3522, country: 'FR', city: 'Paris' }, target: { lat: 52.3676, lng: 4.9041, country: 'NL', city: 'Amsterdam' }, value: 120 }
-  ]
-
-  // Generate mock connections
-  const mockConnections: Connection[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `conn-${i}`,
-    sourceIp: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-    destIp: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-    sourcePort: Math.floor(Math.random() * 60000) + 1024,
-    destPort: [80, 443, 8080, 3000, 5432, 27017][Math.floor(Math.random() * 6)],
-    protocol: ['TCP', 'UDP', 'ICMP', 'OTHER'][Math.floor(Math.random() * 4)] as Connection['protocol'],
-    status: ['active', 'active', 'active', 'inactive'][Math.floor(Math.random() * 4)] as Connection['status'],
-    country: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].country,
-    countryCode: mockStatistics.value!.byCountry[Math.floor(Math.random() * 10)].countryCode,
-    category: mockStatistics.value!.byCategory[Math.floor(Math.random() * 5)].category,
-    bandwidth: Math.floor(Math.random() * 10000000),
-    startTime: new Date(Date.now() - Math.floor(Math.random() * 86400000)),
-    lastActivity: new Date(Date.now() - Math.floor(Math.random() * 60000))
-  }))
-
-  store.setConnections(mockConnections)
-  store.setTrafficFlows(mockFlows.value)
-  store.setStatistics(mockStatistics.value!)
-}
-
-// Computed display values with mock data fallback
-const displayStatistics = computed(() => statistics.value || mockStatistics.value)
-const displayTimeSeries = computed(() => 
-  statistics.value?.timeSeries || mockTimeSeriesData.value
-)
-const displayFlows = computed(() => 
-  trafficFlows.value.length > 0 ? trafficFlows.value : mockFlows.value
-)
-
-const limitedConnections = computed(() => {
-  return connections.value.slice(0, connectionLimit.value)
-})
-
-// Socket event handlers
+// ── Socket listeners ──────────────────────────────────────────────────────────
 const unsubscribers: (() => void)[] = []
 
 function setupSocketListeners() {
   unsubscribers.push(
     socket.on('tenant:new', ({ tenantId }) => {
-      const nextTenant = tenantId.trim()
-      if (!nextTenant) return
-      if (discoveredTenants.value.includes(nextTenant)) return
-      discoveredTenants.value = [...discoveredTenants.value, nextTenant]
+      const next = tenantId.trim()
+      if (!next || discoveredTenants.value.includes(next)) return
+      discoveredTenants.value = [...discoveredTenants.value, next]
     }),
     socket.on('tenants:list', ({ tenants }) => {
-      const cleaned = tenants
-        .map((tenant) => tenant.trim())
-        .filter((tenant) => tenant.length > 0)
+      const cleaned = tenants.map((t: string) => t.trim()).filter((t: string) => t.length > 0)
       discoveredTenants.value = Array.from(new Set([...discoveredTenants.value, ...cleaned]))
     }),
     socket.on('connection:new', (conn) => {
-      if (connectionsPaused.value) return
-      store.addConnection(conn)
+      if (!connectionsPaused.value) store.addConnection(conn)
     }),
     socket.on('connection:update', (conn) => {
-      if (connectionsPaused.value) return
-      store.updateConnection(conn.id, conn)
+      if (!connectionsPaused.value) store.updateConnection(conn.id, conn)
     }),
     socket.on('connection:remove', ({ id }) => {
-      if (connectionsPaused.value) return
-      store.removeConnection(id)
+      if (!connectionsPaused.value) store.removeConnection(id)
     }),
     socket.on('connections:batch', (conns) => {
-      if (connectionsPaused.value) return
-      store.setConnections(conns)
+      if (!connectionsPaused.value) store.setConnections(conns)
     }),
     socket.on('traffic:flows', (flows) => store.setTrafficFlows(flows)),
     socket.on('statistics:update', (stats) => store.setStatistics(stats))
@@ -217,71 +136,37 @@ function handleTimeRangeChange() {
 }
 
 function handleConnectionSelect(connection: Connection) {
-  console.log('Selected connection:', connection)
-  // Could open a detail panel or fly to location on map
   if (connection.latitude && connection.longitude) {
-    mapRef.value?.flyTo({
-      center: [connection.longitude, connection.latitude],
-      zoom: 5,
-      duration: 1000
-    })
+    mapRef.value?.flyTo({ center: [connection.longitude, connection.latitude], zoom: 5, duration: 1000 })
   }
 }
 
-function handleFlowClick(flow: TrafficFlow) {
-  console.log('Clicked flow:', flow)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function handleFlowClick(_flow: TrafficFlow) {
+  // reserved for future use
 }
 
-async function loadDiscoveredTenants() {
-  try {
-    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-    const tenantsUrl = apiBase ? `${apiBase}/api/tenants` : '/api/tenants'
-    const response = await fetch(tenantsUrl)
-    if (!response.ok) {
-      return
-    }
-
-    const payload = await response.json() as { tenants?: unknown }
-    if (!Array.isArray(payload.tenants)) {
-      return
-    }
-
-    discoveredTenants.value = payload.tenants
-      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      .map((value) => value.trim())
-  } catch (error) {
-    console.warn('[Dashboard] Failed to load tenants:', error)
-  }
-}
-
-function connectTenant(tenantId: string) {
+async function handleLogout(): Promise<void> {
   socket.disconnect()
-  store.clearAll()
-  socket.connect(undefined, tenantId)
-  socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
-}
-
-function handleTenantChange() {
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(TENANT_STORAGE_KEY, selectedTenant.value)
+    window.localStorage.removeItem('byteroute:selected-tenant')
   }
-  connectTenant(selectedTenant.value)
+  await authStore.logout()
+  await router.push('/login')
 }
 
-onMounted(() => {
-  // Generate mock data for demo
-  generateMockData()
-
-  void loadDiscoveredTenants()
-
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  const tenants = await loadDiscoveredTenants()
+  if (tenants.length > 0 && !tenants.includes(selectedTenant.value)) {
+    selectedTenant.value = tenants[0]!
+  }
   setupSocketListeners()
-  
-  // Connect to socket
   connectTenant(selectedTenant.value)
 })
 
 onUnmounted(() => {
-  unsubscribers.forEach(unsub => unsub())
+  unsubscribers.forEach((unsub) => unsub())
   socket.disconnect()
 })
 </script>
@@ -289,48 +174,25 @@ onUnmounted(() => {
 <template>
   <div class="dashboard-layout">
     <!-- Header -->
-    <header class="dashboard-header" role="banner">
-      <div class="header-left">
-        <h1 class="logo">ByteRoute</h1>
-        <div class="header-connection-status">
-          <Badge 
-            :value="isConnected ? 'Connected' : 'Disconnected'" 
-            :severity="isConnected ? 'success' : 'danger'"
-          />
-        </div>
-      </div>
-      <div class="header-center">
-        <SelectButton
-          v-model="selectedTimeRange"
-          :options="timeRangeOptions"
-          optionLabel="label"
-          optionValue="value"
-          aria-label="Select time range"
-          @change="handleTimeRangeChange"
-        />
-      </div>
-      <div class="header-right">
-        <Select
-          v-model="selectedTenant"
-          :options="tenantOptions"
-          optionLabel="label"
-          optionValue="value"
-          aria-label="Select tenant"
-          class="tenant-select"
-          @change="handleTenantChange"
-        />
-        <span class="version">v{{ version }}</span>
-        <Button
-          :icon="darkMode ? 'pi pi-sun' : 'pi pi-moon'"
-          :aria-label="darkMode ? 'Switch to light mode' : 'Switch to dark mode'"
-          :aria-pressed="darkMode"
-          text
-          rounded
-          @click="store.toggleDarkMode"
-        />
-        <Button icon="pi pi-cog" aria-label="Open settings" text rounded />
-      </div>
-    </header>
+    <DashboardHeader
+      :is-connected="isConnected"
+      :dark-mode="darkMode"
+      :selected-tenant="selectedTenant"
+      :tenant-options="tenantOptions"
+      :selected-time-range="selectedTimeRange"
+      :time-range-options="timeRangeOptions"
+      :version="version"
+      :copy-token-pending="copyTokenPending"
+      :copy-token-message="copyTokenMessage"
+      @update:selected-tenant="selectedTenant = $event"
+      @update:selected-time-range="store.setTimeRange($event as '1h' | '6h' | '24h' | '7d')"
+      @tenant-change="handleTenantChange"
+      @time-range-change="handleTimeRangeChange"
+      @toggle-dark-mode="store.toggleDarkMode"
+      @copy-token="handleCopyToken"
+      @logout="handleLogout"
+      @new-tenant="showNewTenantDialog = true"
+    />
 
     <!-- Main Content -->
     <main id="main-content" class="dashboard-grid" tabindex="-1">
@@ -365,10 +227,7 @@ onUnmounted(() => {
               <h2 id="statistics-title" class="panel-title">Statistics</h2>
             </div>
             <div class="panel-content">
-              <StatisticsPanel
-                :statistics="displayStatistics"
-                :dark-mode="darkMode"
-              />
+              <StatisticsPanel :statistics="displayStatistics" :dark-mode="darkMode" />
             </div>
           </section>
 
@@ -383,8 +242,8 @@ onUnmounted(() => {
                 <Select
                   v-model="connectionLimit"
                   :options="connectionLimitOptions"
-                  optionLabel="label"
-                  optionValue="value"
+                  option-label="label"
+                  option-value="value"
                   aria-label="Select number of connections shown"
                   class="connections-limit"
                 />
@@ -399,10 +258,7 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="panel-content no-padding">
-              <ConnectionList
-                :connections="limitedConnections"
-                @select="handleConnectionSelect"
-              />
+              <ConnectionList :connections="limitedConnections" @select="handleConnectionSelect" />
             </div>
           </section>
         </div>
@@ -414,18 +270,26 @@ onUnmounted(() => {
           <h2 id="timeline-title" class="panel-title">Traffic Timeline</h2>
         </div>
         <div class="panel-content no-padding">
-          <TrafficChart
-            :data="displayTimeSeries"
-            :dark-mode="darkMode"
-            title=""
-          />
+          <TrafficChart :data="displayTimeSeries" :dark-mode="darkMode" title="" />
         </div>
       </section>
     </main>
+
+    <!-- New Tenant Dialog -->
+    <NewTenantDialog
+      v-model:visible="showNewTenantDialog"
+      :pending="newTenantPending"
+      :error="newTenantError"
+      @submit="handleCreateTenant"
+      @close="newTenantError = null"
+    />
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../assets/styles/tokens' as t;
+@use '../assets/styles/mixins' as m;
+
 .dashboard-layout {
   display: flex;
   flex-direction: column;
@@ -436,58 +300,6 @@ onUnmounted(() => {
   background: var(--p-surface-ground);
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--header-height);
-  padding: 0 1rem;
-  background: var(--p-surface-card);
-  border-bottom: 1px solid var(--p-surface-border);
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.header-connection-status {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.tenant-select {
-  width: 10rem;
-}
-
-.logo {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--p-primary-color);
-  margin: 0;
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.version {
-  font-size: 0.875rem;
-  color: var(--p-text-muted-color);
-  font-weight: 500;
-}
-
 .dashboard-grid {
   display: grid;
   gap: 1rem;
@@ -495,24 +307,24 @@ onUnmounted(() => {
   width: 100%;
   max-width: 100%;
   height: calc(100dvh - var(--header-height));
-  grid-template-columns: minmax(0, 1fr) 380px;
-  grid-template-rows: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) t.$dashboard-sidebar-width;
+  grid-template-rows: 1fr t.$dashboard-charts-row-height;
   overflow: hidden;
-}
 
-.map-panel {
-  grid-column: 1;
-  grid-row: 1;
-}
+  .map-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
 
-.sidebar-panel {
-  grid-column: 2;
-  grid-row: 1 / 3;
-}
+  .sidebar-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
 
-.charts-panel {
-  grid-column: 1;
-  grid-row: 2;
+  .charts-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }
 
 .sidebar-sections {
@@ -526,11 +338,15 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+
+  .panel-content {
+    flex: 1;
+    overflow: auto;
+  }
 }
 
 .statistics-section {
   flex: 0 0 auto;
-  max-height: 50%;
 }
 
 .connections-section {
@@ -543,100 +359,47 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
-.connections-limit {
-  min-width: 8.5rem;
+.connections-header-right {
+  width: 100%;
+  justify-content: flex-end;
 }
 
-.panel-title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.sidebar-section .panel-content {
-  flex: 1;
-  overflow: auto;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
+@include m.max-width(t.$bp-xl) {
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 400px 280px auto;
-  }
+    grid-template-rows: t.$dashboard-map-row-height-xl t.$dashboard-charts-row-height auto;
 
-  .map-panel {
-    grid-column: 1;
-    grid-row: 1;
-  }
+    .map-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
 
-  .charts-panel {
-    grid-column: 1;
-    grid-row: 2;
-  }
+    .charts-panel {
+      grid-column: 1;
+      grid-row: 2;
+    }
 
-  .sidebar-panel {
-    grid-column: 1;
-    grid-row: 3;
-    max-height: 500px;
+    .sidebar-panel {
+      grid-column: 1;
+      grid-row: 3;
+      max-height: t.$dashboard-sidebar-max-height-xl;
+    }
   }
 }
 
-@media (max-width: 768px) {
-  .dashboard-header {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 0.75rem;
-    gap: 0.5rem;
-  }
-
-  .header-left,
-  .header-right,
-  .header-center {
-    width: 100%;
-  }
-
-  .header-left,
-  .header-right {
-    justify-content: space-between;
-  }
-
-  .header-left {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .header-connection-status :deep(.p-badge) {
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .header-center {
-    order: 3;
-    justify-content: center;
-  }
-
-  .tenant-select {
-    width: 100%;
-    max-width: 14rem;
-  }
-
+@include m.max-width(t.$bp-md) {
   .dashboard-grid {
     height: auto;
     min-height: 0;
-    grid-template-rows: 280px 240px minmax(380px, auto);
+    grid-template-rows: t.$dashboard-map-row-height-md t.$dashboard-charts-row-height-md minmax(t.$dashboard-sidebar-min-height-md, auto);
     padding: 0.5rem;
     gap: 0.5rem;
     overflow-x: hidden;
     overflow-y: visible;
-  }
-
-  .statistics-section {
-    max-height: none;
   }
 
   .connections-header-right {
@@ -645,20 +408,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 520px) {
-  .header-left {
-    justify-content: flex-start;
-  }
-
-  .header-right {
-    flex-wrap: wrap;
-    gap: 0.375rem;
-  }
-
-  .version {
-    flex-basis: 100%;
-  }
-
+@include m.max-width(t.$bp-xs) {
   .connections-header-left,
   .connections-header-right {
     width: 100%;
@@ -666,7 +416,7 @@ onUnmounted(() => {
   }
 
   .connections-limit {
-    min-width: 7.5rem;
+    min-width: t.$connections-limit-min-width-xs;
   }
 }
 </style>

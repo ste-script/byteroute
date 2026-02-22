@@ -8,12 +8,10 @@ vi.mock("@byteroute/shared", () => ({
   }
 }));
 
-const generateConnection = vi.fn();
 const generateTrafficFlows = vi.fn();
 const generateStatistics = vi.fn();
 
 vi.mock("../../src/mock/connections.js", () => ({
-  generateConnection,
   generateTrafficFlows,
   generateStatistics
 }));
@@ -66,18 +64,15 @@ describe("connections service", () => {
     expect(service.getAllConnectionsSnapshot().map((c) => c.id)).toEqual(["a", "b"]);
   });
 
-  it("adds and updates connections with events", async () => {
-    generateConnection.mockReturnValue({ id: "conn-1", status: "active" });
+  it("upserts and updates connections with events", async () => {
     generateStatistics.mockReturnValue({ totalConnections: 1 });
     generateTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
 
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    const created = service.addConnection(io as any, TENANT);
-    expect(created.id).toBe("conn-1");
-    expect(io.emit).toHaveBeenCalledWith("connection:new", created);
-    expect(io.emit).toHaveBeenCalledWith("statistics:update", { totalConnections: 1 });
+    service.upsertConnectionsLocal(io as any, TENANT, [{ id: "conn-1", status: "active" } as any]);
+    expect(io.emit).toHaveBeenCalledWith("connection:new", expect.objectContaining({ id: "conn-1" }));
 
     const fetched = service.getConnectionById(TENANT, "conn-1");
     expect(fetched?.id).toBe("conn-1");
@@ -137,13 +132,12 @@ describe("connections service", () => {
   });
 
   it("emits to tenant room when io.to exists", async () => {
-    generateConnection.mockReturnValue({ id: "conn-room", status: "active" });
     generateStatistics.mockReturnValue({ totalConnections: 1 });
 
     const service = await import("../../src/services/connections.js");
     const io = createRoomedIo();
 
-    service.addConnection(io as any, "tenant-room");
+    service.upsertConnectionsLocal(io as any, "tenant-room", [{ id: "conn-room", tenantId: "tenant-room", status: "active" } as any]);
 
     expect(io.to).toHaveBeenCalledWith("tenant:tenant-room");
     expect(io.roomEmit).toHaveBeenCalledWith(
@@ -185,12 +179,12 @@ describe("connections service", () => {
   });
 
   it("does not emit stats when status unchanged", async () => {
-    generateConnection.mockReturnValue({ id: "conn-2", status: "active" });
+    generateStatistics.mockReturnValue({ totalConnections: 1 });
 
     const service = await import("../../src/services/connections.js");
     const io = createIo();
 
-    service.addConnection(io as any, TENANT);
+    service.upsertConnectionsLocal(io as any, TENANT, [{ id: "conn-2", status: "active" } as any]);
     io.emit.mockClear();
 
     const updated = service.updateConnection(io as any, TENANT, "conn-2", { bandwidth: 1000 });
@@ -200,82 +194,4 @@ describe("connections service", () => {
     expect(io.emit).not.toHaveBeenCalledWith("statistics:update", expect.anything());
   });
 
-  it("runs demo mode branches", async () => {
-    let counter = 0;
-    generateConnection.mockImplementation((overrides) => ({
-      id: `demo-${++counter}`,
-      status: "active",
-      bytesIn: 0,
-      bytesOut: 0,
-      ...overrides
-    }));
-
-    generateTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
-    generateStatistics.mockReturnValue({ totalConnections: 1 });
-
-    const service = await import("../../src/services/connections.js");
-    const io = createIo();
-
-    service.upsertConnectionsLocal(io as any, TENANT, Array.from({ length: 11 }, (_, i) => ({ id: `seed-${i}` } as any)));
-
-    const randomValues = [
-      0.1,
-      0.5,
-      0.0,
-      0.7,
-      0.2,
-      0.3,
-      0.4,
-      0.8,
-      0.1,
-      0.95
-    ];
-
-    const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => randomValues.shift() ?? 0.99);
-
-    vi.useFakeTimers();
-    const timer = service.startDemoMode(io as any, 1000);
-
-    vi.advanceTimersByTime(4000);
-
-    service.stopDemoMode(timer);
-    randomSpy.mockRestore();
-
-    expect(service.getAllConnectionsSnapshot().length).toBeGreaterThanOrEqual(10);
-  });
-
-  it("skips demo updates when no connections", async () => {
-    const service = await import("../../src/services/connections.js");
-    const io = createIo();
-
-    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
-    vi.useFakeTimers();
-
-    const timer = service.startDemoMode(io as any, 1000);
-    vi.advanceTimersByTime(1000);
-    service.stopDemoMode(timer);
-
-    randomSpy.mockRestore();
-    expect(service.getAllConnectionsSnapshot()).toHaveLength(0);
-  });
-
-  it("skips demo removal when under threshold", async () => {
-    const service = await import("../../src/services/connections.js");
-    const io = createIo();
-
-    service.upsertConnectionsLocal(io as any, TENANT, Array.from({ length: 5 }, (_, i) => ({ id: `seed-${i}` } as any)));
-
-    const removeSpy = vi.spyOn(service, "removeConnection");
-    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.8);
-    vi.useFakeTimers();
-
-    const timer = service.startDemoMode(io as any, 1000);
-    vi.advanceTimersByTime(1000);
-    service.stopDemoMode(timer);
-
-    randomSpy.mockRestore();
-    removeSpy.mockRestore();
-
-    expect(removeSpy).not.toHaveBeenCalled();
-  });
 });

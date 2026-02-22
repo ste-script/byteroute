@@ -127,7 +127,6 @@ Defaults:
 - Backend:
 	- `MONGODB_URI` (default: `mongodb://mongodb:27017/byteroute`)
 	- `PORT` (default: `4000`)
-	- `DEMO_MODE=true` to emit mock traffic periodically
 	- `CONNECTIONS_BOOTSTRAP_LIMIT` (default: `500`)
 	- `STATS_EMIT_INTERVAL` (default: `30000` ms)
 	- MaxMind credentials are only required for downloading/updating GeoLite2 databases:

@@ -154,13 +154,6 @@ export function generateTrafficFlow(connection?: Connection): TrafficFlow {
 
   flowIdCounter++;
 
-  // Color based on connection status or random
-  const colors: [number, number, number, number][] = [
-    [0, 255, 0, 200],   // green - active
-    [255, 165, 0, 200], // orange - inactive
-    [0, 191, 255, 200], // blue - default
-  ];
-
   return {
     id: `flow-${flowIdCounter}-${Date.now()}`,
     source: {

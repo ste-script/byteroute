@@ -35,6 +35,7 @@ sudo setcap cap_net_raw,cap_net_admin=eip ./byteroute-client
 ./byteroute-client \
 	--iface eth0 \
 	--backend http://localhost:4000 \
+	--auth-token "$BYTEROUTE_AUTH_TOKEN" \
 	--flush 5s
 ```
 
@@ -58,10 +59,15 @@ List interfaces:
 - `--idle-ttl`: drop flows that have been idle
 - `--flush`: how often to post updates
 - `--flow`: legacy alias for `--flush`
+- `--auth-token`: bearer token used for authenticated backend requests
+
+Before each metrics/connections post, the client checks `GET /api/tenants` and ensures
+the configured `--tenant-id` is authorized for the current identity.
 
 ### Env vars
 
 - `BYTEROUTE_BACKEND_URL`
+- `BYTEROUTE_AUTH_TOKEN`
 - `BYTEROUTE_IFACE`
 - `BYTEROUTE_BPF`
 - `BYTEROUTE_REPORTER_IP`

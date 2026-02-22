@@ -232,19 +232,19 @@ defineExpose({
   />
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .world-map {
   width: 100%;
   height: 100%;
   position: relative;
-}
 
-.world-map :deep(.maplibregl-canvas) {
-  outline: none;
-}
+  :deep(.maplibregl-canvas) {
+    outline: none;
+  }
 
-.world-map :deep(.maplibregl-ctrl-attrib) {
-  font-size: 10px;
-  opacity: 0.7;
+  :deep(.maplibregl-ctrl-attrib) {
+    font-size: 10px;
+    opacity: 0.7;
+  }
 }
 </style>
