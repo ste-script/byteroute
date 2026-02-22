@@ -17,8 +17,8 @@ export async function postMetrics(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const tenantId = resolveTenantIdFromRequest(req);
     const principal = getPrincipal(req);
+    const tenantId = resolveTenantIdFromRequest(req, principal?.tenantIds[0]);
 
     if (!principal || !userHasTenantAccess(principal.tenantIds, tenantId)) {
       res.status(403).json({ error: "Forbidden: no access to tenant" });

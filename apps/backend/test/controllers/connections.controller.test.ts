@@ -261,12 +261,9 @@ describe('Connections Controller', () => {
       consoleError.mockRestore()
     })
 
-    it('should use tenant-aware fallback for non-default tenant', async () => {
+    it('should derive tenant from principal when no x-tenant-id header is sent', async () => {
       const connections = [createConnection()]
-      const req = createMockRequest(
-        { connections },
-        { 'x-tenant-id': 'tenant-acme' }
-      )
+      const req = createMockRequest({ connections })
       req.user = { tenantIds: ['tenant-acme'] }
       const res = createMockResponse()
 
