@@ -58,7 +58,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	bc, err := backend.NewClient(cfg.BackendURL, cfg.HTTPTimeout, cfg.TenantID, cfg.AuthToken)
+	bc, err := backend.NewClient(cfg.BackendURL, cfg.HTTPTimeout, cfg.AuthToken)
 	if err != nil {
 		log.Fatalf("backend client: %v", err)
 	}
@@ -67,12 +67,11 @@ func main() {
 	defer cancel()
 
 	log.Printf(
-		"byteroute-client: iface=%s direction=%s bpf=%q backend=%s tenant=%s flush=%s dedupe=%s",
+		"byteroute-client: iface=%s direction=%s bpf=%q backend=%s flush=%s dedupe=%s",
 		cfg.Iface,
 		cfg.Direction,
 		bpf,
 		cfg.BackendURL,
-		cfg.TenantID,
 		cfg.FlushInterval,
 		cfg.DedupMode,
 	)

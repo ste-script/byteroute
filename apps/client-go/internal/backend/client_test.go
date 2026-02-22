@@ -11,26 +11,12 @@ import (
 
 func TestClient_PostConnections(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == "/api/tenants" {
-			if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"tenants": []string{"tenant-a"}})
-			return
-		}
-
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 		if r.URL.Path != "/api/connections" {
 			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-a" {
-			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
@@ -54,7 +40,7 @@ func TestClient_PostConnections(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c, err := NewClient(ts.URL, 2*time.Second, "tenant-a", "test-token")
+	c, err := NewClient(ts.URL, 2*time.Second, "test-token")
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -74,35 +60,5 @@ func TestClient_PostConnections(t *testing.T) {
 	}
 	if resp.Status == "" {
 		t.Fatalf("expected status")
-	}
-}
-
-func TestClient_PostConnections_UnauthorizedTenant(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == "/api/tenants" {
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"tenants": []string{"tenant-b"}})
-			return
-		}
-
-		if r.Method == http.MethodPost && r.URL.Path == "/api/connections" {
-			t.Fatalf("connections post should not be called when tenant is unauthorized")
-		}
-
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer ts.Close()
-
-	c, err := NewClient(ts.URL, 2*time.Second, "tenant-a", "test-token")
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	_, err = c.PostConnections(ctx, []Connection{{ID: "a", SourceIP: "1.1.1.1", DestIP: "8.8.8.8", SourcePort: 1, DestPort: 2, Protocol: "TCP", Status: "active", StartTime: time.Now().UTC().Format(time.RFC3339Nano), LastActivity: time.Now().UTC().Format(time.RFC3339Nano)}})
-	if err == nil {
-		t.Fatalf("expected unauthorized tenant error")
 	}
 }

@@ -44,4 +44,20 @@ describe("tenant utils", () => {
     } as unknown as Request;
     expect(resolveTenantIdFromRequest(reqDefault)).toBe(DEFAULT_TENANT_ID);
   });
+
+  it("uses explicit fallback (principal tenantId) when no header or query is present", () => {
+    const req = { headers: {}, query: {} } as unknown as Request;
+
+    expect(resolveTenantIdFromRequest(req, "principal-tenant")).toBe("principal-tenant");
+
+    // header takes priority over fallback
+    const reqWithHeader = {
+      headers: { "x-tenant-id": "header-tenant" },
+      query: {},
+    } as unknown as Request;
+    expect(resolveTenantIdFromRequest(reqWithHeader, "principal-tenant")).toBe("header-tenant");
+
+    // blank fallback still resolves to default
+    expect(resolveTenantIdFromRequest(req, "  ")).toBe(DEFAULT_TENANT_ID);
+  });
 });

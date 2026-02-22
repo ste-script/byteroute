@@ -62,14 +62,14 @@ export type RequestLike = {
   query?: Record<string, unknown> & { tenantId?: unknown };
 };
 
-export function resolveTenantIdFromRequest(req: RequestLike): string {
+export function resolveTenantIdFromRequest(req: RequestLike, fallback?: string): string {
   const headerTenant = sanitizeTenantId(takeFirstHeaderValue(req.headers?.["x-tenant-id"]));
   const queryTenant = sanitizeTenantId(req.query?.tenantId);
-  return headerTenant ?? queryTenant ?? DEFAULT_TENANT_ID;
+  return headerTenant ?? queryTenant ?? sanitizeTenantId(fallback) ?? DEFAULT_TENANT_ID;
 }
 
-export function resolveTenantContextFromRequest(req: RequestLike): TenantContext {
-  return createTenantContext(resolveTenantIdFromRequest(req));
+export function resolveTenantContextFromRequest(req: RequestLike, fallback?: string): TenantContext {
+  return createTenantContext(resolveTenantIdFromRequest(req, fallback));
 }
 
 export type SocketHandshakeLike = {

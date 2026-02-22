@@ -20,8 +20,8 @@ export async function postConnections(req: Request, res: Response): Promise<void
   }
 
   const io = req.app.get("io") as TypedSocketServer | undefined;
-  const { tenantId } = resolveTenantContextFromRequest(req);
   const principal = getPrincipal(req);
+  const { tenantId } = resolveTenantContextFromRequest(req, principal?.tenantIds[0]);
 
   if (!principal || !userHasTenantAccess(principal.tenantIds, tenantId)) {
     res.status(403).json({ error: "Forbidden: no access to tenant" });
