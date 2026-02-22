@@ -1,4 +1,3 @@
-import type { AxiosError } from 'axios'
 import client from '@/api/client'
 import type { AuthResponse, SignInPayload, SignUpPayload } from '@/types/auth'
 
@@ -26,8 +25,12 @@ export async function getCurrentUser(): Promise<{ user: AuthResponse['user'] } |
     if (!data.user) return null
     return { user: data.user }
   } catch (error) {
-    if ((error as AxiosError).response?.status === 401) return null
-    throw error
+    // Treat any error (401, 5xx, network) as "not authenticated" so a backend
+    // hiccup never prevents the app from rendering.
+    if (import.meta.env.DEV) {
+      console.warn('[auth] getCurrentUser failed, treating as unauthenticated:', error)
+    }
+    return null
   }
 }
 
