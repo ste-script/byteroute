@@ -1,3 +1,13 @@
+## [4.0.0](https://github.com/ste-script/byteroute/compare/v3.0.0...v4.0.0) (2026-02-22)
+
+### ⚠ BREAKING CHANGES
+
+* **backend:** wrong condition on passport auth
+
+### Bug Fixes
+
+* **backend:** wrong condition on passport auth ([9708ef5](https://github.com/ste-script/byteroute/commit/9708ef5341101f279852beea69fe7832ddc1ff94))
+
 ## [3.0.0](https://github.com/ste-script/byteroute/compare/v2.0.0...v3.0.0) (2026-02-22)
 
 ### ⚠ BREAKING CHANGES
