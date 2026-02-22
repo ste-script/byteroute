@@ -58,6 +58,11 @@ describe("auth/passport", () => {
   });
 
   it("returns undefined for invalid token payload", () => {
+    expect(verifyAuthToken("not-a-token")).toBeUndefined();
+    expect(verifyAuthToken(undefined)).toBeUndefined();
+  });
+
+  it("accepts tokens with an empty tenantIds array (new user with no tenants yet)", () => {
     const noTenantsToken = signAuthTokenWithTtl(
       {
         sub: "user-1",
@@ -68,19 +73,27 @@ describe("auth/passport", () => {
       "1d"
     );
 
-    expect(verifyAuthToken("not-a-token")).toBeUndefined();
-    expect(verifyAuthToken(noTenantsToken)).toBeUndefined();
-    expect(verifyAuthToken(undefined)).toBeUndefined();
+    const principal = verifyAuthToken(noTenantsToken);
+    expect(principal).toEqual(
+      expect.objectContaining({
+        id: "user-1",
+        email: "user@example.com",
+        tenantIds: [],
+      })
+    );
   });
 
-  it("returns undefined when tenantIds claim is missing", () => {
+  it("returns a principal with empty tenantIds when the claim is missing", () => {
     const token = jwt.sign(
       { sub: "user-1", email: "user@example.com", name: "User" },
       process.env.JWT_SECRET as string,
       { expiresIn: "1d" }
     );
 
-    expect(verifyAuthToken(token)).toBeUndefined();
+    const principal = verifyAuthToken(token);
+    expect(principal).toEqual(
+      expect.objectContaining({ id: "user-1", tenantIds: [] })
+    );
   });
 
   it("returns undefined when sub claim is missing", () => {
