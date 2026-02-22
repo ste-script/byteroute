@@ -1,3 +1,33 @@
+## [3.0.0](https://github.com/ste-script/byteroute/compare/v2.0.0...v3.0.0) (2026-02-22)
+
+### ⚠ BREAKING CHANGES
+
+* **client-go:** auth with token
+* tenant ownership
+* multi tenant
+
+### Features
+
+*  tenant switch ([30846d9](https://github.com/ste-script/byteroute/commit/30846d92ebfee8b04f9ab6ea21bdd69c37f61e5a))
+* **backend:** init jwt authentication ([e41a2c6](https://github.com/ste-script/byteroute/commit/e41a2c612125930d36ede0c004f0ca1cf1780de8))
+* **backend:** tenant registration endpoint ([3be7f28](https://github.com/ste-script/byteroute/commit/3be7f28286bab2e22b502fcba88639a4029cd8e0))
+* **client-go:** auth with token ([4c4083c](https://github.com/ste-script/byteroute/commit/4c4083c6d3d4383313ca91b15403787d932d5448))
+* **dashboard:** scss for better style ([c5f7d35](https://github.com/ste-script/byteroute/commit/c5f7d355f7d4e36353f102aa2a7f21df95bc13a3))
+* init to implement login and logout ([14720f7](https://github.com/ste-script/byteroute/commit/14720f7649ec1734eba9edb9ab220bba3e9c7a07))
+* mobile friendly ([888e255](https://github.com/ste-script/byteroute/commit/888e2553546dbae133b38f176c7d5650dcd5d62a))
+* multi tenant ([9f51fbe](https://github.com/ste-script/byteroute/commit/9f51fbe63826a38743604a7df344aca0c7f2b11f))
+* tenant ownership ([6324c1a](https://github.com/ste-script/byteroute/commit/6324c1a76c911f456eb0d15535828dccdef439bc))
+
+### Bug Fixes
+
+* attach tenant correctly to user ([bae1900](https://github.com/ste-script/byteroute/commit/bae1900cccc24f69f13f7ed82002d28a0f0f6d23))
+* authentication issue ([a4dd850](https://github.com/ste-script/byteroute/commit/a4dd850fd1ed1d065ae2a868b43420e4dd72e79e))
+* **backend:**  maxmind db update script ([634cf44](https://github.com/ste-script/byteroute/commit/634cf44e0a650ae62e09fede6b164fcdc78dbad2))
+* **backend:** move mongodb uri computation inside BeforeAll hook ([ebd1875](https://github.com/ste-script/byteroute/commit/ebd1875b828b9d8e00e171fd222b835c76c061a5))
+* **backend:** tests building issue ([ee8427d](https://github.com/ste-script/byteroute/commit/ee8427d64f8b079e933c3f5d3d525f3df654996d))
+* **client-go:** add ssl certificates on build ([6b7a85a](https://github.com/ste-script/byteroute/commit/6b7a85ac89ab43b5c2616934776141238091fb14))
+* **client-go:** fixed a bug of sending interval ([0d10236](https://github.com/ste-script/byteroute/commit/0d102369437cc11e205a26aff36ee704c05af690))
+
 ## [2.0.0](https://github.com/ste-script/byteroute/compare/v1.5.2...v2.0.0) (2026-02-14)
 
 ### ⚠ BREAKING CHANGES
