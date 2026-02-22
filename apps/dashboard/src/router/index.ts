@@ -38,7 +38,14 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
   if (!authStore.hydrated && !authStore.isAuthenticated) {
-    await authStore.restoreSession()
+    try {
+      await authStore.restoreSession()
+    } catch (error) {
+      // restoreSession already sets hydrated=true in its finally block.
+      // Swallow unexpected errors here so navigation is never aborted by a
+      // backend hiccup (the user will simply land on /login).
+      console.error('[router] restoreSession failed:', error)
+    }
   }
 
   const authenticated = authStore.isAuthenticated
