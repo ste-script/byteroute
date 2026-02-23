@@ -146,25 +146,8 @@ export class GeoIpService {
     return enriched;
   }
 
-  async enrichBatch(connections: Connection[], context: GeoIpContext = {}): Promise<Connection[]> {
-    const concurrency = 20;
-    const results = new Array<Connection>(connections.length);
-
-    let index = 0;
-    const workerCount = Math.min(concurrency, connections.length);
-
-    const workers = Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const current = index++;
-        if (current >= connections.length) {
-          return;
-        }
-        results[current] = await this.enrichConnection(connections[current]!, context);
-      }
-    });
-
-    await Promise.all(workers);
-    return results;
+  enrichBatch(connections: Connection[], context: GeoIpContext = {}): Promise<Connection[]> {
+    return Promise.all(connections.map((connection) => this.enrichConnection(connection, context)));
   }
 }
 
