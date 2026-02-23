@@ -94,7 +94,7 @@ jobs:
 
       - name: Build
         run: pnpm -w build
-          
+
       - name: Test Go client with coverage
         run: |
           cd apps/client-go
@@ -118,6 +118,11 @@ jobs:
 
       - name: Test
         run: pnpm -w coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Code Coverage Summary
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -144,5 +149,3 @@ jobs:
             coverage/
             code-coverage-results.md
           retention-days: 30
-
-
