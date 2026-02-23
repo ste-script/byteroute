@@ -1,3 +1,9 @@
+## [4.1.1](https://github.com/ste-script/byteroute/compare/v4.1.0...v4.1.1) (2026-02-23)
+
+### Bug Fixes
+
+* header content type ([d8c2a59](https://github.com/ste-script/byteroute/commit/d8c2a59ce42dcbace280931aa6d9c0edca83b4e8))
+
 ## [4.1.0](https://github.com/ste-script/byteroute/compare/v4.0.0...v4.1.0) (2026-02-22)
 
 ### Features
