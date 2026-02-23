@@ -1,9 +1,7 @@
 # ByteRoute
 
 [![Release](https://github.com/ste-script/byteroute/actions/workflows/release.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/release.yml)
-[![Linting](https://github.com/ste-script/byteroute/actions/workflows/lint.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/lint.yml)
-[![Testing](https://github.com/ste-script/byteroute/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/build-and-test.yml)
-[![Coverage](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml/badge.svg)](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml)
+![Codecov](https://img.shields.io/codecov/c/github/ste-script/byteroute)
 [![Version](https://img.shields.io/github/v/release/ste-script/byteroute)](https://github.com/ste-script/byteroute/releases)
 
 **University Project for SPE (Software Performance Engineering) and ASW (Architetture Software per il Web)**
