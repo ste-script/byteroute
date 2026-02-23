@@ -71,6 +71,11 @@ function normalizeConnection(input: Partial<Connection>, tenantId: string): Conn
     longitude: input.longitude,
     asn: input.asn,
     asOrganization: input.asOrganization,
+    destCountry: input.destCountry,
+    destCountryCode: input.destCountryCode,
+    destCity: input.destCity,
+    destLatitude: input.destLatitude,
+    destLongitude: input.destLongitude,
 
     category: input.category,
     bandwidth: input.bandwidth,
