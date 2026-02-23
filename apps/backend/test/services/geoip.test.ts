@@ -273,6 +273,49 @@ describe("geoip enrichment", () => {
     expect(result).toEqual({});
   });
 
+  it("populates dest geo fields from destIp when it is public", async () => {
+    // sourceIp: 8.8.8.8 (US), destIp: 1.1.1.1 (AU)
+    const enriched = await geoip.enrichConnection(
+      baseConnection({ sourceIp: "8.8.8.8", destIp: "1.1.1.1" })
+    );
+
+    expect(enriched.destCountry).toBe("Australia");
+    expect(enriched.destCountryCode).toBe("AU");
+    expect(enriched.destCity).toBe("Sydney");
+    expect(enriched.destLatitude).toBeCloseTo(-33.8688);
+    expect(enriched.destLongitude).toBeCloseTo(151.2093);
+  });
+
+  it("does not populate dest geo fields when destIp is private", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({ sourceIp: "8.8.8.8", destIp: "192.168.1.1" })
+    );
+
+    expect(enriched.destCountry).toBeUndefined();
+    expect(enriched.destLatitude).toBeUndefined();
+    expect(enriched.destLongitude).toBeUndefined();
+  });
+
+  it("does not override producer-provided dest geo fields", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "8.8.8.8",
+        destIp: "1.1.1.1",
+        destCountry: "ProducerDest",
+        destCountryCode: "ZZ",
+        destCity: "ProducerDestCity",
+        destLatitude: 10,
+        destLongitude: 20,
+      })
+    );
+
+    expect(enriched.destCountry).toBe("ProducerDest");
+    expect(enriched.destCountryCode).toBe("ZZ");
+    expect(enriched.destCity).toBe("ProducerDestCity");
+    expect(enriched.destLatitude).toBe(10);
+    expect(enriched.destLongitude).toBe(20);
+  });
+
   it("enrichBatch with context", async () => {
     const batch = [
       baseConnection({

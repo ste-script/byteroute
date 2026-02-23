@@ -117,6 +117,7 @@ export class GeoIpService {
     // - Otherwise fall back to destIp as a best-effort.
 
     let enrichment: GeoIpEnrichment = {};
+    let destEnrichment: GeoIpEnrichment = {};
 
     if (sourceIp && !isPrivateIp(sourceIp)) {
       enrichment = await this.lookupIp(sourceIp);
@@ -130,9 +131,14 @@ export class GeoIpService {
       enrichment = await this.lookupIp(destIp);
     }
 
+    // Enrich destination IP independently for traffic flow targets
+    if (destIp && !isPrivateIp(destIp)) {
+      destEnrichment = await this.lookupIp(destIp);
+    }
+
     const enriched: Connection = {
       ...connection,
-      // Fill missing geo fields (don’t override if producer already provided values)
+      // Fill missing source geo fields (don't override if producer already provided values)
       country: connection.country ?? enrichment.country,
       countryCode: connection.countryCode ?? enrichment.countryCode,
       city: connection.city ?? enrichment.city,
@@ -140,6 +146,12 @@ export class GeoIpService {
       longitude: connection.longitude ?? enrichment.longitude,
       asn: connection.asn ?? enrichment.asn,
       asOrganization: connection.asOrganization ?? enrichment.asOrganization,
+      // Fill missing destination geo fields
+      destCountry: connection.destCountry ?? destEnrichment.country,
+      destCountryCode: connection.destCountryCode ?? destEnrichment.countryCode,
+      destCity: connection.destCity ?? destEnrichment.city,
+      destLatitude: connection.destLatitude ?? destEnrichment.latitude,
+      destLongitude: connection.destLongitude ?? destEnrichment.longitude,
       enriched: hasAnyEnrichment(enrichment),
     };
 

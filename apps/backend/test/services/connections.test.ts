@@ -8,11 +8,14 @@ vi.mock("@byteroute/shared", () => ({
   }
 }));
 
-const generateTrafficFlows = vi.fn();
+const deriveTrafficFlows = vi.fn();
 const generateStatistics = vi.fn();
 
+vi.mock("../../src/services/connections/trafficFlows.js", () => ({
+  deriveTrafficFlows
+}));
+
 vi.mock("../../src/mock/connections.js", () => ({
-  generateTrafficFlows,
   generateStatistics
 }));
 
@@ -66,7 +69,7 @@ describe("connections service", () => {
 
   it("upserts and updates connections with events", async () => {
     generateStatistics.mockReturnValue({ totalConnections: 1 });
-    generateTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
+    deriveTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
 
     const service = await import("../../src/services/connections.js");
     const io = createIo();
@@ -115,7 +118,7 @@ describe("connections service", () => {
   });
 
   it("emits traffic flows and errors", async () => {
-    generateTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
+    deriveTrafficFlows.mockReturnValue([{ id: "flow-1" }]);
     generateStatistics.mockReturnValue({ totalConnections: 0 });
 
     const service = await import("../../src/services/connections.js");
@@ -148,7 +151,7 @@ describe("connections service", () => {
   });
 
   it("emits statistics and flows for all known tenants", async () => {
-    generateTrafficFlows.mockReturnValue([{ id: "flow-multi" }]);
+    deriveTrafficFlows.mockReturnValue([{ id: "flow-multi" }]);
     generateStatistics.mockReturnValue({ totalConnections: 1 });
 
     const service = await import("../../src/services/connections.js");
