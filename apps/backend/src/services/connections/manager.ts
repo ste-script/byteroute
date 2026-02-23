@@ -1,8 +1,8 @@
 import type { Connection } from "@byteroute/shared";
 import {
-  generateTrafficFlows,
   generateStatistics,
 } from "../../mock/connections.js";
+import { deriveTrafficFlows } from "./trafficFlows.js";
 import { ensureTenantId } from "../../utils/tenant.js";
 import { emitToTenant } from "./emitter.js";
 import {
@@ -98,7 +98,7 @@ export function emitConnectionsBatch(io: TypedSocketServer, tenantId: string): v
 
 export function emitTrafficFlows(io: TypedSocketServer, tenantId: string): void {
   const resolvedTenantId = ensureTenantId(tenantId);
-  const flows = generateTrafficFlows(getTenantConnections(resolvedTenantId));
+  const flows = deriveTrafficFlows(getTenantConnections(resolvedTenantId));
   emitToTenant(io, resolvedTenantId, "traffic:flows", flows);
 }
 
