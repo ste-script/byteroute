@@ -7,8 +7,16 @@ import type { AxiosError } from 'axios'
  */
 const client = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || '').replace(/\/$/, ''),
+  timeout: 10_000,
   headers: {
-    'Content-Type': 'application/json',
+    // Scope Content-Type to methods that actually send a body.
+    // Setting it in `common` (the axios.create headers shorthand) sends it on
+    // every request including GET/DELETE, which causes express.json() to stall
+    // waiting for a body that never arrives when requests bypass the Vite proxy
+    // (i.e. in production through Traefik → Express).
+    post: { 'Content-Type': 'application/json' },
+    put: { 'Content-Type': 'application/json' },
+    patch: { 'Content-Type': 'application/json' },
   },
 })
 
