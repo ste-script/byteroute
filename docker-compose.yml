@@ -6,6 +6,7 @@ services:
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=traefik
       - --entrypoints.web.address=:80
     ports:
       # Single public entrypoint for dashboard + API + Socket.IO
@@ -48,6 +49,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set in .env}
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik
       # Route REST API + Socket.IO to backend
       - traefik.http.routers.byteroute-api.rule=PathPrefix(`/api`) || PathPrefix(`/socket.io`) || PathPrefix(`/auth`) || Path(`/health`)
       - traefik.http.routers.byteroute-api.entrypoints=web
@@ -80,4 +82,6 @@ volumes:
 
 networks:
   traefik:
+    name: traefik
   internal:
+    name: byteroute_internal
