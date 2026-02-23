@@ -26,6 +26,11 @@ import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 const server = createServer(app);
+
+// Prevent stalled requests (e.g. body-parser waiting on a bodyless GET with
+// Content-Type: application/json) from holding keep-alive connections open
+// indefinitely and blocking subsequent requests on the same connection.
+server.requestTimeout = 30_000;
 const io: TypedSocketServer = new SocketIOServer<
   ClientToServerEvents,
   ServerToClientEvents,
