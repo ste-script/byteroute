@@ -1,3 +1,13 @@
+## [4.1.0](https://github.com/ste-script/byteroute/compare/v4.0.0...v4.1.0) (2026-02-22)
+
+### Features
+
+* resolve tenant id directly by the jwt ([65aa0a0](https://github.com/ste-script/byteroute/commit/65aa0a05729608e13e233aa4613aceaafc1c9dc7))
+
+### Bug Fixes
+
+* **dashboard:** session restore error handling ([3670a43](https://github.com/ste-script/byteroute/commit/3670a436d1096f8e86bb6c3057ad67780407d3de))
+
 ## [4.0.0](https://github.com/ste-script/byteroute/compare/v3.0.0...v4.0.0) (2026-02-22)
 
 ### ⚠ BREAKING CHANGES
