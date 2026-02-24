@@ -15,7 +15,7 @@ vi.mock("../../src/services/connections/trafficFlows.js", () => ({
   deriveTrafficFlows
 }));
 
-vi.mock("../../src/mock/connections.js", () => ({
+vi.mock("../../src/utils/statistics.js", () => ({
   generateStatistics
 }));
 

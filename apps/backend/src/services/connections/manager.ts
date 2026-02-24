@@ -1,7 +1,5 @@
 import type { Connection } from "@byteroute/shared";
-import {
-  generateStatistics,
-} from "../../mock/connections.js";
+import { generateStatistics } from "../../utils/statistics.js";
 import { deriveTrafficFlows } from "./trafficFlows.js";
 import { ensureTenantId } from "../../utils/tenant.js";
 import { emitToTenant } from "./emitter.js";

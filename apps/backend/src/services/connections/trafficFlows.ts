@@ -1,5 +1,5 @@
 import type { Connection, TrafficFlow } from "@byteroute/shared";
-import { getBandwidthColor } from "../../mock/connections.js";
+import { getBandwidthColor } from "../../utils/bandwidth.js";
 
 let flowIdCounter = 0;
 

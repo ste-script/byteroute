@@ -1,6 +1,6 @@
-import type { Connection, TrafficFlow, Statistics } from "@byteroute/shared";
-import { metricsStore } from "../services/metrics.js";
+import type { Connection, TrafficFlow } from "@byteroute/shared";
 import { DEFAULT_TENANT_ID } from "../utils/tenant.js";
+import { getBandwidthColor } from "../utils/bandwidth.js";
 
 // Sample data for generating realistic mock connections
 const countries = [
@@ -96,58 +96,6 @@ export function generateConnections(count: number): Connection[] {
 
 let flowIdCounter = 0;
 
-/**
- * Maps bandwidth value to a color gradient from green (low) to red (high)
- * @param bandwidth - The bandwidth value in bytes/second
- * @param minBandwidth - Minimum bandwidth for scaling (default: 0)
- * @param maxBandwidth - Maximum bandwidth for scaling (default: 100000)
- * @returns RGBA color tuple [R, G, B, A]
- */
-export function getBandwidthColor(
-  bandwidth: number,
-  minBandwidth = 0,
-  maxBandwidth = 100000
-): [number, number, number, number] {
-  // Normalize bandwidth to 0-1 range
-  const normalized = Math.max(0, Math.min(1, (bandwidth - minBandwidth) / (maxBandwidth - minBandwidth)));
-
-  // Color gradient thresholds:
-  // 0.0 - 0.25: Green to Yellow (low traffic)
-  // 0.25 - 0.5: Yellow to Orange (moderate traffic)
-  // 0.5 - 0.75: Orange to Red-Orange (high traffic)
-  // 0.75 - 1.0: Red-Orange to Red (very high traffic)
-
-  let r: number, g: number, b: number;
-
-  if (normalized < 0.25) {
-    // Green to Yellow
-    const t = normalized / 0.25;
-    r = Math.round(t * 255);
-    g = 255;
-    b = 0;
-  } else if (normalized < 0.5) {
-    // Yellow to Orange
-    const t = (normalized - 0.25) / 0.25;
-    r = 255;
-    g = Math.round(255 - t * 90); // 255 -> 165
-    b = 0;
-  } else if (normalized < 0.75) {
-    // Orange to Red-Orange
-    const t = (normalized - 0.5) / 0.25;
-    r = 255;
-    g = Math.round(165 - t * 100); // 165 -> 65
-    b = 0;
-  } else {
-    // Red-Orange to Red
-    const t = (normalized - 0.75) / 0.25;
-    r = 255;
-    g = Math.round(65 - t * 65); // 65 -> 0
-    b = 0;
-  }
-
-  return [r, g, b, 200];
-}
-
 export function generateTrafficFlow(connection?: Connection): TrafficFlow {
   const sourceCountry = randomChoice(countries);
   const targetCountry = randomChoice(countries);
@@ -179,101 +127,4 @@ export function generateTrafficFlows(connections: Connection[]): TrafficFlow[] {
     .filter(c => c.status === "active")
     .slice(0, 20) // Limit flows for performance
     .map(c => generateTrafficFlow(c));
-}
-
-export function generateStatistics(connections: Connection[], tenantId: string): Statistics {
-  const activeConnections = connections.filter(c => c.status === "active").length;
-  const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
-  const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
-  const bandwidthOut = connections.reduce((sum, c) => sum + (c.bytesOut ?? 0), 0);
-
-  // Group by country
-  const countryMap = new Map<string, { connections: number; bandwidth: number; countryCode: string }>();
-  for (const conn of connections) {
-    if (conn.country && conn.countryCode) {
-      const existing = countryMap.get(conn.country) ?? { connections: 0, bandwidth: 0, countryCode: conn.countryCode };
-      existing.connections++;
-      existing.bandwidth += conn.bandwidth ?? 0;
-      countryMap.set(conn.country, existing);
-    }
-  }
-
-  const byCountry = Array.from(countryMap.entries()).map(([country, data]) => ({
-    country,
-    countryCode: data.countryCode,
-    connections: data.connections,
-    bandwidth: data.bandwidth,
-    percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
-  }));
-
-  // Group by category
-  const categoryMap = new Map<string, { connections: number; bandwidth: number }>();
-  const categoryColors: Record<string, string> = {
-    web: "#3b82f6",
-    streaming: "#8b5cf6",
-    gaming: "#ec4899",
-    email: "#f59e0b",
-    "file-transfer": "#10b981",
-    voip: "#06b6d4",
-    vpn: "#6366f1",
-    social: "#f97316",
-  };
-
-  for (const conn of connections) {
-    if (conn.category) {
-      const existing = categoryMap.get(conn.category) ?? { connections: 0, bandwidth: 0 };
-      existing.connections++;
-      existing.bandwidth += conn.bandwidth ?? 0;
-      categoryMap.set(conn.category, existing);
-    }
-  }
-
-  const byCategory = Array.from(categoryMap.entries()).map(([category, data]) => ({
-    category,
-    connections: data.connections,
-    bandwidth: data.bandwidth,
-    percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
-    color: categoryColors[category],
-  }));
-
-  // Group by protocol
-  const protocolMap = new Map<string, number>();
-  for (const conn of connections) {
-    protocolMap.set(conn.protocol, (protocolMap.get(conn.protocol) ?? 0) + 1);
-  }
-
-  const byProtocol = Array.from(protocolMap.entries()).map(([protocol, count]) => ({
-    protocol,
-    connections: count,
-    percentage: connections.length > 0 ? (count / connections.length) * 100 : 0,
-  }));
-
-  // Get real time series data from metrics store, fallback to mock if empty
-  let timeSeries = metricsStore.getTimeSeries(tenantId, 24);
-
-  // If no real metrics yet, generate mock data
-  if (timeSeries.length === 0) {
-    const now = Date.now();
-    timeSeries = Array.from({ length: 24 }, (_, i) => {
-      const timestamp = new Date(now - (23 - i) * 3600000);
-      return {
-        timestamp: timestamp.toISOString(),
-        connections: randomInt(50, 200),
-        bandwidthIn: randomInt(10000, 100000),
-        bandwidthOut: randomInt(10000, 100000),
-      };
-    });
-  }
-
-  return {
-    totalConnections: connections.length,
-    activeConnections,
-    totalBandwidth,
-    bandwidthIn,
-    bandwidthOut,
-    byCountry,
-    byCategory,
-    byProtocol,
-    timeSeries,
-  };
 }
