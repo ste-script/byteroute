@@ -15,9 +15,11 @@ export default defineConfig({
         reports: [
           ["raw", { outputDir: "raw" }],
           ["console-summary"],
+          ["console-details"],
         ],
         sourceFilter: {
           "**/node_modules/**": false,
+          "**/src/mock/**": false,
           "**/src/**": true,
         },
         cleanCache: true,

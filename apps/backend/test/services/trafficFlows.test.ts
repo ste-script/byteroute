@@ -5,7 +5,7 @@ const { getBandwidthColor } = vi.hoisted(() => ({
   getBandwidthColor: vi.fn().mockReturnValue([0, 255, 0, 200]),
 }));
 
-vi.mock("../../src/mock/connections.js", () => ({
+vi.mock("../../src/utils/bandwidth.js", () => ({
   getBandwidthColor,
 }));
 
