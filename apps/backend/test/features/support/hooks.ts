@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { BeforeAll, AfterAll, After } from '@cucumber/cucumber';
 import { connectMongo, disconnectMongo } from '@byteroute/shared';
 import mongoose from 'mongoose';

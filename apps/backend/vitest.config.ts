@@ -6,16 +6,22 @@ export default defineConfig({
     include: ["test/**/*.test.ts"],
     reporters: "default",
     coverage: {
-      provider: "v8",
-      reportsDirectory: "../../coverage/apps-backend",
-      reporter: ["text", "text-summary", "html", "json", "json-summary", "cobertura"],
-      include: ["src/**/*.ts"],
-      exclude: [
-        "src/index.ts",
-        "src/mock/**",
-        "src/**/*.test.ts",
-        "test/**/*.ts",
-      ],
-    },
+      provider: "custom",
+      customProviderModule: "vitest-monocart-coverage",
+      // MCR options — passed to monocart-coverage-reports as-is
+      coverageReportOptions: {
+        name: "Unit Coverage (Vitest)",
+        outputDir: "coverage/unit",
+        reports: [
+          ["raw", { outputDir: "raw" }],
+          ["console-summary"],
+        ],
+        sourceFilter: {
+          "**/node_modules/**": false,
+          "**/src/**": true,
+        },
+        cleanCache: true,
+      },
+    } as never,
   }
 });
