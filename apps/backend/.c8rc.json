@@ -5,7 +5,7 @@
     "src/index.ts",
     "src/mock/**"
   ],
-  "reporter": ["text", "lcov", "html", "json"],
+  "reporter": ["text",  "json"],
   "reportsDir": "coverage/e2e",
   "all": true
 }
