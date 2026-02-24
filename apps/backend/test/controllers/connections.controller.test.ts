@@ -274,5 +274,28 @@ describe('Connections Controller', () => {
 
       expect(storeRawConnections).toHaveBeenCalledWith(connections, { tenantId: 'tenant-acme' })
     })
+
+    it('returns 403 when principal is missing', async () => {
+      const connections = [createConnection()]
+      const req = createMockRequest({ connections })
+      req.user = undefined
+      const res = createMockResponse()
+
+      await postConnections(req as Request, res as Response)
+
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(res.jsonData.error).toContain('Forbidden')
+    })
+
+    it('returns 403 when principal lacks access to the requested tenant', async () => {
+      const connections = [createConnection()]
+      const req = createMockRequest({ connections }, { 'x-tenant-id': 'other-tenant' })
+      req.user = { tenantIds: ['my-tenant'] }
+      const res = createMockResponse()
+
+      await postConnections(req as Request, res as Response)
+
+      expect(res.status).toHaveBeenCalledWith(403)
+    })
   })
 })

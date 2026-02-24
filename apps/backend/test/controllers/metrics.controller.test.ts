@@ -306,3 +306,35 @@ describe('Metrics Controller integration scenarios', () => {
     expect(stored.map(s => s.connections)).toEqual([100, 200, 300, 400])
   })
 })
+
+// ── Real postMetrics: auth / tenant access branches ─────────────────────────
+
+vi.mock("../../src/services/metrics.js", () => ({
+  metricsStore: {
+    addSnapshots: vi.fn(),
+    getTimeSeries: vi.fn().mockReturnValue([]),
+  },
+}));
+
+describe("postMetrics (auth branches)", () => {
+  it("returns 403 when principal is missing", async () => {
+    const { postMetrics } = await import("../../src/controllers/metrics.controller.js");
+    const req: any = { ...createMockRequest({ snapshots: [createSnapshot()] }), user: undefined, query: {} };
+    const res = createMockResponse();
+    await postMetrics(req, res as any);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("returns 403 when principal lacks access to the requested tenant", async () => {
+    const { postMetrics } = await import("../../src/controllers/metrics.controller.js");
+    const req: any = {
+      ...createMockRequest({ snapshots: [createSnapshot()] }),
+      user: { id: "u1", tenantIds: ["my-tenant"] },
+      headers: { "x-tenant-id": "other-tenant" },
+      query: {},
+    };
+    const res = createMockResponse();
+    await postMetrics(req, res as any);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+})
