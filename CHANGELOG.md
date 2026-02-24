@@ -1,3 +1,9 @@
+## [4.1.2](https://github.com/ste-script/byteroute/compare/v4.1.1...v4.1.2) (2026-02-23)
+
+### Bug Fixes
+
+* docker compose configuration ([526ae8c](https://github.com/ste-script/byteroute/commit/526ae8ca24251813ad09f75d7c41889b8fd27c85))
+
 ## [4.1.1](https://github.com/ste-script/byteroute/compare/v4.1.0...v4.1.1) (2026-02-23)
 
 ### Bug Fixes
