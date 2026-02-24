@@ -17,6 +17,11 @@ export interface Connection {
   longitude?: number
   asn?: number
   asOrganization?: string
+  destCountry?: string
+  destCountryCode?: string
+  destCity?: string
+  destLatitude?: number
+  destLongitude?: number
   category?: string
   bandwidth?: number
   bytesIn?: number
