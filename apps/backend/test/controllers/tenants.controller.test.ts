@@ -203,5 +203,18 @@ describe("tenants.controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
     });
+
+    it("returns 400 when tenantId param is missing", async () => {
+      const req = {
+        user: { id: "user-1" },
+        params: {},
+      } as unknown as Request;
+      const res = createRes();
+
+      await deleteTenant(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: "tenantId is required" });
+    });
   });
 });
