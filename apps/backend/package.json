@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
-    "@cucumber/cucumber": "^12.6.0",
+    "@cucumber/cucumber": "^12.7.0",
     "@eslint/js": "^9.39.3",
     "@types/express": "^5.0.6",
     "@types/ip": "^1.1.3",
