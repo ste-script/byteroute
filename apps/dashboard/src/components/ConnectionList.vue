@@ -49,8 +49,7 @@ const filteredConnections = computed(() => {
       c.sourceIp.toLowerCase().includes(query) ||
       c.destIp.toLowerCase().includes(query) ||
       c.country?.toLowerCase().includes(query) ||
-      c.city?.toLowerCase().includes(query) ||
-      c.category?.toLowerCase().includes(query)
+      c.city?.toLowerCase().includes(query)
     )
   }
 
@@ -88,7 +87,7 @@ function getConnectionAriaLabel(connection: Connection): string {
     <div class="filters">
       <InputText
         v-model="searchQuery"
-        placeholder="Search IP, country, category..."
+        placeholder="Search IP, country, city..."
         aria-label="Search connections"
         class="search-input"
       />
@@ -152,8 +151,8 @@ function getConnectionAriaLabel(connection: Connection): string {
               <i class="pi pi-map-marker" aria-hidden="true" />
               {{ item.country }}
             </span>
-            <span v-if="item.category" class="category">
-              {{ item.category }}
+            <span v-if="item.asn" class="category">
+              {{ item.asOrganization }}
             </span>
           </div>
           <div class="connection-stats">

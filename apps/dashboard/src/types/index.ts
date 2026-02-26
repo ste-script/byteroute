@@ -4,7 +4,7 @@ export {
   type TrafficFlow,
   type Statistics,
   type CountryStats,
-  type CategoryStats,
+  type AsnStats,
   type ProtocolStats,
   type TimeSeriesData,
   type MapViewState,

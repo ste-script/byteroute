@@ -21,8 +21,6 @@ const connectionSchema = new Schema(
 
     asn: { type: Number },
     asOrganization: { type: String },
-
-    category: { type: String },
     bandwidth: { type: Number },
     bytesIn: { type: Number },
     bytesOut: { type: Number },

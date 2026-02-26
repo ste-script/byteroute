@@ -16,7 +16,8 @@ describe('ConnectionList', () => {
       status: 'active',
       country: 'United States',
       countryCode: 'US',
-      category: 'Web Traffic',
+      asn: 13335,
+      asOrganization: 'Cloudflare, Inc.',
       bandwidth: 1000000,
       startTime: new Date(Date.now() - 3600000),
       lastActivity: new Date()
@@ -31,7 +32,8 @@ describe('ConnectionList', () => {
       status: 'inactive',
       country: 'Germany',
       countryCode: 'DE',
-      category: 'API Calls',
+      asn: 15169,
+      asOrganization: 'Google LLC',
       bandwidth: 500000,
       startTime: new Date(Date.now() - 7200000),
       lastActivity: new Date()
@@ -46,7 +48,8 @@ describe('ConnectionList', () => {
       status: 'inactive',
       country: 'France',
       countryCode: 'FR',
-      category: 'Streaming',
+      asn: 8075,
+      asOrganization: 'Microsoft Corporation',
       bandwidth: 2000000,
       startTime: new Date(Date.now() - 1800000),
       lastActivity: new Date()
