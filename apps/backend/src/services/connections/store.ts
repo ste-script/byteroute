@@ -30,7 +30,12 @@ export function resetConnectionStore(): void {
 
 export function setConnection(connection: Connection, fallbackTenantId?: string): TenantConnection {
   const normalized = normalizeTenantConnection(connection, fallbackTenantId);
-  getTenantConnectionsMap(normalized.tenantId).set(normalized.id, normalized);
+  const map = getTenantConnectionsMap(normalized.tenantId);
+  if (map.has(normalized.id)) {
+    // Refresh insertion order so iteration reflects recency.
+    map.delete(normalized.id);
+  }
+  map.set(normalized.id, normalized);
   return normalized;
 }
 
@@ -41,6 +46,11 @@ export function upsertConnection(
   const normalized = normalizeTenantConnection(connection, fallbackTenantId);
   const tenantConnections = getTenantConnectionsMap(normalized.tenantId);
   const existed = tenantConnections.has(normalized.id);
+
+  if (existed) {
+    // Refresh insertion order so iteration reflects recency.
+    tenantConnections.delete(normalized.id);
+  }
   tenantConnections.set(normalized.id, normalized);
   return { connection: normalized, existed };
 }

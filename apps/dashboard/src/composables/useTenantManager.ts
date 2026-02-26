@@ -40,18 +40,21 @@ export function useTenantManager() {
     }
   }
 
-  function connectTenant(tenantId: string) {
+  function connectTenant(tenantId: string, options?: { connectionsLimit?: number }) {
     socket.disconnect()
     store.clearAll()
     socket.connect(undefined, tenantId, authStore.token ?? undefined)
-    socket.emit('subscribe', { rooms: ['connections', 'statistics', 'flows'] })
+    socket.emit('subscribe', {
+      rooms: ['connections', 'statistics', 'flows'],
+      connectionsLimit: options?.connectionsLimit
+    })
   }
 
-  function handleTenantChange() {
+  function handleTenantChange(connectionsLimit?: number) {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(TENANT_STORAGE_KEY, selectedTenant.value)
     }
-    connectTenant(selectedTenant.value)
+    connectTenant(selectedTenant.value, { connectionsLimit })
   }
 
   return {

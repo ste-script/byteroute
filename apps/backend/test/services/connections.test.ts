@@ -142,7 +142,7 @@ describe("connections service", () => {
 
     service.upsertConnectionsLocal(io as any, "tenant-room", [{ id: "conn-room", tenantId: "tenant-room", status: "active" } as any]);
 
-    expect(io.to).toHaveBeenCalledWith("tenant:tenant-room");
+    expect(io.to).toHaveBeenCalledWith("tenant:tenant-room:connections");
     expect(io.roomEmit).toHaveBeenCalledWith(
       "connection:new",
       expect.objectContaining({ id: "conn-room", tenantId: "tenant-room" })

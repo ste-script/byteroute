@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
@@ -25,18 +25,11 @@ const version = __APP_VERSION__
 const store = useDashboardStore()
 const authStore = useAuthStore()
 const router = useRouter()
-const { connections, trafficFlows, statistics, darkMode, selectedTimeRange } = storeToRefs(store)
+const { connections, trafficFlows, statistics, darkMode } = storeToRefs(store)
 
 const socket = useSocket()
 const { isConnected } = socket
 const mapRef = ref<InstanceType<typeof WorldMap> | null>(null)
-
-const timeRangeOptions = [
-  { label: '1H', value: '1h' },
-  { label: '6H', value: '6h' },
-  { label: '24H', value: '24h' },
-  { label: '7D', value: '7d' },
-]
 
 // ── Tenant management ─────────────────────────────────────────────────────────
 const {
@@ -63,7 +56,7 @@ async function handleCreateTenant(payload: { name: string; tenantId?: string }):
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('byteroute:selected-tenant', tenant.tenantId)
     }
-    connectTenant(tenant.tenantId)
+    connectTenant(tenant.tenantId, { connectionsLimit: connectionLimit.value })
     showNewTenantDialog.value = false
   } catch (error) {
     newTenantError.value = error instanceof Error ? error.message : 'Failed to create tenant'
@@ -90,7 +83,13 @@ const connectionsPaused = ref(false)
 
 function toggleConnectionsPaused() {
   connectionsPaused.value = !connectionsPaused.value
-  socket.emit(connectionsPaused.value ? 'unsubscribe' : 'subscribe', { rooms: ['connections'] })
+
+  if (connectionsPaused.value) {
+    socket.emit('unsubscribe', { rooms: ['connections'] })
+    return
+  }
+
+  socket.emit('subscribe', { rooms: ['connections'], connectionsLimit: connectionLimit.value })
 }
 
 const limitedConnections = computed(() => connections.value.slice(0, connectionLimit.value))
@@ -131,10 +130,6 @@ function setupSocketListeners() {
   )
 }
 
-function handleTimeRangeChange() {
-  socket.emit('subscribe:timerange', { range: selectedTimeRange.value })
-}
-
 function handleConnectionSelect(connection: Connection) {
   if (connection.latitude && connection.longitude) {
     mapRef.value?.flyTo({ center: [connection.longitude, connection.latitude], zoom: 5, duration: 1000 })
@@ -162,7 +157,14 @@ onMounted(async () => {
     selectedTenant.value = tenants[0]!
   }
   setupSocketListeners()
-  connectTenant(selectedTenant.value)
+  connectTenant(selectedTenant.value, { connectionsLimit: connectionLimit.value })
+})
+
+watch(connectionLimit, (next) => {
+  // Request a new bounded snapshot when the user changes the limit.
+  if (!connectionsPaused.value) {
+    socket.emit('subscribe', { rooms: ['connections'], connectionsLimit: next })
+  }
 })
 
 onUnmounted(() => {
@@ -179,15 +181,11 @@ onUnmounted(() => {
       :dark-mode="darkMode"
       :selected-tenant="selectedTenant"
       :tenant-options="tenantOptions"
-      :selected-time-range="selectedTimeRange"
-      :time-range-options="timeRangeOptions"
       :version="version"
       :copy-token-pending="copyTokenPending"
       :copy-token-message="copyTokenMessage"
       @update:selected-tenant="selectedTenant = $event"
-      @update:selected-time-range="store.setTimeRange($event as '1h' | '6h' | '24h' | '7d')"
-      @tenant-change="handleTenantChange"
-      @time-range-change="handleTimeRangeChange"
+      @tenant-change="handleTenantChange(connectionLimit)"
       @toggle-dark-mode="store.toggleDarkMode"
       @copy-token="handleCopyToken"
       @logout="handleLogout"

@@ -130,7 +130,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-  'subscribe': (data: { rooms: string[] }) => void
+  'subscribe': (data: { rooms: string[]; connectionsLimit?: number }) => void
   'unsubscribe': (data: { rooms: string[] }) => void
 }
 

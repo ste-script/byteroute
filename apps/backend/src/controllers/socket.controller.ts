@@ -11,7 +11,12 @@ import {
   emitStatisticsUpdate,
   emitTrafficFlows,
 } from "../services/connections.js";
-import { resolveTenantContextFromSocketHandshake } from "../utils/tenant.js";
+import {
+  ensureTenantId,
+  getTenantScopedRoom,
+  isTenantFeatureRoom,
+  resolveTenantContextFromSocketHandshake,
+} from "../utils/tenant.js";
 import type { HydratedPrincipal } from "../auth/principal.js";
 
 export type TypedSocket = Socket<
@@ -33,34 +38,87 @@ export function handleConnection(io: TypedSocketServer, socket: TypedSocket): vo
   void socket.join(tenantRoom);
 
   // Send initial data to client — only the tenants this user owns
-  const connections = getConnectionsForTenant(tenantId);
-  socket.emit("connections:batch", connections);
   socket.emit("tenants:list", { tenants: principal?.tenantIds ?? [] });
-  emitStatisticsUpdate(io, tenantId);
-  emitTrafficFlows(io, tenantId);
 
   // Register event handlers
-  socket.on("subscribe", (data) => handleSubscribe(socket, data));
+  socket.on("subscribe", (data) => handleSubscribe(io, socket, data));
   socket.on("unsubscribe", (data) => handleUnsubscribe(socket, data));
   socket.on("disconnect", (reason) => handleDisconnect(socket, reason));
 }
 
-function handleSubscribe(socket: TypedSocket, { rooms }: { rooms: string[] }): void {
-  for (const room of rooms) {
-    void socket.join(room);
-    socket.data.subscribedRooms?.push(room);
+function clampConnectionsLimit(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
   }
-  console.log(`Client ${socket.id} subscribed to: ${rooms.join(", ")}`);
+
+  const asInt = Math.floor(value);
+  if (asInt <= 0) {
+    return fallback;
+  }
+
+  // Hard cap to avoid accidental / abusive huge payloads.
+  return Math.min(asInt, 500);
+}
+
+function handleSubscribe(
+  io: TypedSocketServer,
+  socket: TypedSocket,
+  { rooms, connectionsLimit }: { rooms: string[]; connectionsLimit?: number }
+): void {
+  const tenantId = ensureTenantId(socket.data.tenantId);
+  const subscribed: string[] = [];
+
+  for (const roomName of rooms) {
+    if (!isTenantFeatureRoom(roomName)) {
+      continue;
+    }
+
+    const scopedRoom = getTenantScopedRoom(tenantId, roomName);
+    void socket.join(scopedRoom);
+
+    if (!socket.data.subscribedRooms?.includes(roomName)) {
+      socket.data.subscribedRooms?.push(roomName);
+    }
+
+    subscribed.push(roomName);
+
+    // Send room-specific initial snapshots only when requested.
+    if (roomName === "connections") {
+      const limit = clampConnectionsLimit(connectionsLimit, 10);
+      socket.emit("connections:batch", getConnectionsForTenant(tenantId, limit));
+    } else if (roomName === "statistics") {
+      emitStatisticsUpdate(io, tenantId);
+    } else if (roomName === "flows") {
+      emitTrafficFlows(io, tenantId);
+    }
+  }
+
+  if (subscribed.length > 0) {
+    console.log(`Client ${socket.id} subscribed to: ${subscribed.join(", ")}`);
+  }
 }
 
 function handleUnsubscribe(socket: TypedSocket, { rooms }: { rooms: string[] }): void {
-  for (const room of rooms) {
-    void socket.leave(room);
+  const tenantId = ensureTenantId(socket.data.tenantId);
+  const unsubscribed: string[] = [];
+
+  for (const roomName of rooms) {
+    if (!isTenantFeatureRoom(roomName)) {
+      continue;
+    }
+
+    const scopedRoom = getTenantScopedRoom(tenantId, roomName);
+    void socket.leave(scopedRoom);
+    unsubscribed.push(roomName);
+
     if (socket.data.subscribedRooms) {
-      socket.data.subscribedRooms = socket.data.subscribedRooms.filter(r => r !== room);
+      socket.data.subscribedRooms = socket.data.subscribedRooms.filter((r) => r !== roomName);
     }
   }
-  console.log(`Client ${socket.id} unsubscribed from: ${rooms.join(", ")}`);
+
+  if (unsubscribed.length > 0) {
+    console.log(`Client ${socket.id} unsubscribed from: ${unsubscribed.join(", ")}`);
+  }
 }
 
 function handleDisconnect(socket: TypedSocket, reason: string): void {

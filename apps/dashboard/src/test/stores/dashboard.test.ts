@@ -29,11 +29,6 @@ describe('Dashboard Store', () => {
       expect(store.isConnected).toBe(false)
     })
 
-    it('should have default time range of 1h', () => {
-      const store = useDashboardStore()
-      expect(store.selectedTimeRange).toBe('1h')
-    })
-
     it('should have dark mode disabled by default', () => {
       const store = useDashboardStore()
       expect(store.darkMode).toBe(false)
@@ -177,12 +172,6 @@ describe('Dashboard Store', () => {
       const store = useDashboardStore()
       store.setConnectionStatus(true)
       expect(store.isConnected).toBe(true)
-    })
-
-    it('should set time range', () => {
-      const store = useDashboardStore()
-      store.setTimeRange('24h')
-      expect(store.selectedTimeRange).toBe('24h')
     })
 
     it('should toggle dark mode', () => {
