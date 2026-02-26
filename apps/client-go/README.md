@@ -61,9 +61,6 @@ List interfaces:
 - `--flow`: legacy alias for `--flush`
 - `--auth-token`: bearer token used for authenticated backend requests
 
-Before each metrics/connections post, the client checks `GET /api/tenants` and ensures
-the configured `--tenant-id` is authorized for the current identity.
-
 ### Env vars
 
 - `BYTEROUTE_BACKEND_URL`
