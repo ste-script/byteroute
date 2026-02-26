@@ -2,14 +2,8 @@
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
-import SelectButton from 'primevue/selectbutton'
 
 interface TenantOption {
-  label: string
-  value: string
-}
-
-interface TimeRangeOption {
   label: string
   value: string
 }
@@ -19,8 +13,6 @@ defineProps<{
   darkMode: boolean
   selectedTenant: string
   tenantOptions: TenantOption[]
-  selectedTimeRange: string
-  timeRangeOptions: TimeRangeOption[]
   version: string
   copyTokenPending: boolean
   copyTokenMessage: string | null
@@ -28,9 +20,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:selectedTenant': [value: string]
-  'update:selectedTimeRange': [value: string]
   'tenant-change': []
-  'time-range-change': []
   'toggle-dark-mode': []
   'copy-token': []
   'logout': []
@@ -48,18 +38,6 @@ const emit = defineEmits<{
           :severity="isConnected ? 'success' : 'danger'"
         />
       </div>
-    </div>
-
-    <div class="header-center">
-      <SelectButton
-        :model-value="selectedTimeRange"
-        :options="timeRangeOptions"
-        option-label="label"
-        option-value="value"
-        aria-label="Select time range"
-        @update:model-value="emit('update:selectedTimeRange', $event as string)"
-        @change="emit('time-range-change')"
-      />
     </div>
 
     <div class="header-right">
@@ -98,7 +76,6 @@ const emit = defineEmits<{
         @click="emit('copy-token')"
       />
       <Button icon="pi pi-sign-out" aria-label="Sign out" text rounded @click="emit('logout')" />
-      <Button icon="pi pi-cog" aria-label="Open settings" text rounded />
       <span v-if="copyTokenMessage" class="copy-token-message">{{ copyTokenMessage }}</span>
     </div>
   </header>
@@ -137,12 +114,6 @@ const emit = defineEmits<{
     overflow: hidden;
     text-overflow: ellipsis;
   }
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-  width: 100%;
 }
 
 .header-right {
@@ -186,11 +157,6 @@ const emit = defineEmits<{
   .header-left,
   .header-right {
     justify-content: space-between;
-  }
-
-  .header-center {
-    order: 3;
-    justify-content: center;
   }
 }
 

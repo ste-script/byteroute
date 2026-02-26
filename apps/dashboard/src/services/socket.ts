@@ -123,10 +123,12 @@ class SocketService {
   }
 
   emit(event: string, data?: unknown): void {
-    if (!this.socket?.connected) {
-      console.warn('[Socket] Cannot emit, not connected')
+    if (!this.socket) {
+      console.warn('[Socket] Cannot emit, socket not initialized')
       return
     }
+
+    // Socket.IO will buffer emits until the connection is established.
     this.socket.emit(event, data)
   }
 

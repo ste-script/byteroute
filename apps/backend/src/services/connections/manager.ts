@@ -1,7 +1,7 @@
 import type { Connection } from "@byteroute/shared";
 import { generateStatistics } from "../../utils/statistics.js";
 import { deriveTrafficFlows } from "./trafficFlows.js";
-import { ensureTenantId } from "../../utils/tenant.js";
+import { ensureTenantId, getTenantScopedRoom } from "../../utils/tenant.js";
 import { emitToTenant } from "./emitter.js";
 import {
   getAllConnections,
@@ -14,8 +14,33 @@ import {
 } from "./store.js";
 import type { TypedSocketServer } from "./types.js";
 
-export function getConnectionsForTenant(tenantId: string): Connection[] {
-  return getTenantConnections(ensureTenantId(tenantId));
+function hasRoomSubscribers(io: TypedSocketServer, roomName: string): boolean {
+  const rooms = (io as unknown as { sockets?: { adapter?: { rooms?: Map<string, Set<string>> } } }).sockets?.adapter?.rooms;
+
+  // If we can't introspect rooms (adapter differs), be conservative and compute.
+  if (!rooms || typeof rooms.get !== "function") {
+    return true;
+  }
+
+  const entry = rooms.get(roomName);
+  return entry ? entry.size > 0 : false;
+}
+
+export function getConnectionsForTenant(tenantId: string, limit?: number): Connection[] {
+  const resolvedTenantId = ensureTenantId(tenantId);
+  const all = getTenantConnections(resolvedTenantId);
+
+  if (typeof limit !== "number" || limit <= 0) {
+    return all;
+  }
+
+  if (all.length <= limit) {
+    // Most-recent last (Map insertion order), so reverse for UI.
+    return all.slice().reverse();
+  }
+
+  // Most-recent last (Map insertion order), so take the last N and reverse.
+  return all.slice(-limit).reverse();
 }
 
 export function getAllConnectionsSnapshot(): Connection[] {
@@ -96,6 +121,10 @@ export function emitConnectionsBatch(io: TypedSocketServer, tenantId: string): v
 
 export function emitTrafficFlows(io: TypedSocketServer, tenantId: string): void {
   const resolvedTenantId = ensureTenantId(tenantId);
+  const room = getTenantScopedRoom(resolvedTenantId, "flows");
+  if (!hasRoomSubscribers(io, room)) {
+    return;
+  }
   const flows = deriveTrafficFlows(getTenantConnections(resolvedTenantId));
   emitToTenant(io, resolvedTenantId, "traffic:flows", flows);
 }
@@ -108,6 +137,10 @@ export function emitTrafficFlowsAllTenants(io: TypedSocketServer): void {
 
 export function emitStatisticsUpdate(io: TypedSocketServer, tenantId: string): void {
   const resolvedTenantId = ensureTenantId(tenantId);
+  const room = getTenantScopedRoom(resolvedTenantId, "statistics");
+  if (!hasRoomSubscribers(io, room)) {
+    return;
+  }
   const stats = generateStatistics(getTenantConnections(resolvedTenantId), resolvedTenantId);
   emitToTenant(io, resolvedTenantId, "statistics:update", stats);
 }

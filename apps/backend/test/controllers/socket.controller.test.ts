@@ -64,33 +64,19 @@ describe('Socket Controller', () => {
       expect(mockSocket.data.subscribedRooms).toEqual([])
     })
 
-    it('should send initial connections batch', () => {
-      const mockConnections = [
-        { id: 'conn1', sourceIp: '1.2.3.4' },
-        { id: 'conn2', sourceIp: '5.6.7.8' }
-      ]
-      vi.mocked(getConnectionsForTenant).mockReturnValue(mockConnections as any)
+    it('should send initial tenants list only', () => {
       mockSocket.data.principal = { tenantIds: ['default', 'tenant-acme'] }
 
       handleConnection(mockIo, mockSocket)
 
-      expect(getConnectionsForTenant).toHaveBeenCalledWith('default')
-      expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', mockConnections)
       expect(mockSocket.emit).toHaveBeenCalledWith('tenants:list', {
         tenants: ['default', 'tenant-acme']
       })
-    })
 
-    it('should emit statistics update', () => {
-      handleConnection(mockIo, mockSocket)
-
-      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo, 'default')
-    })
-
-    it('should emit traffic flows', () => {
-      handleConnection(mockIo, mockSocket)
-
-      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo, 'default')
+      // Optimized behavior: initial payloads are sent on subscribe, not on connect.
+      expect(getConnectionsForTenant).not.toHaveBeenCalled()
+      expect(emitStatisticsUpdate).not.toHaveBeenCalled()
+      expect(emitTrafficFlows).not.toHaveBeenCalled()
     })
 
     it('should register event handlers', () => {
@@ -102,6 +88,12 @@ describe('Socket Controller', () => {
     })
 
     it('should handle subscribe event', () => {
+      const mockConnections = [
+        { id: 'conn1', sourceIp: '1.2.3.4' },
+        { id: 'conn2', sourceIp: '5.6.7.8' }
+      ]
+      vi.mocked(getConnectionsForTenant).mockReturnValue(mockConnections as any)
+
       handleConnection(mockIo, mockSocket)
 
       // Get the subscribe handler
@@ -112,19 +104,28 @@ describe('Socket Controller', () => {
       expect(subscribeHandler).toBeDefined()
 
       // Call the subscribe handler
-      subscribeHandler?.({ rooms: ['room1', 'room2'] } as any)
+      subscribeHandler?.({ rooms: ['connections', 'statistics', 'flows'] } as any)
 
-      expect(mockSocket.join).toHaveBeenCalledWith('room1')
-      expect(mockSocket.join).toHaveBeenCalledWith('room2')
-      expect(mockSocket.data.subscribedRooms).toEqual(['room1', 'room2'])
-      expect(consoleLog).toHaveBeenCalledWith('Client test-socket-id subscribed to: room1, room2')
+      expect(mockSocket.join).toHaveBeenCalledWith('tenant:default:connections')
+      expect(mockSocket.join).toHaveBeenCalledWith('tenant:default:statistics')
+      expect(mockSocket.join).toHaveBeenCalledWith('tenant:default:flows')
+      expect(mockSocket.data.subscribedRooms).toEqual(['connections', 'statistics', 'flows'])
+
+      expect(getConnectionsForTenant).toHaveBeenCalledWith('default', 10)
+      expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', mockConnections)
+      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo, 'default')
+      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo, 'default')
+
+      expect(consoleLog).toHaveBeenCalledWith(
+        'Client test-socket-id subscribed to: connections, statistics, flows'
+      )
     })
 
     it('should handle unsubscribe event', () => {
       handleConnection(mockIo, mockSocket)
 
       // Setup initial subscriptions
-      mockSocket.data.subscribedRooms = ['room1', 'room2', 'room3']
+      mockSocket.data.subscribedRooms = ['connections', 'statistics', 'flows']
 
       // Get the unsubscribe handler
       const unsubscribeHandler = vi.mocked(mockSocket.on).mock.calls.find(
@@ -134,12 +135,14 @@ describe('Socket Controller', () => {
       expect(unsubscribeHandler).toBeDefined()
 
       // Call the unsubscribe handler
-      unsubscribeHandler?.({ rooms: ['room1', 'room3'] } as any)
+      unsubscribeHandler?.({ rooms: ['connections', 'flows'] } as any)
 
-      expect(mockSocket.leave).toHaveBeenCalledWith('room1')
-      expect(mockSocket.leave).toHaveBeenCalledWith('room3')
-      expect(mockSocket.data.subscribedRooms).toEqual(['room2'])
-      expect(consoleLog).toHaveBeenCalledWith('Client test-socket-id unsubscribed from: room1, room3')
+      expect(mockSocket.leave).toHaveBeenCalledWith('tenant:default:connections')
+      expect(mockSocket.leave).toHaveBeenCalledWith('tenant:default:flows')
+      expect(mockSocket.data.subscribedRooms).toEqual(['statistics'])
+      expect(consoleLog).toHaveBeenCalledWith(
+        'Client test-socket-id unsubscribed from: connections, flows'
+      )
     })
 
     it('should handle unsubscribe with no subscribed rooms', () => {
@@ -155,10 +158,10 @@ describe('Socket Controller', () => {
 
       // Should not throw
       expect(() => {
-        unsubscribeHandler?.({ rooms: ['room1'] } as any)
+        unsubscribeHandler?.({ rooms: ['connections'] } as any)
       }).not.toThrow()
 
-      expect(mockSocket.leave).toHaveBeenCalledWith('room1')
+      expect(mockSocket.leave).toHaveBeenCalledWith('tenant:default:connections')
     })
 
     it('should handle disconnect event', () => {
@@ -187,18 +190,22 @@ describe('Socket Controller', () => {
       )?.[1]
 
       // First subscription
-      subscribeHandler?.({ rooms: ['room1'] } as any)
-      expect(mockSocket.data.subscribedRooms).toEqual(['room1'])
+      subscribeHandler?.({ rooms: ['connections'] } as any)
+      expect(mockSocket.data.subscribedRooms).toEqual(['connections'])
 
       // Second subscription
-      subscribeHandler?.({ rooms: ['room2', 'room3'] } as any)
-      expect(mockSocket.data.subscribedRooms).toEqual(['room1', 'room2', 'room3'])
+      subscribeHandler?.({ rooms: ['statistics', 'flows'] } as any)
+      expect(mockSocket.data.subscribedRooms).toEqual(['connections', 'statistics', 'flows'])
     })
 
     it('should send empty array if no connections', () => {
       vi.mocked(getConnectionsForTenant).mockReturnValue([])
 
       handleConnection(mockIo, mockSocket)
+      const subscribeHandler = vi.mocked(mockSocket.on).mock.calls.find(
+        call => call[0] === 'subscribe'
+      )?.[1]
+      subscribeHandler?.({ rooms: ['connections'] } as any)
 
       expect(mockSocket.emit).toHaveBeenCalledWith('connections:batch', [])
     })
@@ -210,9 +217,14 @@ describe('Socket Controller', () => {
 
       expect(mockSocket.data.tenantId).toBe('tenant-acme')
       expect(mockSocket.join).toHaveBeenCalledWith('tenant:tenant-acme')
-      expect(getConnectionsForTenant).toHaveBeenCalledWith('tenant-acme')
-      expect(emitStatisticsUpdate).toHaveBeenCalledWith(mockIo, 'tenant-acme')
-      expect(emitTrafficFlows).toHaveBeenCalledWith(mockIo, 'tenant-acme')
+
+      const subscribeHandler = vi.mocked(mockSocket.on).mock.calls.find(
+        call => call[0] === 'subscribe'
+      )?.[1]
+      subscribeHandler?.({ rooms: ['connections'] } as any)
+
+      expect(mockSocket.join).toHaveBeenCalledWith('tenant:tenant-acme:connections')
+      expect(getConnectionsForTenant).toHaveBeenCalledWith('tenant-acme', 10)
     })
   })
 })

@@ -3,13 +3,14 @@ import { ref, computed } from 'vue'
 import type { Connection, TrafficFlow, Statistics } from '@/types'
 
 export const useDashboardStore = defineStore('dashboard', () => {
+  const MAX_CONNECTIONS_IN_MEMORY = 500
+
   // State
   const connections = ref<Connection[]>([])
   const trafficFlows = ref<TrafficFlow[]>([])
   const statistics = ref<Statistics | null>(null)
   const isConnected = ref(false)
   const lastUpdated = ref<Date | null>(null)
-  const selectedTimeRange = ref<'1h' | '6h' | '24h' | '7d'>('1h')
   const darkMode = ref(false)
 
   // Getters
@@ -35,7 +36,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Actions
   function setConnections(newConnections: Connection[]) {
-    connections.value = newConnections
+    connections.value = newConnections.slice(0, MAX_CONNECTIONS_IN_MEMORY)
     lastUpdated.value = new Date()
   }
 
@@ -45,6 +46,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
       connections.value[index] = connection
     } else {
       connections.value.unshift(connection)
+    }
+
+    if (connections.value.length > MAX_CONNECTIONS_IN_MEMORY) {
+      connections.value.splice(MAX_CONNECTIONS_IN_MEMORY)
     }
     lastUpdated.value = new Date()
   }
@@ -78,10 +83,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     isConnected.value = status
   }
 
-  function setTimeRange(range: '1h' | '6h' | '24h' | '7d') {
-    selectedTimeRange.value = range
-  }
-
   function toggleDarkMode() {
     darkMode.value = !darkMode.value
     document.documentElement.classList.toggle('dark-mode', darkMode.value)
@@ -101,7 +102,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     statistics,
     isConnected,
     lastUpdated,
-    selectedTimeRange,
     darkMode,
     // Getters
     activeConnections,
@@ -115,7 +115,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     setTrafficFlows,
     setStatistics,
     setConnectionStatus,
-    setTimeRange,
     toggleDarkMode,
     clearAll
   }
