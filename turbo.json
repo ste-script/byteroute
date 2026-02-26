@@ -4,7 +4,27 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [
+        "dist/**",
+        "build/**"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "src/**",
+        "cmd/**",
+        "internal/**",
+        "index.html",
+        "vite.config.*",
+        "tsconfig*.json",
+        "go.mod",
+        "go.sum",
+
+        "!**/*.mmdb",
+        "!**/databases/**",
+        "!**/coverage/**",
+        "!**/coverage-reports/**",
+        "!**/reports/**"
+      ]
     },
     "dev": {
       "dependsOn": ["^dev"],
