@@ -1,3 +1,13 @@
+## [4.2.0](https://github.com/ste-script/byteroute/compare/v4.1.2...v4.2.0) (2026-02-26)
+
+### Features
+
+* **backend:** enrichment for connection target ([6f566cf](https://github.com/ste-script/byteroute/commit/6f566cf9a9456fa8c1362ab30f86ca11c50b8a78))
+
+### Bug Fixes
+
+* **shared:** missing type definition ([c106408](https://github.com/ste-script/byteroute/commit/c106408ea2bd4b636fa4113b8aa07b24d597b4dc))
+
 ## [4.1.2](https://github.com/ste-script/byteroute/compare/v4.1.1...v4.1.2) (2026-02-23)
 
 ### Bug Fixes
