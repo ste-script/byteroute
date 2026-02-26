@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
-    "@types/node": "^24.10.13",
+    "@types/node": "^24.10.14",
     "typescript": "^5.9.3"
   }
 }
