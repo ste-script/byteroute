@@ -20,8 +20,6 @@ type Connection struct {
 	ASOrg       *string  `json:"asOrganization,omitempty"`
 	Enriched    *bool    `json:"enriched,omitempty"`
 
-	Category *string `json:"category,omitempty"`
-
 	Bandwidth  *int64 `json:"bandwidth,omitempty"`
 	BytesIn    *int64 `json:"bytesIn,omitempty"`
 	BytesOut   *int64 `json:"bytesOut,omitempty"`

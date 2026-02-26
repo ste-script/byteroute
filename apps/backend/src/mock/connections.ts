@@ -31,7 +31,6 @@ const cities: Record<string, string[]> = {
 
 const protocols: Connection["protocol"][] = ["TCP", "UDP", "ICMP", "OTHER"];
 const statuses: Connection["status"][] = ["active", "inactive"];
-const categories = ["web", "streaming", "gaming", "email", "file-transfer", "voip", "vpn", "social"];
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -77,7 +76,6 @@ export function generateConnection(overrides?: Partial<Connection>): Connection 
     city,
     latitude: countryData.lat + (Math.random() - 0.5) * 10,
     longitude: countryData.lng + (Math.random() - 0.5) * 10,
-    category: randomChoice(categories),
     bandwidth: randomInt(100, 100000),
     bytesIn: randomInt(1000, 10000000),
     bytesOut: randomInt(1000, 10000000),

@@ -1,17 +1,6 @@
 import type { Connection, Statistics } from "@byteroute/shared";
 import { metricsStore } from "../services/metrics.js";
 
-const categoryColors: Record<string, string> = {
-  web: "#3b82f6",
-  streaming: "#8b5cf6",
-  gaming: "#ec4899",
-  email: "#f59e0b",
-  "file-transfer": "#10b981",
-  voip: "#06b6d4",
-  vpn: "#6366f1",
-  social: "#f97316",
-};
-
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -22,7 +11,7 @@ export function generateStatistics(connections: Connection[], tenantId: string):
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
   const bandwidthOut = connections.reduce((sum, c) => sum + (c.bytesOut ?? 0), 0);
 
-  // Group by country
+  // Group by country 
   const countryMap = new Map<string, { connections: number; bandwidth: number; countryCode: string }>();
   for (const conn of connections) {
     if (conn.country && conn.countryCode) {
@@ -41,23 +30,28 @@ export function generateStatistics(connections: Connection[], tenantId: string):
     percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
   }));
 
-  // Group by category
-  const categoryMap = new Map<string, { connections: number; bandwidth: number }>();
+  // Group by ASN
+  const asnMap = new Map<number, { connections: number; bandwidth: number; asOrganization?: string }>();
   for (const conn of connections) {
-    if (conn.category) {
-      const existing = categoryMap.get(conn.category) ?? { connections: 0, bandwidth: 0 };
-      existing.connections++;
-      existing.bandwidth += conn.bandwidth ?? 0;
-      categoryMap.set(conn.category, existing);
+    if (typeof conn.asn !== "number" || !Number.isFinite(conn.asn)) {
+      continue;
     }
+
+    const existing = asnMap.get(conn.asn) ?? { connections: 0, bandwidth: 0 };
+    existing.connections++;
+    existing.bandwidth += conn.bandwidth ?? 0;
+    if (!existing.asOrganization && typeof conn.asOrganization === "string" && conn.asOrganization.trim().length > 0) {
+      existing.asOrganization = conn.asOrganization;
+    }
+    asnMap.set(conn.asn, existing);
   }
 
-  const byCategory = Array.from(categoryMap.entries()).map(([category, data]) => ({
-    category,
+  const byAsn = Array.from(asnMap.entries()).map(([asn, data]) => ({
+    asn,
+    asOrganization: data.asOrganization,
     connections: data.connections,
     bandwidth: data.bandwidth,
     percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
-    color: categoryColors[category],
   }));
 
   // Group by protocol
@@ -96,7 +90,7 @@ export function generateStatistics(connections: Connection[], tenantId: string):
     bandwidthIn,
     bandwidthOut,
     byCountry,
-    byCategory,
+    byAsn,
     byProtocol,
     timeSeries,
   };

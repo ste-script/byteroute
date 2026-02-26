@@ -24,11 +24,11 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { darkMode: false })
 
-type TabId = 'country' | 'category' | 'protocol'
+type TabId = 'country' | 'asn' | 'protocol'
 
 const tabOptions: Array<{ id: TabId; label: string }> = [
   { id: 'country', label: 'Countries' },
-  { id: 'category', label: 'Categories' },
+  { id: 'asn', label: 'ASNs' },
   { id: 'protocol', label: 'Protocols' },
 ]
 
@@ -36,7 +36,7 @@ const { activeTab, setActiveTab, handleTabKeydown } = useTabs(tabOptions)
 
 const statisticsRef = computed(() => props.statistics)
 const darkModeRef = toRef(props, 'darkMode')
-const { countryChartOption, categoryChartOption, protocolChartOption } =
+const { countryChartOption, asnChartOption, protocolChartOption } =
   useStatisticsCharts(statisticsRef, darkModeRef)
 </script>
 
@@ -87,11 +87,11 @@ const { countryChartOption, categoryChartOption, protocolChartOption } =
         autoresize
       />
       <v-chart
-        v-else-if="activeTab === 'category'"
-        id="stats-panel-category"
+        v-else-if="activeTab === 'asn'"
+        id="stats-panel-asn"
         role="img"
-        aria-label="Pie chart of traffic categories"
-        :option="categoryChartOption"
+        aria-label="Bar chart of top ASNs by connections"
+        :option="asnChartOption"
         autoresize
       />
       <v-chart

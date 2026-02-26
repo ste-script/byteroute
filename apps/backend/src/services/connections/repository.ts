@@ -23,7 +23,6 @@ export async function loadConnectionsFromDb(limit = 500): Promise<number> {
       longitude: 1,
       asn: 1,
       asOrganization: 1,
-      category: 1,
       bandwidth: 1,
       bytesIn: 1,
       bytesOut: 1,

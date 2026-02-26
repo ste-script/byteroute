@@ -63,44 +63,51 @@ export function useStatisticsCharts(
     }
   })
 
-  const categoryChartOption = computed(() => {
-    const data = statistics.value?.byCategory ?? []
+  const asnChartOption = computed(() => {
+    const data = statistics.value?.byAsn ?? []
+    const topAsns = [...data]
+      .sort((a, b) => b.connections - a.connections)
+      .slice(0, 10)
 
     return {
       backgroundColor: 'transparent',
       title: {
-        text: 'By Category',
+        text: 'Top ASNs',
         left: 'center',
         textStyle: { color: textColor.value, fontSize: 14, fontWeight: 600 },
       },
       tooltip: {
-        trigger: 'item',
-        formatter: (params: { name: string; value: number; percent: number }) =>
-          `${params.name}<br/>Connections: ${params.value}<br/>${params.percent?.toFixed(1)}%`,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: { name: string; value: number; dataIndex: number }[]) => {
+          const item = params[0]!
+          const asn = topAsns[item.dataIndex]
+          const title = asn?.asOrganization ? `AS${asn.asn} (${asn.asOrganization})` : `AS${asn?.asn ?? item.name}`
+          return `${title}<br/>
+            Connections: ${asn?.connections || 0}<br/>
+            Bandwidth: ${formatBytes(asn?.bandwidth || 0)}<br/>
+            ${asn?.percentage?.toFixed(1) || 0}%`
+        },
       },
-      legend: {
-        orient: 'vertical',
-        right: '5%',
-        top: 'middle',
-        textStyle: { color: textColor.value, fontSize: 10 },
+      grid: { left: '3%', right: '4%', bottom: '3%', top: '20%', containLabel: true },
+      xAxis: {
+        type: 'value',
+        axisLabel: { color: textColor.value, fontSize: 10 },
+        splitLine: { lineStyle: { color: splitLineColor(darkMode.value), type: 'dashed' } },
+      },
+      yAxis: {
+        type: 'category',
+        data: topAsns.map((a) => `${a.asOrganization}`).reverse(),
+        axisLabel: { color: textColor.value, fontSize: 10 },
       },
       series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['35%', '55%'],
-        avoidLabelOverlap: true,
+        type: 'bar',
+        data: topAsns.map((a) => a.connections).reverse(),
         itemStyle: {
-          borderRadius: 4,
-          borderColor: darkMode.value ? '#1f2937' : '#fff',
-          borderWidth: 2,
+          color: (params: { dataIndex: number }) =>
+            CHART_COLORS[params.dataIndex % CHART_COLORS.length],
         },
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold' } },
-        data: data.map((c, i) => ({
-          name: c.category,
-          value: c.connections,
-          itemStyle: { color: c.color || CHART_COLORS[i % CHART_COLORS.length] },
-        })),
+        barMaxWidth: 30,
       }],
     }
   })
@@ -137,5 +144,5 @@ export function useStatisticsCharts(
     }
   })
 
-  return { countryChartOption, categoryChartOption, protocolChartOption }
+  return { countryChartOption, asnChartOption, protocolChartOption }
 }

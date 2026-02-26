@@ -4,7 +4,7 @@ import type {
   TrafficFlow, 
   Statistics, 
   CountryStats, 
-  CategoryStats,
+  AsnStats,
   ProtocolStats,
   TimeSeriesData,
   DashboardFilters 
@@ -56,7 +56,8 @@ describe('Type definitions', () => {
         city: 'New York',
         latitude: 40.7128,
         longitude: -74.0060,
-        category: 'Web Traffic',
+        asn: 13335,
+        asOrganization: 'Cloudflare, Inc.',
         bandwidth: 1000000,
         bytesIn: 500000,
         bytesOut: 500000,
@@ -107,7 +108,7 @@ describe('Type definitions', () => {
         bandwidthIn: 600000000,
         bandwidthOut: 400000000,
         byCountry: [],
-        byCategory: [],
+        byAsn: [],
         byProtocol: [],
         timeSeries: []
       }
@@ -132,18 +133,18 @@ describe('Type definitions', () => {
     })
   })
 
-  describe('CategoryStats', () => {
-    it('should accept valid category stats', () => {
-      const categoryStats: CategoryStats = {
-        category: 'Web Traffic',
+  describe('AsnStats', () => {
+    it('should accept valid ASN stats', () => {
+      const asnStats: AsnStats = {
+        asn: 13335,
+        asOrganization: 'Cloudflare, Inc.',
         connections: 300,
         bandwidth: 300000000,
         percentage: 30,
-        color: '#3b82f6'
       }
       
-      expect(categoryStats.category).toBe('Web Traffic')
-      expect(categoryStats.color).toBe('#3b82f6')
+      expect(asnStats.asn).toBe(13335)
+      expect(asnStats.asOrganization).toBe('Cloudflare, Inc.')
     })
   })
 
@@ -189,7 +190,6 @@ describe('Type definitions', () => {
       const filters: DashboardFilters = {
         timeRange: '24h',
         countries: ['US', 'DE'],
-        categories: ['Web Traffic'],
         protocols: ['TCP', 'UDP'],
         status: ['active', 'inactive'],
         search: 'test'

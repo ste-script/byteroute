@@ -161,7 +161,7 @@ describe('Dashboard Store', () => {
         bandwidthIn: 600000,
         bandwidthOut: 400000,
         byCountry: [],
-        byCategory: [],
+        byAsn: [],
         byProtocol: [],
         timeSeries: []
       }

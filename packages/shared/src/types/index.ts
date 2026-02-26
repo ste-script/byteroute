@@ -22,7 +22,6 @@ export interface Connection {
   destCity?: string
   destLatitude?: number
   destLongitude?: number
-  category?: string
   bandwidth?: number
   bytesIn?: number
   bytesOut?: number
@@ -59,7 +58,7 @@ export interface Statistics {
   bandwidthIn: number
   bandwidthOut: number
   byCountry: CountryStats[]
-  byCategory: CategoryStats[]
+  byAsn: AsnStats[]
   byProtocol: ProtocolStats[]
   timeSeries: TimeSeriesData[]
 }
@@ -72,12 +71,12 @@ export interface CountryStats {
   percentage: number
 }
 
-export interface CategoryStats {
-  category: string
+export interface AsnStats {
+  asn: number
+  asOrganization?: string
   connections: number
   bandwidth: number
   percentage: number
-  color?: string
 }
 
 export interface ProtocolStats {
@@ -111,7 +110,6 @@ export interface SocketMessage<T = unknown> {
 export interface DashboardFilters {
   timeRange: '1h' | '6h' | '24h' | '7d'
   countries?: string[]
-  categories?: string[]
   protocols?: string[]
   status?: ('active' | 'inactive')[]
   search?: string

@@ -52,7 +52,7 @@ describe("generateStatistics", () => {
     expect(stats.bandwidthIn).toBe(0);
     expect(stats.bandwidthOut).toBe(0);
     expect(stats.byCountry).toEqual([]);
-    expect(stats.byCategory).toEqual([]);
+    expect(stats.byAsn).toEqual([]);
     expect(stats.byProtocol).toEqual([]);
   });
 
@@ -157,38 +157,38 @@ describe("generateStatistics", () => {
     expect(stats.byCountry[0]!.country).toBe("Japan");
   });
 
-  // ── byCategory ──────────────────────────────────────────────────────────
+  // ── byAsn ──────────────────────────────────────────────────────────────
 
-  it("groups connections by category with known colors", () => {
+  it("groups connections by ASN", () => {
     const connections = [
-      makeConn({ category: "web" }),
-      makeConn({ category: "web" }),
-      makeConn({ category: "streaming" }),
+      makeConn({ asn: 13335, asOrganization: "Cloudflare, Inc." }),
+      makeConn({ asn: 13335, asOrganization: "Cloudflare, Inc." }),
+      makeConn({ asn: 15169, asOrganization: "Google LLC" }),
     ];
 
     const stats = generateStatistics(connections, "default");
 
-    const web = stats.byCategory.find(c => c.category === "web")!;
-    const streaming = stats.byCategory.find(c => c.category === "streaming")!;
+    const cloudflare = stats.byAsn.find(c => c.asn === 13335)!;
+    const google = stats.byAsn.find(c => c.asn === 15169)!;
 
-    expect(web.connections).toBe(2);
-    expect(web.color).toBe("#3b82f6");
-    expect(web.percentage).toBeCloseTo(66.67, 1);
+    expect(cloudflare.connections).toBe(2);
+    expect(cloudflare.asOrganization).toBe("Cloudflare, Inc.");
+    expect(cloudflare.percentage).toBeCloseTo(66.67, 1);
 
-    expect(streaming.connections).toBe(1);
-    expect(streaming.color).toBe("#8b5cf6");
+    expect(google.connections).toBe(1);
+    expect(google.asOrganization).toBe("Google LLC");
   });
 
-  it("skips connections without a category", () => {
+  it("skips connections without an ASN", () => {
     const connections = [
-      makeConn({ category: undefined }),
-      makeConn({ category: "gaming" }),
+      makeConn({ asn: undefined }),
+      makeConn({ asn: 8075, asOrganization: "Microsoft Corporation" }),
     ];
 
     const stats = generateStatistics(connections, "default");
 
-    expect(stats.byCategory).toHaveLength(1);
-    expect(stats.byCategory[0]!.category).toBe("gaming");
+    expect(stats.byAsn).toHaveLength(1);
+    expect(stats.byAsn[0]!.asn).toBe(8075);
   });
 
   // ── byProtocol ──────────────────────────────────────────────────────────
