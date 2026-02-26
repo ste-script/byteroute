@@ -27,6 +27,7 @@ type MockSocket = {
       token?: unknown;
       bearerToken?: unknown;
       authorization?: unknown;
+      tenantId?: string;
     };
     headers?: Record<string, string | string[] | undefined>;
   };
