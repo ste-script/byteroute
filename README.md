@@ -16,7 +16,7 @@ The project consists of a system composed of:
 
 - **A lightweight Linux client** written in Go that captures network packets, extracts destination IPs, deduplicates them, and sends batches of connections to the backend
 - **A Node.js/Express backend** that receives connections, performs enrichment (GeoIP lookup), stores data in MongoDB, and broadcasts updates in real-time via Socket.IO
-- **A Vue.js dashboard** that displays a world map with traffic flows, live connection list, statistics by category/country, and time-based charts
+- **A Vue.js dashboard** that displays a world map with traffic flows, live connection list, statistics by ASN/country, and time-based charts
 
 ## Technology Stack
 
@@ -35,7 +35,7 @@ This repo uses `semantic-release` to generate GitHub Releases and (via `@semanti
 
 CI generates backend and Go client coverage and publishes a Markdown summary using the GitHub Marketplace action [`irongut/CodeCoverageSummary`](https://github.com/marketplace/actions/code-coverage-summary).
 
-- Workflow: [Coverage CI](https://github.com/ste-script/byteroute/actions/workflows/coverage.yml)
+- Workflow: [Build & Test CI](https://github.com/ste-script/byteroute/actions/workflows/build-and-test.yml)
 - Summary location: GitHub Actions job summary (`Code Coverage Summary` step output)
 - Artifact: `coverage-reports` (includes HTML report + `code-coverage-results.md`) and `coverage-go` (includes `coverage.out` + Cobertura XML)
 
@@ -54,6 +54,7 @@ This starts a production-like stack using prebuilt images (backend + dashboard) 
 
 - `MAXMIND_USER_ID`
 - `MAXMIND_API_KEY`
+- `JWT_SECRET`
 
 2) Start the stack:
 
@@ -66,6 +67,38 @@ docker compose up -d
 - UI: `http://localhost:8080` (or `http://localhost:${TRAEFIK_PORT}`)
 - Backend health: `http://localhost:8080/health`
 
+### Authenticate and create a tenant
+
+The backend uses bearer auth for `/api/*`, and ingested connections/metrics are stored per-tenant.
+
+Option A (UI): open the dashboard, register/login, create a tenant, then copy a client token from the header.
+
+Option B (API):
+
+1) Sign up (or sign in) and save the returned `token` as `AUTH_TOKEN`:
+
+```bash
+curl -sS -X POST http://localhost:8080/auth/signup \
+	-H 'content-type: application/json' \
+	-d '{"name":"Demo","email":"demo@byteroute.dev","password":"change-me-please"}'
+```
+
+2) Create a tenant:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/tenants \
+	-H 'content-type: application/json' \
+	-H "authorization: Bearer $AUTH_TOKEN" \
+	-d '{"name":"My Laptop"}'
+```
+
+3) Create a client token for the Go client:
+
+```bash
+curl -sS -X POST http://localhost:8080/auth/client-token \
+	-H "authorization: Bearer $AUTH_TOKEN"
+```
+
 ### Send data (Linux client)
 
 Build and run the Go client (from source):
@@ -76,6 +109,13 @@ go build -o byteroute-client ./cmd/byteroute-client
 sudo ./byteroute-client --iface eth0 --backend http://localhost:8080 --flush 5s
 ```
 
+Note: in a default setup the backend requires authentication for ingestion endpoints.
+Pass the client token obtained from `/auth/client-token`:
+
+```bash
+sudo ./byteroute-client --iface eth0 --backend http://localhost:8080 --auth-token "$BYTEROUTE_AUTH_TOKEN" --flush 5s
+```
+
 Or pull and run the latest Docker image (Linux only; uses host networking + packet-capture capabilities):
 
 ```bash
@@ -84,6 +124,15 @@ docker run --rm --net=host \
 	--cap-add=NET_ADMIN --cap-add=NET_RAW \
 	ghcr.io/ste-script/byteroute-client:latest \
 	--iface eth0 --backend http://localhost:8080 --flush 5s
+```
+
+If your backend requires auth (default), pass the client token as well:
+
+```bash
+docker run --rm --net=host \
+  --cap-add=NET_ADMIN --cap-add=NET_RAW \
+  ghcr.io/ste-script/byteroute-client:latest \
+  --iface eth0 --backend http://localhost:8080 --auth-token "$BYTEROUTE_AUTH_TOKEN" --flush 5s
 ```
 
 Troubleshooting: if the client logs `x509: certificate signed by unknown authority`, you’re likely running an older image that didn’t include system CA certificates. Workaround:
