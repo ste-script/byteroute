@@ -27,7 +27,17 @@ export default mergeConfig(
           'src/test/',
           '**/*.d.ts',
           '**/*.config.*',
-          '**/types/**'
+          '**/types/**',
+          // App bootstrapping – no testable logic
+          'src/main.ts',
+          'src/index.ts',
+          'src/App.vue',
+          'src/plugins/**',
+          'src/components/index.ts',
+          // WebGL / native-GPU components that cannot run in happy-dom
+          'src/components/WorldMap.vue',
+          // Complex orchestrator that composes WorldMap (requires WebGL ref)
+          'src/views/DashboardView.vue'
         ]
       }
     }
