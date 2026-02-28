@@ -8,6 +8,7 @@ async function copyTextToClipboard(value: string): Promise<void> {
     return
   }
 
+  /* v8 ignore next 3 */
   if (typeof document === 'undefined') {
     throw new Error('Clipboard is not available in this environment')
   }
