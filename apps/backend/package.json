@@ -22,7 +22,7 @@
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
     "@cucumber/cucumber": "^12.7.0",
-    "@eslint/js": "^9.39.3",
+    "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
     "@types/ip": "^1.1.3",
     "@types/jsonwebtoken": "^9.0.10",
@@ -32,7 +32,7 @@
     "@types/supertest": "^7.2.0",
     "@vitest/coverage-v8": "^4.0.18",
     "c8": "^11.0.0",
-    "eslint": "^9.39.3",
+    "eslint": "^10.0.2",
     "globals": "^17.3.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
