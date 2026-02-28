@@ -27,6 +27,7 @@ export async function getCurrentUser(): Promise<{ user: AuthResponse['user'] } |
   } catch (error) {
     // Treat any error (401, 5xx, network) as "not authenticated" so a backend
     // hiccup never prevents the app from rendering.
+    /* v8 ignore next 3 */
     if (import.meta.env.DEV) {
       console.warn('[auth] getCurrentUser failed, treating as unauthenticated:', error)
     }

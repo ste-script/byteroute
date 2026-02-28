@@ -64,7 +64,39 @@ describe('Dashboard Store', () => {
       expect(store.connections).toHaveLength(1)
     })
 
-    it('should update existing connection when adding with same id', () => {
+    it('should cap connections at 500 when adding beyond the limit', () => {
+      const store = useDashboardStore()
+      // Fill up to exactly 500
+      const initial = Array.from({ length: 500 }, (_, i) => ({
+        id: `conn-${i}`,
+        status: 'active' as const,
+        sourceIp: '1.1.1.1',
+        destIp: '2.2.2.2',
+        sourcePort: 1,
+        destPort: 2,
+        protocol: 'TCP' as const,
+        startTime: new Date(),
+        lastActivity: new Date()
+      }))
+      store.setConnections(initial)
+      expect(store.connections).toHaveLength(500)
+
+      // Adding one more should splice off the oldest
+      store.addConnection({
+        id: 'conn-new',
+        status: 'active',
+        sourceIp: '3.3.3.3',
+        destIp: '4.4.4.4',
+        sourcePort: 80,
+        destPort: 443,
+        protocol: 'TCP',
+        startTime: new Date(),
+        lastActivity: new Date()
+      })
+      expect(store.connections).toHaveLength(500)
+    })
+
+    it('should update existing connection when added again with the same id', () => {
       const store = useDashboardStore()
       store.addConnection(mockConnection)
       
@@ -121,7 +153,16 @@ describe('Dashboard Store', () => {
       expect(store.connectionsByCountry.get('DE')).toHaveLength(1)
     })
 
-    it('should calculate total bandwidth', () => {
+    it('should group connections without country under "Unknown"', () => {
+      const store = useDashboardStore()
+      store.setConnections([
+        { id: '1', country: undefined, status: 'active', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() },
+      ] as Connection[])
+
+      expect(store.connectionsByCountry.get('Unknown')).toHaveLength(1)
+    })
+
+    it('should compute total bandwidth', () => {
       const store = useDashboardStore()
       store.setConnections([
         { id: '1', bandwidth: 1000, status: 'active', sourceIp: '1.1.1.1', destIp: '2.2.2.2', sourcePort: 1, destPort: 2, protocol: 'TCP', startTime: new Date(), lastActivity: new Date() },
