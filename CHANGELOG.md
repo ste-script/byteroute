@@ -1,3 +1,17 @@
+## [5.0.0](https://github.com/ste-script/byteroute/compare/v4.2.0...v5.0.0) (2026-02-28)
+
+### ⚠ BREAKING CHANGES
+
+* use asn instead of category
+
+### Features
+
+* use asn instead of category ([654868a](https://github.com/ste-script/byteroute/commit/654868a19d3c3c67ba3fba4c6e1df391dd46e85f))
+
+### Bug Fixes
+
+* **socket:** scope tenant rooms and limit connection snapshots ([4d0ac53](https://github.com/ste-script/byteroute/commit/4d0ac530b56f57ffd765beb7da97533662784a18))
+
 ## [4.2.0](https://github.com/ste-script/byteroute/compare/v4.1.2...v4.2.0) (2026-02-26)
 
 ### Features
