@@ -121,7 +121,7 @@ const chartOption = computed(() => {
 
         params.forEach((param: TooltipParam) => {
           const value = param.value
-          let formattedValue = value
+          let formattedValue: string | number = value
 
           // Format bandwidth values (first two series)
           if (param.seriesName === 'Bandwidth In' || param.seriesName === 'Bandwidth Out') {
