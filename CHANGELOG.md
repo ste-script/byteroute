@@ -1,3 +1,10 @@
+## [5.0.1](https://github.com/ste-script/byteroute/compare/v5.0.0...v5.0.1) (2026-03-02)
+
+### Bug Fixes
+
+* build errors ([cc04662](https://github.com/ste-script/byteroute/commit/cc04662eaf71c886842282b36678132338f430ec))
+* linting ([ac92935](https://github.com/ste-script/byteroute/commit/ac929355af56bc73f2fb30207077107e9662f410))
+
 ## [5.0.0](https://github.com/ste-script/byteroute/compare/v4.2.0...v5.0.0) (2026-02-28)
 
 ### ⚠ BREAKING CHANGES
