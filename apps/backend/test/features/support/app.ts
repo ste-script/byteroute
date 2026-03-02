@@ -6,7 +6,8 @@
 import 'reflect-metadata';
 import express from 'express';
 import passport from 'passport';
-import routes from '../../../src/routes/index.js';
+import { createRoutes } from '../../../src/routes/index.js';
+import { createAppContext } from '../../../src/config/composition-root.js';
 import { ensurePassportAuthInitialized } from '../../../src/auth/passport.js';
 import { errorHandler } from '../../../src/middleware/error.middleware.js';
 
@@ -27,7 +28,7 @@ export function buildTestApp(): express.Express {
   app.use(passport.initialize());
   app.set('io', mockIo);
 
-  app.use(routes);
+  app.use(createRoutes(createAppContext(mockIo as never)));
   app.use(errorHandler);
 
   return app;

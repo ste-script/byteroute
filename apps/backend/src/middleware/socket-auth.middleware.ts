@@ -1,5 +1,7 @@
 import type { ExtendedError } from "socket.io";
 import type { Socket } from "socket.io";
+import type { AppContext } from "../config/composition-root.js";
+import { AuthService } from "../services/auth.service.js";
 import {
   extractBearerTokenFromAuthorization,
   verifyAuthToken,
@@ -46,6 +48,50 @@ export function extractBearerTokenFromSocketHandshake(
   return headerAuthorization;
 }
 
+export function createSocketAuthMiddleware(ctx: AppContext) {
+  const authService = new AuthService(
+    ctx.userRepository,
+    ctx.tenantRepository,
+    ctx.passwordService,
+    ctx.jwt
+  );
+
+  return function socketAuthMiddleware(
+    socket: Socket,
+    next: (err?: ExtendedError | undefined) => void
+  ): void {
+    void (async () => {
+      try {
+        const providedToken = extractBearerTokenFromSocketHandshake(socket.handshake);
+        const principal = verifyAuthToken(providedToken);
+
+        if (!principal) {
+          next(new Error("Unauthorized"));
+          return;
+        }
+
+        const hydratedPrincipal = await authService.refreshPrincipal(principal);
+        if (!hydratedPrincipal) {
+          next(new Error("Unauthorized"));
+          return;
+        }
+
+        const { tenantId } = resolveTenantContextFromSocketHandshake(socket.handshake);
+        if (!userHasTenantAccess(hydratedPrincipal.tenantIds, tenantId)) {
+          next(new Error("Forbidden: no access to tenant"));
+          return;
+        }
+
+        (socket.data as Record<string, unknown>).principal = hydratedPrincipal;
+        next();
+      } catch (error) {
+        console.error("Socket authentication misconfigured:", error);
+        next(new Error("Authentication misconfigured"));
+      }
+    })();
+  };
+}
+
 export function socketAuthMiddleware(
   socket: Socket,
   next: (err?: ExtendedError | undefined) => void
@@ -56,6 +102,9 @@ export function socketAuthMiddleware(
       const principal = verifyAuthToken(providedToken);
 
       if (!principal) {
+        if (!process.env.JWT_SECRET) {
+          throw new Error("JWT_SECRET is required");
+        }
         next(new Error("Unauthorized"));
         return;
       }

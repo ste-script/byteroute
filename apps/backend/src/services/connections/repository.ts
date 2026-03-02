@@ -1,6 +1,17 @@
-import { ConnectionModel } from "../../infrastructure/persistence/models/connection.model.js";
+import * as shared from "@byteroute/shared";
+import { ConnectionModel as InfraConnectionModel } from "../../infrastructure/persistence/models/connection.model.js";
 import { DEFAULT_TENANT_ID } from "../../utils/tenant.js";
 import { resetConnectionStore, setConnection } from "./store.js";
+
+let sharedConnectionModel: typeof InfraConnectionModel | undefined;
+
+try {
+  sharedConnectionModel = (shared as { ConnectionModel?: typeof InfraConnectionModel }).ConnectionModel;
+} catch {
+  sharedConnectionModel = undefined;
+}
+
+const ConnectionModel = sharedConnectionModel ?? InfraConnectionModel;
 
 export async function loadConnectionsFromDb(limit = 500): Promise<number> {
   const docs = await ConnectionModel.find(

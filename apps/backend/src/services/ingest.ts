@@ -1,9 +1,21 @@
 import type { Connection } from "@byteroute/shared";
-import { ConnectionModel } from "../infrastructure/persistence/models/connection.model.js";
+import * as shared from "@byteroute/shared";
+import { ConnectionModel as InfraConnectionModel } from "../infrastructure/persistence/models/connection.model.js";
 import type { TypedSocketServer } from "./connections.js";
 import { upsertConnectionsLocal, emitStatisticsUpdate, emitTrafficFlows } from "./connections.js";
 import { enrichBatch } from "./geoip.js";
+import { normalizeConnection } from "../domain/connection/normalizer.js";
 import { ensureTenantId } from "../utils/tenant.js";
+
+let sharedConnectionModel: typeof InfraConnectionModel | undefined;
+
+try {
+  sharedConnectionModel = (shared as { ConnectionModel?: typeof InfraConnectionModel }).ConnectionModel;
+} catch {
+  sharedConnectionModel = undefined;
+}
+
+const ConnectionModel = sharedConnectionModel ?? InfraConnectionModel;
 
 type IngestResult = {
   received: number;
@@ -16,15 +28,6 @@ export type IngestConnectionsOptions = {
   tenantId?: string;
 };
 
-const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);
-const ALLOWED_STATUSES = new Set<Connection["status"]>(["active", "inactive"]);
-
-let generatedIdCounter = 0;
-
-function toIsoNow(): string {
-  return new Date().toISOString();
-}
-
 function coerceDate(value: unknown, fallback: Date): Date {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? fallback : value;
@@ -34,54 +37,6 @@ function coerceDate(value: unknown, fallback: Date): Date {
     return Number.isNaN(d.getTime()) ? fallback : d;
   }
   return fallback;
-}
-
-function normalizeConnection(input: Partial<Connection>, tenantId: string): Connection {
-  const nowIso = toIsoNow();
-
-  const id =
-    typeof input.id === "string" && input.id.trim().length > 0
-      ? input.id
-      : `ingest-${++generatedIdCounter}-${Date.now()}`;
-
-  const protocol: Connection["protocol"] =
-    input.protocol && ALLOWED_PROTOCOLS.has(input.protocol) ? input.protocol : "OTHER";
-
-  const status: Connection["status"] =
-    input.status && ALLOWED_STATUSES.has(input.status) ? input.status : "active";
-
-  return {
-    id,
-    tenantId,
-    sourceIp: input.sourceIp ?? "0.0.0.0",
-    destIp: input.destIp ?? "0.0.0.0",
-    sourcePort: input.sourcePort ?? 0,
-    destPort: input.destPort ?? 0,
-    protocol,
-    status,
-    startTime: input.startTime ?? nowIso,
-    lastActivity: input.lastActivity ?? nowIso,
-    duration: input.duration,
-
-    enriched: input.enriched,
-    country: input.country,
-    countryCode: input.countryCode,
-    city: input.city,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    asn: input.asn,
-    asOrganization: input.asOrganization,
-    destCountry: input.destCountry,
-    destCountryCode: input.destCountryCode,
-    destCity: input.destCity,
-    destLatitude: input.destLatitude,
-    destLongitude: input.destLongitude,
-    bandwidth: input.bandwidth,
-    bytesIn: input.bytesIn,
-    bytesOut: input.bytesOut,
-    packetsIn: input.packetsIn,
-    packetsOut: input.packetsOut,
-  };
 }
 
 async function upsertConnectionsInDb(connections: Connection[]): Promise<number> {

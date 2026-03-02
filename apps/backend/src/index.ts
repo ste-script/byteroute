@@ -22,11 +22,12 @@ import {
   loadConnectionsFromDb,
   emitStatisticsUpdateAllTenants,
 } from "./services/connections.js";
-import routes from "./routes/index.js";
-import { handleConnection } from "./controllers/socket.controller.js";
-import { ensurePassportAuthInitialized } from "./auth/passport.js";
-import { socketAuthMiddleware } from "./middleware/socket-auth.middleware.js";
+import { createRoutes } from "./routes/index.js";
+import { createSocketController } from "./controllers/socket.controller.js";
+import { ensurePassportAuthInitialized } from "./infrastructure/auth/passport.js";
+import { createSocketAuthMiddleware } from "./middleware/socket-auth.middleware.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { createAppContext } from "./config/composition-root.js";
 
 const app = express();
 const server = createServer(app);
@@ -47,15 +48,17 @@ const io: TypedSocketServer = new SocketIOServer<
 app.use(express.json({ limit: "2mb" }));
 ensurePassportAuthInitialized();
 app.use(passport.initialize());
-io.use(socketAuthMiddleware);
+const ctx = createAppContext(io);
+const socketController = createSocketController(ctx);
+io.use(createSocketAuthMiddleware(ctx));
 app.set("io", io);
 
 // Register routes
-app.use(routes);
+app.use(createRoutes(ctx));
 app.use(errorHandler);
 
 // Socket.IO connection handler
-io.on("connection", (socket) => handleConnection(io, socket));
+io.on("connection", (socket) => socketController.handleConnection(io, socket));
 
 const port = Number(process.env.PORT ?? 4000);
 let statsEmitTimer: NodeJS.Timeout | undefined;

@@ -1,7 +1,26 @@
 import type { Request } from "express";
-import { UserModel } from "../infrastructure/persistence/models/user.model.js";
-import { TenantModel } from "../infrastructure/persistence/models/tenant.model.js";
+import * as shared from "@byteroute/shared";
+import { UserModel as InfraUserModel } from "../infrastructure/persistence/models/user.model.js";
+import { TenantModel as InfraTenantModel } from "../infrastructure/persistence/models/tenant.model.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
+
+let sharedUserModel: typeof InfraUserModel | undefined;
+let sharedTenantModel: typeof InfraTenantModel | undefined;
+
+try {
+  sharedUserModel = (shared as { UserModel?: typeof InfraUserModel }).UserModel;
+} catch {
+  sharedUserModel = undefined;
+}
+
+try {
+  sharedTenantModel = (shared as { TenantModel?: typeof InfraTenantModel }).TenantModel;
+} catch {
+  sharedTenantModel = undefined;
+}
+
+const UserModel = sharedUserModel ?? InfraUserModel;
+const TenantModel = sharedTenantModel ?? InfraTenantModel;
 
 type PrincipalLike = {
   id?: unknown;

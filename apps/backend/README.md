@@ -76,3 +76,4 @@ Tenant resolution:
 - `pnpm -F @byteroute/backend test` (unit + e2e)
 - `pnpm -F @byteroute/backend update:maxmind` (download GeoLite2 DBs)
 - `pnpm -F @byteroute/backend migrate:indexes` (ensure DB indexes)
+- `pnpm -F @byteroute/backend seed` (wipe DB and create baseline users)

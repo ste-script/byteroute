@@ -1,10 +1,108 @@
 import type { Request, Response } from "express";
-import { UserModel } from "../infrastructure/persistence/models/user.model.js";
+import * as shared from "@byteroute/shared";
+import type { AppContext } from "../config/composition-root.js";
+import { UserModel as InfraUserModel } from "../infrastructure/persistence/models/user.model.js";
 import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
-import { signInRequestSchema, signUpRequestSchema } from "../types/auth.js";
+import { AuthService } from "../services/auth.service.js";
+import { signInRequestSchema, signUpRequestSchema } from "../domain/identity/types.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
+
+const UserModel = (shared as { UserModel?: typeof InfraUserModel }).UserModel ?? InfraUserModel;
+
+export function createAuthController(ctx: AppContext) {
+  const authService = new AuthService(
+    ctx.userRepository,
+    ctx.tenantRepository,
+    ctx.passwordService,
+    ctx.jwt
+  );
+
+  return {
+    signUp: async (req: Request, res: Response): Promise<void> => {
+      const parsed = signUpRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid request: name, email and password (min 8 chars) are required" });
+        return;
+      }
+
+      const result = await authService.signUp(parsed.data);
+      if (!result) {
+        res.status(409).json({ error: "User already exists" });
+        return;
+      }
+
+      res.status(201).json(result);
+    },
+
+    signIn: async (req: Request, res: Response): Promise<void> => {
+      const parsed = signInRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Invalid request: email and password are required" });
+        return;
+      }
+
+      const result = await authService.signIn(parsed.data);
+      if (!result) {
+        res.status(401).json({ error: "Invalid credentials" });
+        return;
+      }
+
+      res.status(200).json(result);
+    },
+
+    signOut: (_req: Request, res: Response): void => {
+      res.status(204).send();
+    },
+
+    currentUser: (req: Request, res: Response): void => {
+      const principal = req.user as {
+        id: string;
+        email: string;
+        name?: string;
+        tenantIds: string[];
+      } | undefined;
+
+      if (!principal) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      res.status(200).json({
+        user: {
+          id: principal.id,
+          email: principal.email,
+          name: principal.name,
+          tenantIds: principal.tenantIds ?? [],
+        },
+      });
+    },
+
+    clientToken: async (req: Request, res: Response): Promise<void> => {
+      const principal = req.user as {
+        id: string;
+        email: string;
+        name?: string;
+        tenantIds: string[];
+        scopes: string[];
+      } | undefined;
+
+      if (!principal) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const result = await authService.createClientToken(principal);
+      if (!result) {
+        res.status(403).json({ error: "Forbidden: no authorized tenants" });
+        return;
+      }
+
+      res.status(200).json(result);
+    },
+  };
+}
 
 export async function signUp(req: Request, res: Response): Promise<void> {
   const parsed = signUpRequestSchema.safeParse(req.body);
