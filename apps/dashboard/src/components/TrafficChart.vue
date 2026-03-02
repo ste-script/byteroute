@@ -13,6 +13,14 @@ import {
 } from 'echarts/components'
 import type { TimeSeriesData } from '@/types'
 
+interface TooltipParam {
+  axisValue: string
+  seriesName: string
+  value: number
+  color: string
+  marker?: string
+}
+
 use([
   CanvasRenderer,
   LineChart,
@@ -106,12 +114,12 @@ const chartOption = computed(() => {
       textStyle: {
         color: textColor
       },
-      formatter: (params: any) => {
+      formatter: (params: TooltipParam | TooltipParam[]) => {
         if (!Array.isArray(params)) return ''
 
         let result = `<div style="font-weight: 600; margin-bottom: 4px;">${params[0].axisValue}</div>`
 
-        params.forEach((param: any) => {
+        params.forEach((param: TooltipParam) => {
           const value = param.value
           let formattedValue = value
 

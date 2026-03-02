@@ -10,6 +10,8 @@ export default defineConfig([
       "node_modules/**",
       "**/*.d.ts",
       "**/test/**",
+      '**/coverage-reports/**',
+      '**/coverage/**',
     ],
   },
   {

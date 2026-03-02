@@ -70,7 +70,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { countryChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = countryChartOption.value.tooltip.formatter as Function
+      const formatter = countryChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       const result = formatter([{ name: 'US', value: 50, dataIndex: 0 }])
       expect(result).toContain('United States')
       expect(result).toContain('50')
@@ -81,7 +81,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { countryChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = countryChartOption.value.tooltip.formatter as Function
+      const formatter = countryChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       // dataIndex beyond the data length → undefined country
       const result = formatter([{ name: 'XX', value: 5, dataIndex: 99 }])
       expect(result).toContain('XX')
@@ -92,7 +92,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { countryChartOption } = useStatisticsCharts(stats, dark)
 
-      const colorFn = countryChartOption.value.series[0].itemStyle.color as Function
+      const colorFn = countryChartOption.value.series[0].itemStyle.color as (...args: unknown[]) => unknown
       const color = colorFn({ dataIndex: 0 })
       expect(color).toMatch(/^#/)
       // Color wraps around
@@ -151,7 +151,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { asnChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = asnChartOption.value.tooltip.formatter as Function
+      const formatter = asnChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       const result = formatter([{ name: 'AS13335', value: 40, dataIndex: 0 }])
       expect(result).toContain('Cloudflare')
     })
@@ -163,7 +163,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { asnChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = asnChartOption.value.tooltip.formatter as Function
+      const formatter = asnChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       const result = formatter([{ name: 'AS99999', value: 5, dataIndex: 0 }])
       expect(result).toContain('AS99999')
     })
@@ -173,7 +173,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { asnChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = asnChartOption.value.tooltip.formatter as Function
+      const formatter = asnChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       const result = formatter([{ name: 'AS0', value: 99, dataIndex: 99 }])
       expect(typeof result).toBe('string')
     })
@@ -204,7 +204,7 @@ describe('useStatisticsCharts', () => {
       const dark = ref(false)
       const { protocolChartOption } = useStatisticsCharts(stats, dark)
 
-      const formatter = protocolChartOption.value.tooltip.formatter as Function
+      const formatter = protocolChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
       const result = formatter({ name: 'TCP', value: 70, percent: 70 })
       expect(result).toContain('TCP')
       expect(result).toContain('70')
