@@ -1,9 +1,35 @@
 import type { Connection, Statistics } from "@byteroute/shared";
 import { metricsStore } from "../services/metrics.js";
 import type { IMetricsStore } from "../domain/metrics/metrics-store.interface.js";
+import {
+  getCompiledDomainDsl,
+  type AggregationQuerySpec,
+} from "../infrastructure/dsl/domain-dsl.js";
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function applyAggregationQuery<T extends { connections: number; bandwidth?: number }>(
+  entries: T[],
+  query: AggregationQuerySpec
+): T[] {
+  const sorted = [...entries].sort((left, right) => {
+    const leftValue = query.sortBy === "bandwidth" ? (left.bandwidth ?? 0) : left.connections;
+    const rightValue = query.sortBy === "bandwidth" ? (right.bandwidth ?? 0) : right.connections;
+
+    if (query.order === "asc") {
+      return leftValue - rightValue;
+    }
+
+    return rightValue - leftValue;
+  });
+
+  if (typeof query.limit === "number") {
+    return sorted.slice(0, query.limit);
+  }
+
+  return sorted;
 }
 
 export function generateStatistics(
@@ -11,6 +37,7 @@ export function generateStatistics(
   tenantId: string,
   store: IMetricsStore = metricsStore
 ): Statistics {
+  const queryDsl = getCompiledDomainDsl().analytics.queries;
   const activeConnections = connections.filter(c => c.status === "active").length;
   const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
@@ -27,13 +54,14 @@ export function generateStatistics(
     }
   }
 
-  const byCountry = Array.from(countryMap.entries()).map(([country, data]) => ({
+  const byCountryRaw = Array.from(countryMap.entries()).map(([country, data]) => ({
     country,
     countryCode: data.countryCode,
     connections: data.connections,
     bandwidth: data.bandwidth,
     percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
   }));
+  const byCountry = applyAggregationQuery(byCountryRaw, queryDsl.byCountry);
 
   // Group by ASN
   const asnMap = new Map<number, { connections: number; bandwidth: number; asOrganization?: string }>();
@@ -51,13 +79,14 @@ export function generateStatistics(
     asnMap.set(conn.asn, existing);
   }
 
-  const byAsn = Array.from(asnMap.entries()).map(([asn, data]) => ({
+  const byAsnRaw = Array.from(asnMap.entries()).map(([asn, data]) => ({
     asn,
     asOrganization: data.asOrganization,
     connections: data.connections,
     bandwidth: data.bandwidth,
     percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
   }));
+  const byAsn = applyAggregationQuery(byAsnRaw, queryDsl.byAsn);
 
   // Group by protocol
   const protocolMap = new Map<string, number>();
@@ -65,11 +94,12 @@ export function generateStatistics(
     protocolMap.set(conn.protocol, (protocolMap.get(conn.protocol) ?? 0) + 1);
   }
 
-  const byProtocol = Array.from(protocolMap.entries()).map(([protocol, count]) => ({
+  const byProtocolRaw = Array.from(protocolMap.entries()).map(([protocol, count]) => ({
     protocol,
     connections: count,
     percentage: connections.length > 0 ? (count / connections.length) * 100 : 0,
   }));
+  const byProtocol = applyAggregationQuery(byProtocolRaw, queryDsl.byProtocol);
 
   // Get real time series data from metrics store, fallback to mock if empty
   let timeSeries = store.getTimeSeries(tenantId, 24);

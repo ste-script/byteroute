@@ -27,6 +27,7 @@ Optional:
 - `STATS_EMIT_INTERVAL` (default: `30000` ms)
 - `AUTH_TOKEN_TTL` (default: `1d`)
 - `AUTH_CLIENT_TOKEN_TTL` (default: `12h`)
+- `DOMAIN_DSL_PATH` (optional path to YAML domain DSL; defaults to `config/domain.dsl.yaml` or `apps/backend/config/domain.dsl.yaml`)
 
 See [apps/backend/.env.example](apps/backend/.env.example) for a starter file.
 
@@ -77,3 +78,12 @@ Tenant resolution:
 - `pnpm -F @byteroute/backend update:maxmind` (download GeoLite2 DBs)
 - `pnpm -F @byteroute/backend migrate:indexes` (ensure DB indexes)
 - `pnpm -F @byteroute/backend seed` (wipe DB and create baseline users)
+
+## Domain DSL (YAML)
+
+The backend can compile a domain DSL at startup and apply it in runtime logic:
+
+- `ingestion.connection` rules are applied before enrichment/storage
+- `analytics.queries` rules shape sorting/limiting of statistics groups
+
+Default file: `apps/backend/config/domain.dsl.yaml`.

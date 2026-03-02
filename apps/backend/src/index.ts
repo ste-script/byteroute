@@ -28,6 +28,7 @@ import { ensurePassportAuthInitialized } from "./infrastructure/auth/passport.js
 import { createSocketAuthMiddleware } from "./middleware/socket-auth.middleware.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { createAppContext } from "./config/composition-root.js";
+import { compileDomainDslAtStartup } from "./infrastructure/dsl/domain-dsl.js";
 
 const app = express();
 const server = createServer(app);
@@ -64,6 +65,13 @@ const port = Number(process.env.PORT ?? 4000);
 let statsEmitTimer: NodeJS.Timeout | undefined;
 
 async function start(): Promise<void> {
+  const compiledDsl = await compileDomainDslAtStartup();
+  if (compiledDsl.sourcePath) {
+    console.log(`[DSL] Loaded domain DSL from ${compiledDsl.sourcePath}`);
+  } else {
+    console.log("[DSL] No domain DSL file found. Using defaults.");
+  }
+
   await connectMongo();
   await UserModel.init();
   await ConnectionModel.init();
