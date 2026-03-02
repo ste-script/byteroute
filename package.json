@@ -12,7 +12,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "turbo run format",
-    "seed": "pnpm -F @byteroute/seed seed",
+    "seed": "pnpm -F @byteroute/backend seed",
     "release": "semantic-release",
     "coverage": "turbo run coverage"
   },
@@ -34,7 +34,7 @@
     "typescript": "5.9.3"
   },
   "engines": {
-    "node": ">=24.14.0"
+    "node": ">=24.13.0"
   },
   "version": "5.0.1"
 }
