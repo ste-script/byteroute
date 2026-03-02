@@ -1,0 +1,208 @@
+\documentclass[12pt]{report}
+\usepackage{xcolor}
+
+\title{\textbf{Monorepo Project Review} \\ \large University Technical Report}
+
+\author{
+  Babini Stefano\\
+  0001125127 \\
+  \texttt{stefano.babini5@studio.unibo.it}
+}
+
+\date{\today}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\pagestyle{plain}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage[export]{adjustbox}
+\usetikzlibrary{petri,positioning}
+\usepackage{listings}
+\usepackage{titlesec}
+
+\titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\graphicspath{{images/}}
+
+\renewcommand{\lstlistingname}{Code}
+\renewcommand{\lstlistlistingname}{List of \lstlistingname s}
+
+% Color setup
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Code listing style
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\maketitle
+\newpage
+\tableofcontents{}
+\newpage
+
+\chapter{Introduction}
+
+This document presents a technical review of the \textbf{ByteRoute} monorepo, a multi-application project organized around network traffic analysis, visualization, and client tooling. The repository combines a TypeScript backend, a Vue-based dashboard, a Go command-line client, and shared packages in a single coordinated workspace.
+
+The objective of this report is to evaluate how the monorepo structure supports software quality, collaboration, and delivery in a distributed-systems-oriented project.
+
+\section{Review Scope}
+
+The analysis focuses on:
+\begin{itemize}
+  \item architectural decomposition across applications and packages;
+  \item development workflow and dependency management;
+  \item testing and quality assurance strategy;
+  \item strengths, limitations, and potential improvements.
+\end{itemize}
+
+\chapter{Repository Overview}
+
+\section{Top-Level Organization}
+
+The project follows a workspace-driven layout with clear separation of concerns:
+\begin{itemize}
+  \item \texttt{apps/backend}: TypeScript backend services and APIs;
+  \item \texttt{apps/dashboard}: frontend dashboard built with Vite and Vue;
+  \item \texttt{apps/client-go}: Go-based command-line client;
+  \item \texttt{packages/shared}: shared contracts, models, and reusable types;
+  \item \texttt{scripts}: workspace-level automation scripts.
+\end{itemize}
+
+This structure makes ownership boundaries explicit while preserving high discoverability of shared resources.
+
+\section{Monorepo Tooling}
+
+The repository uses \texttt{pnpm} workspaces together with Turbo orchestration. This combination provides:
+\begin{itemize}
+  \item deterministic dependency installation;
+  \item efficient task execution and caching;
+  \item consistent build/test commands across projects.
+\end{itemize}
+
+\chapter{Component Analysis}
+
+\section{Backend Application}
+
+The backend application is implemented in TypeScript and organized by domain-focused modules (auth, controllers, routes, services, middleware, and infrastructure). It includes:
+\begin{itemize}
+  \item dedicated unit and feature test directories;
+  \item scripts for coverage aggregation and database preparation;
+  \item Docker support for containerized execution.
+\end{itemize}
+
+This reflects a mature service architecture with explicit separation between HTTP interfaces, business logic, and persistence concerns.
+
+\section{Dashboard Application}
+
+The dashboard follows a modern frontend structure with dedicated folders for components, composables, stores, services, and views. This promotes:
+\begin{itemize}
+  \item reusable UI logic;
+  \item predictable state management;
+  \item improved testability of isolated view logic.
+\end{itemize}
+
+Integration with Vite and Vitest supports fast iteration and frontend quality checks.
+
+\section{Go Client}
+
+The Go client introduces language diversity in the same repository while preserving modularity through \texttt{cmd/} and \texttt{internal/} packages. It appears oriented to traffic capture, backend communication, and runtime metrics collection.
+
+Keeping the client close to server and shared contracts can reduce integration drift and simplify release coordination.
+
+\section{Shared Package}
+
+The shared package centralizes common models and types. In a multi-application environment, this is critical to avoid contract divergence and to ensure compile-time compatibility between producers and consumers.
+
+\chapter{Quality and Delivery}
+
+\section{Testing Strategy}
+
+The monorepo shows evidence of a layered testing approach:
+\begin{itemize}
+  \item backend unit and feature/e2e coverage;
+  \item dashboard unit testing via Vitest;
+  \item generated coverage reports for inspection.
+\end{itemize}
+
+A unified quality baseline across applications is one of the key advantages of this monorepo setup.
+
+\section{Developer Experience}
+
+The repository includes common governance and automation files (commit linting, release configuration, renovate settings, and workspace synchronization scripts). These conventions contribute to:
+\begin{itemize}
+  \item consistent contribution standards;
+  \item easier onboarding;
+  \item safer dependency lifecycle management.
+\end{itemize}
+
+\chapter{Critical Evaluation}
+
+\section{Strengths}
+
+\begin{itemize}
+  \item \textbf{Unified lifecycle}: build, test, and release can be coordinated from one workspace.
+  \item \textbf{Contract consistency}: shared models reduce mismatch across backend, dashboard, and client.
+  \item \textbf{Operational readiness}: Docker and scripts indicate strong deployment awareness.
+  \item \textbf{Scalability of collaboration}: clear subproject boundaries support team parallelism.
+\end{itemize}
+
+\section{Potential Risks}
+
+\begin{itemize}
+  \item \textbf{Cross-language complexity}: TypeScript and Go require dual expertise and toolchain maintenance.
+  \item \textbf{Pipeline coupling}: broad CI jobs may become slower as the repository grows.
+  \item \textbf{Shared package impact}: breaking contract changes can affect multiple applications simultaneously.
+\end{itemize}
+
+\section{Recommended Improvements}
+
+\begin{itemize}
+  \item enforce stricter contract versioning rules for shared models;
+  \item expand architecture documentation for cross-component data flows;
+  \item adopt selective CI execution based on affected projects;
+  \item track non-functional metrics (build time, test duration, deployment lead time).
+\end{itemize}
+
+\chapter{Conclusion}
+
+The ByteRoute monorepo demonstrates a well-structured and production-oriented organization. It balances modularity and integration by combining independent applications with shared contracts and centralized tooling.
+
+From a university project perspective, this repository is a strong example of modern multi-service software engineering practice, with particular value in maintainability, consistency, and end-to-end coordination.
+
+\end{document}
