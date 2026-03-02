@@ -6,6 +6,7 @@ import { upsertConnectionsLocal, emitStatisticsUpdate, emitTrafficFlows } from "
 import { enrichBatch } from "./geoip.js";
 import { normalizeConnection } from "../domain/connection/normalizer.js";
 import { ensureTenantId } from "../utils/tenant.js";
+import { getCompiledDomainDsl } from "../infrastructure/dsl/domain-dsl.js";
 
 let sharedConnectionModel: typeof InfraConnectionModel | undefined;
 
@@ -27,6 +28,26 @@ export type IngestConnectionsOptions = {
   reporterIp?: string;
   tenantId?: string;
 };
+
+function applyIngestionDsl(connections: Connection[]): Connection[] {
+  const rules = getCompiledDomainDsl().ingestion.connection;
+
+  return connections
+    .filter((connection) => !rules.denySourceIps.has(connection.sourceIp))
+    .map((connection) => {
+      const protocol = rules.allowedProtocols.has(connection.protocol)
+        ? connection.protocol
+        : rules.defaultProtocol;
+
+      const status = connection.status ?? rules.defaultStatus;
+
+      return {
+        ...connection,
+        protocol,
+        status,
+      };
+    });
+}
 
 function coerceDate(value: unknown, fallback: Date): Date {
   if (value instanceof Date) {
@@ -81,8 +102,9 @@ export async function enrichAndStoreConnections(
 ): Promise<IngestResult> {
   const tenantId = ensureTenantId(options.tenantId);
   const normalized = rawConnections.map((connection) => normalizeConnection(connection, tenantId));
+  const shapedByDsl = applyIngestionDsl(normalized);
 
-  const enriched = await enrichBatch(normalized, { reporterIp: options.reporterIp });
+  const enriched = await enrichBatch(shapedByDsl, { reporterIp: options.reporterIp });
 
   const stored = await upsertConnectionsInDb(enriched);
 
@@ -109,5 +131,5 @@ export async function storeRawConnections(
   const normalized = rawConnections
     .map((connection) => normalizeConnection(connection, tenantId))
     .map((c) => ({ ...c, enriched: false }));
-  return upsertConnectionsInDb(normalized);
+  return upsertConnectionsInDb(applyIngestionDsl(normalized));
 }
