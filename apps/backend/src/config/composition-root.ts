@@ -10,7 +10,7 @@ import { MongoTenantRepository } from "../infrastructure/persistence/tenant.repo
 import { MongoConnectionRepository } from "../infrastructure/persistence/connection.repository.js";
 import { ScryptPasswordService } from "../infrastructure/auth/scrypt-password.service.js";
 import { MaxmindGeoIpLookup } from "../infrastructure/geoip/maxmind-geoip.service.js";
-import { InMemoryMetricsStore } from "../infrastructure/metrics/in-memory-metrics-store.js";
+import { metricsStore } from "../services/metrics.js";
 import {
   signToken,
   verifyToken,
@@ -33,13 +33,7 @@ export interface AppContext {
   };
 }
 
-let sharedMetricsStore: InMemoryMetricsStore | undefined;
-
 export function createAppContext(io?: TypedSocketServer): AppContext {
-  if (!sharedMetricsStore) {
-    sharedMetricsStore = new InMemoryMetricsStore();
-  }
-
   return {
     io,
     userRepository: new MongoUserRepository(),
@@ -47,7 +41,7 @@ export function createAppContext(io?: TypedSocketServer): AppContext {
     connectionRepository: new MongoConnectionRepository(),
     passwordService: new ScryptPasswordService(),
     geoIpLookup: new MaxmindGeoIpLookup(),
-    metricsStore: sharedMetricsStore,
+    metricsStore,
     jwt: {
       signToken,
       verifyToken,

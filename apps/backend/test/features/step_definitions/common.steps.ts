@@ -8,7 +8,8 @@
 import assert from 'node:assert/strict';
 import { Given, When, Then, type DataTable } from '@cucumber/cucumber';
 import request from 'supertest';
-import { UserModel, TenantModel } from '@byteroute/shared';
+import { UserModel } from '../../../src/infrastructure/persistence/models/user.model.js';
+import { TenantModel } from '../../../src/infrastructure/persistence/models/tenant.model.js';
 import { signAuthToken } from '../../../src/auth/passport.js';
 import { testApp } from '../support/app.js';
 import type { ByterouteWorld } from '../support/world.js';

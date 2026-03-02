@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict';
 import { Given, Then } from '@cucumber/cucumber';
-import { UserModel } from '@byteroute/shared';
+import { UserModel } from '../../../src/infrastructure/persistence/models/user.model.js';
 import { hashPassword } from '../../../src/services/password.js';
 import type { ByterouteWorld } from '../support/world.js';
 
