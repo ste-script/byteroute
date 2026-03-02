@@ -20,6 +20,11 @@ export default defineConfigWithVueTs(
   skipFormatting,
 
   {
+    name: 'app/typescript-rules',
+    files: ['**/*.{ts,mts,tsx,vue}'],
+  },
+
+  {
     name: 'app/custom-rules',
     rules: {
       'vue/multi-word-component-names': 'off',
