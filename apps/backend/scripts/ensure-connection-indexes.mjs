@@ -1,4 +1,5 @@
-import { connectMongo, disconnectMongo, ConnectionModel } from "@byteroute/shared";
+import { connectMongo, disconnectMongo } from "../src/infrastructure/persistence/mongoose.js";
+import { ConnectionModel } from "../src/infrastructure/persistence/models/connection.model.js";
 
 async function ensureConnectionIndexes() {
   await connectMongo();

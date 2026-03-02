@@ -1,5 +1,6 @@
 import type { Request } from "express";
-import { UserModel, TenantModel } from "@byteroute/shared";
+import { UserModel } from "../infrastructure/persistence/models/user.model.js";
+import { TenantModel } from "../infrastructure/persistence/models/tenant.model.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
 
 type PrincipalLike = {

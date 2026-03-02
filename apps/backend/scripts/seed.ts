@@ -1,4 +1,5 @@
-import { connectMongo, disconnectMongo, mongoose, UserModel } from "@byteroute/shared";
+import { connectMongo, disconnectMongo, mongoose } from "../src/infrastructure/persistence/mongoose.js";
+import { UserModel } from "../src/infrastructure/persistence/models/user.model.js";
 
 async function wipeAndReseed(): Promise<void> {
   await connectMongo();

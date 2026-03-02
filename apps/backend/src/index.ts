@@ -6,13 +6,17 @@ import { Server as SocketIOServer } from "socket.io";
 import {
   connectMongo,
   disconnectMongo,
+} from "./infrastructure/persistence/mongoose.js";
+import {
   ConnectionModel,
-  UserModel,
+} from "./infrastructure/persistence/models/connection.model.js";
+import {
   type ServerToClientEvents,
   type ClientToServerEvents,
   type InterServerEvents,
   type SocketData,
 } from "@byteroute/shared";
+import { UserModel } from "./infrastructure/persistence/models/user.model.js";
 import {
   type TypedSocketServer,
   loadConnectionsFromDb,

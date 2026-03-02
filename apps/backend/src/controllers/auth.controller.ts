@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { UserModel } from "@byteroute/shared";
+import { UserModel } from "../infrastructure/persistence/models/user.model.js";
 import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
