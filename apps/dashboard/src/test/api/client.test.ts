@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import client, { setAuthToken, apiErrorMessage } from '@/api/client'
 import type { AxiosError } from 'axios'
 
@@ -13,9 +13,7 @@ describe('API Client', () => {
       setAuthToken('my-jwt-token')
 
       // Grab the request config via interceptors
-      let capturedConfig: Record<string, unknown> | null = null
       const interceptorId = client.interceptors.request.use((config) => {
-        capturedConfig = config as Record<string, unknown>
         return config
       })
 

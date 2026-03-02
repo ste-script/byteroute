@@ -49,8 +49,6 @@ describe('DashboardHeader', () => {
 
   it('emits toggle-dark-mode when dark mode button is clicked', async () => {
     const wrapper = mount(DashboardHeader, { props: defaultProps })
-    // Find the aria-label for dark mode button
-    const buttons = wrapper.findAll('button, [role="button"]')
     // Find the button stub with the dark mode label
     const darkModeBtn = wrapper.find('[aria-label="Switch to dark mode"]')
     if (darkModeBtn.exists()) {

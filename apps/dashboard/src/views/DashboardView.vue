@@ -136,7 +136,7 @@ function handleConnectionSelect(connection: Connection) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 function handleFlowClick(_flow: TrafficFlow) {
   // reserved for future use
 }

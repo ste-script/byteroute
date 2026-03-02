@@ -103,7 +103,7 @@ describe('TrafficChart', () => {
       global: { stubs: { VChart: MockVChart } }
     })
     const option = wrapper.findComponent(MockVChart).props('option') as Record<string, unknown>
-    const formatter = (option.tooltip as Record<string, unknown>).formatter as Function
+    const formatter = (option.tooltip as Record<string, unknown>).formatter as (...args: unknown[]) => unknown
     expect(formatter('not-an-array')).toBe('')
   })
 
@@ -113,7 +113,7 @@ describe('TrafficChart', () => {
       global: { stubs: { VChart: MockVChart } }
     })
     const option = wrapper.findComponent(MockVChart).props('option') as Record<string, unknown>
-    const formatter = (option.tooltip as Record<string, unknown>).formatter as Function
+    const formatter = (option.tooltip as Record<string, unknown>).formatter as (...args: unknown[]) => unknown
 
     const result = formatter([
       { axisValue: '12:00', seriesName: 'Bandwidth In', value: 1_500_000, color: '#10b981' },
@@ -130,7 +130,7 @@ describe('TrafficChart', () => {
     })
     const option = wrapper.findComponent(MockVChart).props('option') as Record<string, unknown>
     const yAxes = option.yAxis as Array<Record<string, unknown>>
-    const formatter = (yAxes[0].axisLabel as Record<string, unknown>).formatter as Function
+    const formatter = (yAxes[0].axisLabel as Record<string, unknown>).formatter as (...args: unknown[]) => unknown
     expect(formatter(1_000_000)).toBe('1.0 MB')
     expect(formatter(1_000)).toBe('1.0 KB')
     expect(formatter(500)).toBe('500 B')

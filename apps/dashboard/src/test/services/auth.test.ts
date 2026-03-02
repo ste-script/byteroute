@@ -12,7 +12,6 @@ vi.mock('@/api/client', () => ({
 }))
 
 import { signIn, signUp, getCurrentUser, signOut, createClientToken } from '@/services/auth'
-import { setAuthToken } from '@/api/client'
 
 const mockUser = { id: 'user-1', email: 'test@example.com', tenantId: 'tenant-1' }
 
