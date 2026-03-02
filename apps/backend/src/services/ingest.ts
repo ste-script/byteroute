@@ -1,5 +1,5 @@
 import type { Connection } from "@byteroute/shared";
-import { ConnectionModel } from "@byteroute/shared";
+import { ConnectionModel } from "../infrastructure/persistence/models/connection.model.js";
 import type { TypedSocketServer } from "./connections.js";
 import { upsertConnectionsLocal, emitStatisticsUpdate, emitTrafficFlows } from "./connections.js";
 import { enrichBatch } from "./geoip.js";

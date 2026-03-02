@@ -3,7 +3,7 @@ import {
   disconnectMongo,
   mongoReadyState,
   mongoose
-} from "@byteroute/shared";
+} from "../infrastructure/persistence/mongoose.js";
 
 export type MongoBindings = {
   connectMongo: typeof connectMongo;

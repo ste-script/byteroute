@@ -1,4 +1,4 @@
-import { ConnectionModel } from "@byteroute/shared";
+import { ConnectionModel } from "../../infrastructure/persistence/models/connection.model.js";
 import { DEFAULT_TENANT_ID } from "../../utils/tenant.js";
 import { resetConnectionStore, setConnection } from "./store.js";
 

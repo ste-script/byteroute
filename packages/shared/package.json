@@ -25,9 +25,7 @@
     "lint": "node -e \"console.log('shared: lint (placeholder)')\"",
     "test": "node -e \"console.log('shared: test (placeholder)')\""
   },
-  "dependencies": {
-    "mongoose": "^9.2.3"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
     "@types/node": "^24.11.0",

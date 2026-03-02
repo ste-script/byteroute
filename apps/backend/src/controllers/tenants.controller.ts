@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { TenantModel } from "@byteroute/shared";
+import { TenantModel } from "../infrastructure/persistence/models/tenant.model.js";
 import { getPrincipal } from "../auth/principal.js";
 
 export async function getTenants(req: Request, res: Response): Promise<void> {
