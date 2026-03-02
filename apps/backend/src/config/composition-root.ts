@@ -12,6 +12,10 @@ import { ScryptPasswordService } from "../infrastructure/auth/scrypt-password.se
 import { MaxmindGeoIpLookup } from "../infrastructure/geoip/maxmind-geoip.service.js";
 import { metricsStore } from "../services/metrics.js";
 import {
+  getCompiledDomainDsl,
+  type CompiledDomainDsl,
+} from "../infrastructure/dsl/domain-dsl.js";
+import {
   signToken,
   verifyToken,
   extractBearerTokenFromAuthorization,
@@ -26,6 +30,7 @@ export interface AppContext {
   passwordService: IPasswordService;
   geoIpLookup: IGeoIpLookup;
   metricsStore: IMetricsStore;
+  domainDsl: CompiledDomainDsl;
   jwt: {
     signToken: (claims: AuthTokenClaims, ttl?: string) => string;
     verifyToken: typeof verifyToken;
@@ -42,6 +47,7 @@ export function createAppContext(io?: TypedSocketServer): AppContext {
     passwordService: new ScryptPasswordService(),
     geoIpLookup: new MaxmindGeoIpLookup(),
     metricsStore,
+    domainDsl: getCompiledDomainDsl(),
     jwt: {
       signToken,
       verifyToken,

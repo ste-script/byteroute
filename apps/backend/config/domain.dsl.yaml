@@ -1,0 +1,25 @@
+ingestion:
+  connection:
+    allowedProtocols:
+      - TCP
+      - UDP
+      - ICMP
+      - OTHER
+    defaultProtocol: OTHER
+    defaultStatus: active
+    denySourceIps: []
+
+analytics:
+  queries:
+    byCountry:
+      sortBy: connections
+      order: desc
+      # limit: 10
+    byAsn:
+      sortBy: connections
+      order: desc
+      # limit: 10
+    byProtocol:
+      sortBy: connections
+      order: desc
+      # limit: 5
