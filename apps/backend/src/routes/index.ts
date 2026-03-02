@@ -1,35 +1,78 @@
 import { Router } from "express";
+import type { AppContext } from "../config/composition-root.js";
+import { createAppContext } from "../config/composition-root.js";
 import { healthCheck } from "../controllers/health.controller.js";
-import { postConnections } from "../controllers/connections.controller.js";
-import { postMetrics } from "../controllers/metrics.controller.js";
-import { getTenants, createTenant, deleteTenant } from "../controllers/tenants.controller.js";
-import { createClientToken, getCurrentUser, signIn, signOut, signUp } from "../controllers/auth.controller.js";
-import { requireApiAuth } from "../middleware/auth.middleware.js";
+import * as connectionsControllerModule from "../controllers/connections.controller.js";
+import * as metricsControllerModule from "../controllers/metrics.controller.js";
+import * as tenantsControllerModule from "../controllers/tenants.controller.js";
+import * as authControllerModule from "../controllers/auth.controller.js";
+import * as authMiddlewareModule from "../middleware/auth.middleware.js";
 
-const router = Router();
+function getOptional<T>(resolver: () => T): T | undefined {
+	try {
+		return resolver();
+	} catch {
+		return undefined;
+	}
+}
 
-// Health check endpoint
-router.get("/health", healthCheck);
+export function createRoutes(ctx: AppContext): Router {
+	const router = Router();
+	const createAuthController = getOptional(() => authControllerModule.createAuthController);
+	const createConnectionsController = getOptional(() => connectionsControllerModule.createConnectionsController);
+	const createMetricsController = getOptional(() => metricsControllerModule.createMetricsController);
+	const createTenantsController = getOptional(() => tenantsControllerModule.createTenantsController);
+	const createAuthMiddleware = getOptional(() => authMiddlewareModule.createAuthMiddleware);
+	const requireApiAuthLegacy = getOptional(() => authMiddlewareModule.requireApiAuth);
 
-// Authentication
-router.post("/auth/signup", signUp);
-router.post("/auth/signin", signIn);
-router.get("/auth/me", requireApiAuth, getCurrentUser);
-router.post("/auth/client-token", requireApiAuth, createClientToken);
-router.post("/auth/logout", signOut);
+	const authController = typeof createAuthController === "function"
+		? createAuthController(ctx)
+		: {
+			signUp: authControllerModule.signUp,
+			signIn: authControllerModule.signIn,
+			signOut: authControllerModule.signOut,
+			currentUser: authControllerModule.getCurrentUser,
+			clientToken: authControllerModule.createClientToken,
+		};
+	const connectionsController = typeof createConnectionsController === "function"
+		? createConnectionsController(ctx)
+		: { ingest: connectionsControllerModule.postConnections };
+	const metricsController = typeof createMetricsController === "function"
+		? createMetricsController(ctx)
+		: { ingest: metricsControllerModule.postMetrics };
+	const tenantsController = typeof createTenantsController === "function"
+		? createTenantsController(ctx)
+		: {
+			list: tenantsControllerModule.getTenants,
+			create: tenantsControllerModule.createTenant,
+			remove: tenantsControllerModule.deleteTenant,
+		};
+	const requireApiAuth = requireApiAuthLegacy
+		?? (typeof createAuthMiddleware === "function" ? createAuthMiddleware(ctx) : undefined);
 
-// Protect API endpoints
-router.use("/api", requireApiAuth);
+	if (!requireApiAuth) {
+		throw new Error("Authentication middleware is not available");
+	}
 
-// Ingest connections (producer -> backend)
-router.post("/api/connections", postConnections);
+	router.get("/health", healthCheck);
 
-// Ingest metrics (client -> backend)
-router.post("/api/metrics", postMetrics);
+	router.post("/auth/signup", authController.signUp);
+	router.post("/auth/signin", authController.signIn);
+	router.get("/auth/me", requireApiAuth, authController.currentUser);
+	router.post("/auth/client-token", requireApiAuth, authController.clientToken);
+	router.post("/auth/logout", authController.signOut);
 
-// Tenant management (dashboard)
-router.get("/api/tenants", getTenants);
-router.post("/api/tenants", createTenant);
-router.delete("/api/tenants/:tenantId", deleteTenant);
+	router.use("/api", requireApiAuth);
 
-export default router;
+	router.post("/api/connections", connectionsController.ingest);
+
+	router.post("/api/metrics", metricsController.ingest);
+
+	router.get("/api/tenants", tenantsController.list);
+	router.post("/api/tenants", tenantsController.create);
+	router.delete("/api/tenants/:tenantId", tenantsController.remove);
+
+	return router;
+}
+
+export default createRoutes(createAppContext());

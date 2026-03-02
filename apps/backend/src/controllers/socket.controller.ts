@@ -5,6 +5,8 @@ import type {
   InterServerEvents,
   SocketData,
 } from "@byteroute/shared";
+import type { AppContext } from "../config/composition-root.js";
+import { createAppContext } from "../config/composition-root.js";
 import {
   type TypedSocketServer,
   getConnectionsForTenant,
@@ -26,25 +28,30 @@ export type TypedSocket = Socket<
   SocketData
 >;
 
-export function handleConnection(io: TypedSocketServer, socket: TypedSocket): void {
-  const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(socket.handshake);
-  const principal = socket.data.principal as HydratedPrincipal | undefined;
+export function createSocketController(ctx: AppContext) {
+  void ctx;
+  return {
+    handleConnection: (io: TypedSocketServer, socket: TypedSocket): void => {
+      const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(socket.handshake);
+      const principal = socket.data.principal as HydratedPrincipal | undefined;
 
-  console.log(`Client connected: ${socket.id}`);
+      console.log(`Client connected: ${socket.id}`);
 
-  // Initialize socket data
-  socket.data.tenantId = tenantId;
-  socket.data.subscribedRooms = [];
-  void socket.join(tenantRoom);
+      socket.data.tenantId = tenantId;
+      socket.data.subscribedRooms = [];
+      void socket.join(tenantRoom);
 
-  // Send initial data to client — only the tenants this user owns
-  socket.emit("tenants:list", { tenants: principal?.tenantIds ?? [] });
+      socket.emit("tenants:list", { tenants: principal?.tenantIds ?? [] });
 
-  // Register event handlers
-  socket.on("subscribe", (data) => handleSubscribe(io, socket, data));
-  socket.on("unsubscribe", (data) => handleUnsubscribe(socket, data));
-  socket.on("disconnect", (reason) => handleDisconnect(socket, reason));
+      socket.on("subscribe", (data) => handleSubscribe(io, socket, data));
+      socket.on("unsubscribe", (data) => handleUnsubscribe(socket, data));
+      socket.on("disconnect", (reason) => handleDisconnect(socket, reason));
+    },
+  };
 }
+
+const defaultController = createSocketController(createAppContext());
+export const handleConnection = defaultController.handleConnection;
 
 function clampConnectionsLimit(value: unknown, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {

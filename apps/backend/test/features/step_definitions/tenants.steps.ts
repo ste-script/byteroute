@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { Given, When, Then } from '@cucumber/cucumber';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { TenantModel } from '@byteroute/shared';
+import { TenantModel } from '../../../src/infrastructure/persistence/models/tenant.model.js';
 import { testApp } from '../support/app.js';
 import type { ByterouteWorld } from '../support/world.js';
 

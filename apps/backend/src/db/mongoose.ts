@@ -1,9 +1,17 @@
+import * as shared from "@byteroute/shared";
 import {
-  connectMongo,
-  disconnectMongo,
-  mongoReadyState,
-  mongoose
+  connectMongo as infraConnectMongo,
+  disconnectMongo as infraDisconnectMongo,
+  mongoReadyState as infraMongoReadyState,
+  mongoose as infraMongoose
 } from "../infrastructure/persistence/mongoose.js";
+
+const connectMongo = (shared as { connectMongo?: typeof infraConnectMongo }).connectMongo ?? infraConnectMongo;
+const disconnectMongo =
+  (shared as { disconnectMongo?: typeof infraDisconnectMongo }).disconnectMongo ?? infraDisconnectMongo;
+const mongoReadyState =
+  (shared as { mongoReadyState?: typeof infraMongoReadyState }).mongoReadyState ?? infraMongoReadyState;
+const mongoose = (shared as { mongoose?: typeof infraMongoose }).mongoose ?? infraMongoose;
 
 export type MongoBindings = {
   connectMongo: typeof connectMongo;

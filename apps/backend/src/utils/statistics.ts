@@ -1,11 +1,16 @@
 import type { Connection, Statistics } from "@byteroute/shared";
 import { metricsStore } from "../services/metrics.js";
+import type { IMetricsStore } from "../domain/metrics/metrics-store.interface.js";
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function generateStatistics(connections: Connection[], tenantId: string): Statistics {
+export function generateStatistics(
+  connections: Connection[],
+  tenantId: string,
+  store: IMetricsStore = metricsStore
+): Statistics {
   const activeConnections = connections.filter(c => c.status === "active").length;
   const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
@@ -67,7 +72,7 @@ export function generateStatistics(connections: Connection[], tenantId: string):
   }));
 
   // Get real time series data from metrics store, fallback to mock if empty
-  let timeSeries = metricsStore.getTimeSeries(tenantId, 24);
+  let timeSeries = store.getTimeSeries(tenantId, 24);
 
   // If no real metrics yet, generate mock data
   if (timeSeries.length === 0) {

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { BeforeAll, AfterAll, After } from '@cucumber/cucumber';
-import { connectMongo, disconnectMongo } from '@byteroute/shared';
+import { connectMongo, disconnectMongo } from '../../../src/infrastructure/persistence/mongoose.js';
 import mongoose from 'mongoose';
 
 BeforeAll({ timeout: 30_000 }, async function () {
