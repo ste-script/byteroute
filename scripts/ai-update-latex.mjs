@@ -17,14 +17,15 @@ const reportFiles = (process.env.REPORT_FILES || "docs/SPE-report.tex,docs/ASW-r
 const extraContext = process.env.EXTRA_CONTEXT || "";
 
 const PROMPT_ATTEMPTS = [
-  { currentMaxChars: 14000, repoMaxChars: 8000 },
-  { currentMaxChars: 9000, repoMaxChars: 3000 },
-  { currentMaxChars: 6000, repoMaxChars: 1200 },
-  { currentMaxChars: 3500, repoMaxChars: 0 }
+  { currentMaxChars: 9000, repoMaxChars: 1800 },
+  { currentMaxChars: 6500, repoMaxChars: 900 },
+  { currentMaxChars: 4200, repoMaxChars: 300 },
+  { currentMaxChars: 3200, repoMaxChars: 0 }
 ];
 
 const MAX_RATE_LIMIT_RETRIES = 5;
 const BASE_RATE_LIMIT_DELAY_MS = 2000;
+const CONTEXT_CHARS_PER_FILE = Number(process.env.AI_CONTEXT_CHARS_PER_FILE || 2500);
 
 if (!apiToken) {
   console.error("Missing AI token. Set AI_API_TOKEN, OPENAI_API_KEY, or GITHUB_TOKEN.");
@@ -59,7 +60,7 @@ async function collectRepositoryContext() {
   for (const file of files) {
     const content = await readOptional(file);
     if (content) {
-      parts.push(`### ${file}\n${content.slice(0, 12000)}`);
+      parts.push(`### ${file}\n${content.slice(0, CONTEXT_CHARS_PER_FILE)}`);
     }
   }
 
@@ -81,18 +82,15 @@ function buildPrompt({ path, currentContent, repoContext, currentMaxChars, repoM
   const safeRepo = truncateMiddle(repoContext, repoMaxChars);
 
   return [
-    "You are updating a university LaTeX report for a monorepo.",
-    "Return ONLY valid LaTeX source code for the full file, no markdown fences.",
-    "Preserve the existing language and style consistency.",
-    "Keep preamble packages unless a change is required for validity.",
-    "Ensure the output contains both \\begin{document} and \\end{document}.",
-    "Keep document focused, technical, and concise.",
-    "Do not invent repository files or technologies not present in the context.",
+    "Task: refresh a university LaTeX report for this monorepo.",
+    "Output: ONLY full LaTeX source for the target file, no markdown fences or explanations.",
+    "Constraints: keep structure/style coherent, keep package choices unless required for validity, keep claims grounded in provided context.",
+    "Validity: must include \\begin{document} and \\end{document}.",
     safeCurrent !== currentContent
-      ? "The current file content below may be truncated in the middle; preserve structure and coherence."
+      ? "Current file content can be truncated in the middle; preserve continuity and avoid large rewrites."
       : "",
     safeRepo !== repoContext
-      ? "Repository context may be truncated; prefer conservative updates grounded in explicit context."
+      ? "Repository context can be truncated; prefer conservative updates grounded in explicit context only."
       : "",
     extraContext ? `Additional user context: ${extraContext}` : "",
     `Target file: ${path}`,
@@ -118,6 +116,26 @@ function parseRetryAfterMs(headerValue) {
   const asDate = Date.parse(headerValue);
   if (Number.isNaN(asDate)) return null;
   return Math.max(0, asDate - Date.now());
+}
+
+function sanitizeModelOutput(text) {
+  if (!text) return "";
+  const trimmed = text.trim();
+
+  const fenced = trimmed.match(/^```(?:latex)?\s*([\s\S]*?)\s*```$/i);
+  const unfenced = fenced ? fenced[1] : trimmed;
+  return unfenced.endsWith("\n") ? unfenced : `${unfenced}\n`;
+}
+
+function extractGithubText(data) {
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (typeof part === "string" ? part : part?.text || ""))
+      .join("");
+  }
+  return "";
 }
 
 async function generateUpdatedLatex({ path, currentContent, repoContext }) {
@@ -152,13 +170,19 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
           provider === "github"
             ? JSON.stringify({
                 model,
+                max_tokens: 3200,
                 messages: [
+                  {
+                    role: "system",
+                    content:
+                      "You update LaTeX technical reports conservatively. Return only valid LaTeX source code for the full target file."
+                  },
                   {
                     role: "user",
                     content: prompt
                   }
                 ],
-                temperature: 1,
+                temperature: 1, //gpt5 only allows 1
               })
             : JSON.stringify({
                 model,
@@ -202,7 +226,7 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
     const data = await response.json();
     const text =
       provider === "github"
-        ? data.choices?.[0]?.message?.content?.trim()
+        ? sanitizeModelOutput(extractGithubText(data))
         : data.output_text?.trim();
 
     if (!text) {
@@ -213,7 +237,7 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
       throw new Error(`Generated LaTeX for ${path} is invalid (missing document markers).`);
     }
 
-    return text.endsWith("\n") ? text : `${text}\n`;
+    return provider === "github" ? text : text.endsWith("\n") ? text : `${text}\n`;
   }
 
   throw lastError || new Error(`Unable to generate LaTeX for ${path}.`);

@@ -69,6 +69,10 @@ Run the `AI LaTeX Docs Update` workflow from GitHub Actions (`workflow_dispatch`
 - `model`: GitHub Models model name (for example `openai/gpt-4.1`)
 - `extra_context`: additional instructions for the update
 
+Optional tuning env var for local runs:
+
+- `AI_CONTEXT_CHARS_PER_FILE` (default `2500`) to reduce/increase repository context sent in prompts.
+
 Always review the generated PR before merge.
 
 ### Notes about Copilot subscription
