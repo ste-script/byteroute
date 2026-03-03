@@ -43,3 +43,34 @@ make clean
 - Build/test workflow validates LaTeX compilation by running `make pdf` in `docs/`.
 - Release workflow builds `docs/SPE-report.pdf` and `docs/ASW-report.pdf` before semantic release.
 - GitHub release publishes both PDFs as release assets.
+
+## AI-assisted automatic updates
+
+An optional workflow is available at `.github/workflows/ai-docs-update.yml`.
+
+It can:
+
+- update `docs/SPE-report.tex` and `docs/ASW-report.tex` using an AI model,
+- compile them with LaTeX to validate correctness,
+- open a pull request with the generated changes.
+
+### Required configuration
+
+- GitHub Actions permission: `models: read` (already set in workflow)
+- No extra AI key required for default mode: workflow uses `secrets.GITHUB_TOKEN`
+- Optional repository variable: `AI_API_URL` (defaults to `https://models.github.ai/inference/chat/completions`)
+- Optional secret for PR pushes: `DEPLOYMENT_TOKEN` (fallback is `GITHUB_TOKEN`)
+
+### How to run
+
+Run the `AI LaTeX Docs Update` workflow from GitHub Actions (`workflow_dispatch`) and optionally set:
+
+- `reports`: comma-separated report files
+- `model`: GitHub Models model name (for example `openai/gpt-4.1`)
+- `extra_context`: additional instructions for the update
+
+Always review the generated PR before merge.
+
+### Notes about Copilot subscription
+
+GitHub Actions cannot directly "reuse" the interactive Copilot chat session. The supported GitHub-native automation path is GitHub Models with `GITHUB_TOKEN`, which this workflow now uses.

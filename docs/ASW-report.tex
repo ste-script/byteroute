@@ -1,39 +1,160 @@
 \documentclass[12pt]{report}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage{hyperref}
+\usepackage{xcolor}
 
-\title{\textbf{ASW Report} \\ \large University Project Document}
+\title{\textbf{ByteRoute} \\ \large ASW Report}
+
 \author{
   Babini Stefano\\
   0001125127 \\
   \texttt{stefano.babini5@studio.unibo.it}
 }
+
 \date{\today}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{float}
+\pagestyle{plain}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage[export]{adjustbox}
+\usetikzlibrary{petri,positioning}
+\usepackage{listings}
+\usepackage{titlesec}
+
+\titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\graphicspath{{images/}}
+
+\renewcommand{\lstlistingname}{Code}
+\renewcommand{\lstlistlistingname}{List of \lstlistingname s}
+
+% Color setup
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Code listing style
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
+}
+
+\lstset{style=mystyle}
 
 \begin{document}
 
 \maketitle
-\tableofcontents
+\newpage
+\tableofcontents{}
 \newpage
 
 \chapter{Introduction}
-This document is the ASW report template for the ByteRoute project.
+This document is the ASW report template for the ByteRoute project. It summarizes the web-oriented architecture, components, and operational choices used to provide real-time visibility into network traffic destinations within a monorepo.
 
 \chapter{Project Context}
-Describe objectives, scope, and constraints of the assignment.
+The ByteRoute project is developed as part of the ASW (Architetture Software per il Web) course assignment. Its objective is to provide real-time visibility into network traffic destinations, enabling users to identify which servers and services their computer connects to. The scope includes designing and implementing a multi-component system for traffic monitoring, enrichment, and visualization. Constraints include Linux-only client support, authenticated backend ingestion, and reliance on MaxMind GeoLite2 databases for GeoIP enrichment. The monorepo is also used in a university SPE context, but this report focuses on ASW aspects (backend, API, and web dashboard).
 
 \chapter{Architecture and Design}
-Describe system architecture, key components, and design decisions.
+The system is structured as a monorepo and consists of three main components:
+\begin{itemize}
+    \item \textbf{Client}: A Go-based Linux agent utilizing libpcap to capture packets, generate a BPF filter from local context (direction and local IPv4s) when not provided, deduplicate destination IPs, and batch-send connection records to the backend.
+    \item \textbf{Backend}: A Node.js/Express application that receives connection data, performs GeoIP enrichment using MaxMind GeoLite2, stores records in MongoDB, and broadcasts updates via Socket.IO. Authentication (bearer JWT) is enforced for ingestion and API endpoints. Data is stored per-tenant, and the backend exposes health and API endpoints.
+    \item \textbf{Dashboard}: A Vue.js 3 frontend (built with Vite) displaying a world map of traffic flows, live connection lists, statistics by ASN/country, and time-based charts. The dashboard communicates with the backend via REST and WebSocket.
+\end{itemize}
+
+Containerization is achieved with Docker and Docker Compose, enabling production-like deployments behind Traefik for routing. The dashboard is typically reachable at \url{http://localhost:8080}, and backend health at \url{http://localhost:8080/health}.
+
+Shared code lives in \texttt{packages/shared} and includes MongoDB models (users, tenants, connections) and helpers intended to be reused by backend and seeding apps.
+
+\paragraph{Data flow}
+\begin{enumerate}
+    \item The client captures packets on a specified interface, applies a BPF, and emits flow/connection information.
+    \item The client deduplicates by either flow (5-tuple) or IP, aggregates into batches respecting record and payload size limits, and posts to the backend with bearer authentication.
+    \item The backend authenticates, resolves tenant access, enriches records via GeoLite2, upserts into MongoDB, and emits real-time updates over Socket.IO.
+    \item The dashboard consumes REST endpoints for initial state and Socket.IO for live updates and visualization.
+\end{enumerate}
+
+\paragraph{Security and multi-tenancy}
+\begin{itemize}
+    \item User signup/signin returns a JWT used for protected \texttt{/api/*} endpoints.
+    \item Tenants are created by authenticated users; ingestion and metrics are stored per-tenant.
+    \item Client tokens are created from a user session and used by the Go client for authenticated posting.
+\end{itemize}
 
 \chapter{Implementation Notes}
-Describe implementation details, tooling, and workflow.
+The monorepo leverages pnpm for dependency management and workspace orchestration. The Go client is built from source or run via Docker, requiring elevated privileges for packet capture. Relevant flags include:
+\begin{itemize}
+    \item \texttt{--iface}: capture interface (required)
+    \item \texttt{--direction}: \texttt{out} (default), \texttt{in}, or \texttt{both}
+    \item \texttt{--bpf}: custom BPF filter; if omitted, a default is generated
+    \item \texttt{--reporter-ip}: optional WAN IP to geo-locate private sources
+    \item \texttt{--dedupe}: \texttt{flow} or \texttt{ip}
+    \item \texttt{--max-batch-conns}, \texttt{--max-batch-bytes}: batch sizing
+    \item \texttt{--idle-ttl}, \texttt{--flush} (alias: \texttt{--flow})
+    \item \texttt{--auth-token}: bearer token for backend requests
+\end{itemize}
+
+Backend environment variables configure MongoDB, authentication, and MaxMind credentials. For Docker Compose quickstart, set:
+\begin{itemize}
+    \item \texttt{MAXMIND\_USER\_ID}
+    \item \texttt{MAXMIND\_API\_KEY}
+    \item \texttt{JWT\_SECRET}
+\end{itemize}
+Client environment variables include:
+\begin{itemize}
+    \item \texttt{BYTEROUTE\_BACKEND\_URL}
+    \item \texttt{BYTEROUTE\_AUTH\_TOKEN}
+    \item \texttt{BYTEROUTE\_IFACE}, \texttt{BYTEROUTE\_BPF}
+    \item \texttt{BYTEROUTE\_REPORTER\_IP}
+    \item \texttt{BYTEROUTE\_HOST\_ID}
+\end{itemize}
+
+\paragraph{API overview}
+\begin{itemize}
+    \item \texttt{POST /auth/signup}, \texttt{POST /auth/signin}: returns user JWT
+    \item \texttt{POST /api/tenants}: create a tenant (authenticated)
+    \item \texttt{POST /auth/client-token}: create a client token (authenticated)
+    \item \texttt{POST /api/connections}: ingest batched connections (authenticated, per-tenant)
+    \item \texttt{GET /health}: backend health check
+\end{itemize}
+
+\paragraph{Payload}
+The client posts to \texttt{POST /api/connections} a JSON body with reporter IP and an array of connections. The backend enriches with GeoLite2 and upserts records in MongoDB.
+
+\paragraph{CI/CD and releases}
+CI uses GitHub Actions to build and test components, validate LaTeX compilation of docs, and publish coverage. Coverage is generated for backend and Go client; a Markdown summary is published via \texttt{irongut/CodeCoverageSummary}. Artifacts include \texttt{coverage-reports} (HTML report and summary) and \texttt{coverage-go} (Go coverage files). Releases are automated with \texttt{semantic-release}, producing GitHub releases and committing changelog/version bumps.
 
 \chapter{Validation and Results}
-Describe test strategy, observed results, and limitations.
+Testing includes unit and end-to-end tests for backend logic, as well as integration tests for client-backend communication. Coverage summaries are published in CI job outputs. The system was validated by deploying the stack via Docker Compose, registering users and tenants, generating a client token, and ingesting live traffic from the Go client. The dashboard was reachable at \texttt{http://localhost:8080}, and backend health at \texttt{/health}. Limitations include Linux-only client support and dependency on external GeoIP databases. The CI artifacts \texttt{coverage-reports} and \texttt{coverage-go} provide reproducible coverage evidence.
 
 \chapter{Conclusion}
-Summarize outcomes and possible future improvements.
+ByteRoute demonstrates a modular approach to real-time network traffic monitoring and visualization. The architecture supports authenticated multi-tenant ingestion, enrichment, and live analytics through a web-oriented stack (Node.js/Express, Socket.IO, Vue.js). Future improvements may include cross-platform client support, enhanced enrichment sources, and expanded analytics features.
 
 \end{document}
