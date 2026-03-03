@@ -54,6 +54,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Install LaTeX
+        run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
+
       - name: Lint commits (Conventional Commits)
         if: ${{ inputs.run_commitlint }}
         shell: bash
@@ -94,6 +97,11 @@ jobs:
 
       - name: Build
         run: pnpm -w build
+
+      - name: Validate LaTeX docs compilation
+        run: |
+          cd docs
+          make pdf
 
       - name: Test Go client with coverage
         run: |

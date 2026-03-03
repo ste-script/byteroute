@@ -28,7 +28,21 @@ module.exports = {
           "node scripts/sync-workspace-versions.mjs ${nextRelease.version} && pnpm -w install --lockfile-only --ignore-scripts"
       }
     ],
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        assets: [
+          {
+            path: "docs/SPE-report.pdf",
+            label: "SPE Report PDF"
+          },
+          {
+            path: "docs/ASW-report.pdf",
+            label: "ASW Report PDF"
+          }
+        ]
+      }
+    ],
     [
       "@semantic-release/git",
       {
