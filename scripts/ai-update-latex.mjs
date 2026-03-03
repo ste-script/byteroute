@@ -3,7 +3,7 @@ import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 
 const provider = process.env.AI_PROVIDER || "github";
-const apiToken = process.env.AI_API_TOKEN || process.env.OPENAI_API_KEY;
+const apiToken = process.env.AI_API_TOKEN || process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN;
 const apiUrl =
   process.env.AI_API_URL ||
   (provider === "github"
@@ -27,7 +27,7 @@ const MAX_RATE_LIMIT_RETRIES = 5;
 const BASE_RATE_LIMIT_DELAY_MS = 2000;
 
 if (!apiToken) {
-  console.error("Missing AI_API_TOKEN (or OPENAI_API_KEY for OpenAI compatibility mode).");
+  console.error("Missing AI token. Set AI_API_TOKEN, OPENAI_API_KEY, or GITHUB_TOKEN.");
   process.exit(1);
 }
 
