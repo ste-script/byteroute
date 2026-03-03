@@ -46,7 +46,7 @@ jobs:
           AI_PROVIDER: github
           AI_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AI_API_URL: ${{ vars.AI_API_URL || 'https://models.github.ai/inference/chat/completions' }}
-          AI_MODEL: ${{ github.event.inputs.model || 'openai/gpt-4.1' }}
+          AI_MODEL: ${{ github.event.inputs.model || 'openai/gpt-5' }}
           REPORT_FILES: ${{ github.event.inputs.reports || 'docs/SPE-report.tex,docs/ASW-report.tex' }}
           EXTRA_CONTEXT: ${{ github.event.inputs.extra_context || '' }}
         run: node scripts/ai-update-latex.mjs
