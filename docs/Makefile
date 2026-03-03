@@ -1,13 +1,16 @@
 LATEX=pdflatex
 FLAGS=-interaction=nonstopmode
+REPORTS=SPE-report ASW-report
 
 .PHONY: all pdf clean
 
 all: pdf
 
 pdf:
-	$(LATEX) $(FLAGS) main.tex
-	$(LATEX) $(FLAGS) main.tex
+	for report in $(REPORTS); do \
+		$(LATEX) $(FLAGS) $$report.tex; \
+		$(LATEX) $(FLAGS) $$report.tex; \
+	done
 
 clean:
-	rm -f *.aux *.log *.out *.toc *.lof *.lot *.fls *.fdb_latexmk *.synctex.gz
+	rm -f *.aux *.log *.out *.toc *.lof *.lot *.fls *.fdb_latexmk *.synctex.gz *.pdf
