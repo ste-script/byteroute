@@ -127,15 +127,64 @@ function sanitizeModelOutput(text) {
   return unfenced.endsWith("\n") ? unfenced : `${unfenced}\n`;
 }
 
+function maybeExtractText(part) {
+  if (!part) return "";
+  if (typeof part === "string") return part;
+  if (typeof part.text === "string") return part.text;
+  if (typeof part.content === "string") return part.content;
+  if (typeof part.value === "string") return part.value;
+  return "";
+}
+
 function extractGithubText(data) {
-  const content = data?.choices?.[0]?.message?.content;
+  const directOutputText = maybeExtractText(data?.output_text);
+  if (directOutputText) return directOutputText;
+
+  const choice = data?.choices?.[0];
+  const message = choice?.message;
+  const content = message?.content;
+
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
-    return content
-      .map((part) => (typeof part === "string" ? part : part?.text || ""))
-      .join("");
+    const joined = content.map(maybeExtractText).filter(Boolean).join("");
+    if (joined) return joined;
   }
+
+  const delta = choice?.delta?.content;
+  if (typeof delta === "string") return delta;
+  if (Array.isArray(delta)) {
+    const joined = delta.map(maybeExtractText).filter(Boolean).join("");
+    if (joined) return joined;
+  }
+
+  const fallbackFields = [
+    maybeExtractText(message?.text),
+    maybeExtractText(choice?.text),
+    maybeExtractText(data?.response?.output_text),
+    maybeExtractText(data?.response?.text)
+  ].filter(Boolean);
+
+  if (fallbackFields.length > 0) return fallbackFields.join("\n");
   return "";
+}
+
+function summarizeResponseShape(data) {
+  try {
+    return JSON.stringify(
+      {
+        topLevelKeys: Object.keys(data || {}),
+        hasChoices: Array.isArray(data?.choices),
+        firstChoiceKeys: data?.choices?.[0] ? Object.keys(data.choices[0]) : [],
+        messageKeys: data?.choices?.[0]?.message ? Object.keys(data.choices[0].message) : [],
+        hasOutputText: Boolean(data?.output_text),
+        hasError: Boolean(data?.error)
+      },
+      null,
+      2
+    );
+  } catch {
+    return "<unable to summarize response shape>";
+  }
 }
 
 async function generateUpdatedLatex({ path, currentContent, repoContext }) {
@@ -170,7 +219,7 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
           provider === "github"
             ? JSON.stringify({
                 model,
-                max_tokens: 3200,
+                max_completion_tokens: 3200,
                 messages: [
                   {
                     role: "system",
@@ -230,7 +279,7 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
         : data.output_text?.trim();
 
     if (!text) {
-      throw new Error("AI response did not contain generated text.");
+      throw new Error(`AI response did not contain generated text. Response shape: ${summarizeResponseShape(data)}`);
     }
 
     if (!text.includes("\\begin{document}") || !text.includes("\\end{document}")) {
