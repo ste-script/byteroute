@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - '**'
+    branches-ignore:
+      - 'main'
+      - 'release/**'
     tags-ignore:
       - '*'
   workflow_dispatch:
