@@ -1,0 +1,76 @@
+name: AI LaTeX Docs Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      reports:
+        description: "Comma-separated LaTeX report paths"
+        required: true
+        default: "docs/SPE-report.tex,docs/ASW-report.tex"
+      model:
+        description: "AI model name"
+        required: true
+        default: "gpt-5"
+      extra_context:
+        description: "Optional context/instructions for the update"
+        required: false
+        default: ""
+  pull_request:
+    types: [opened, synchronize]
+concurrency:
+  group: ai-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.ref != 'chore/ai-latex-docs-update'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.14.0
+
+      - name: Update LaTeX reports with AI
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_API_URL: ${{ vars.AI_API_URL }}
+          AI_MODEL: ${{ github.event.inputs.model || 'gpt-5' }}
+          REPORT_FILES: ${{ github.event.inputs.reports || 'docs/SPE-report.tex,docs/ASW-report.tex' }}
+          EXTRA_CONTEXT: ${{ github.event.inputs.extra_context || '' }}
+        run: node scripts/ai-update-latex.mjs
+
+      - name: Install LaTeX
+        run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
+
+      - name: Validate LaTeX compilation
+        run: |
+          cd docs
+          make pdf
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.DEPLOYMENT_TOKEN || secrets.GITHUB_TOKEN }}
+          commit-message: "docs: AI refresh LaTeX reports"
+          title: "docs: AI refresh LaTeX reports"
+          body: |
+            Automated AI update for LaTeX project reports.
+
+            - Updated report sources in `docs/`
+            - Validated compilation via `make pdf`
+
+            Review the generated content before merge.
+          branch: chore/ai-latex-docs-update
+          delete-branch: true
+          labels: |
+            documentation
+            automated
