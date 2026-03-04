@@ -367,6 +367,7 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
     "  - Update technical details (architecture, API shape, deployment, features) to match what you find in the repository.",
     "  - Keep claims grounded in evidence found in the repository — do not invent details.",
     "  - Prefer conservative, targeted edits over large rewrites.",
+    "  - Always avoid em dashes and en dashes. Opt for commas, parentheses, or alternative punctuation",
     extraContext ? `Additional context from the user: ${extraContext}` : ""
   ]
     .filter(Boolean)
