@@ -1,3 +1,13 @@
+## [5.2.0](https://github.com/ste-script/byteroute/compare/v5.1.0...v5.2.0) (2026-03-04)
+
+### Features
+
+* **backend:** init dsl ([f59c389](https://github.com/ste-script/byteroute/commit/f59c389e00a16c0d5df4d239b3accb98cef8b97d))
+
+### Bug Fixes
+
+* **ci:** wrong syntax ([1f13b3c](https://github.com/ste-script/byteroute/commit/1f13b3cd13422af82ad55c85960451ff237e7755))
+
 ## [5.1.0](https://github.com/ste-script/byteroute/compare/v5.0.1...v5.1.0) (2026-03-03)
 
 ### Features
