@@ -9,7 +9,7 @@ const apiUrl =
   (provider === "github"
     ? "https://models.github.ai/inference/chat/completions"
     : "https://api.openai.com/v1/responses");
-const model = process.env.AI_MODEL || (provider === "github" ? "openai/gpt-5" : "gpt-4.1-mini");
+const model = process.env.AI_MODEL || (provider === "github" ? "openai/gpt-4.1" : "gpt-4.1-mini");
 const reportFiles = (process.env.REPORT_FILES || "docs/SPE-report.tex,docs/ASW-report.tex")
   .split(",")
   .map((file) => file.trim())
@@ -17,15 +17,27 @@ const reportFiles = (process.env.REPORT_FILES || "docs/SPE-report.tex,docs/ASW-r
 const extraContext = process.env.EXTRA_CONTEXT || "";
 
 const PROMPT_ATTEMPTS = [
-  { currentMaxChars: 9000, repoMaxChars: 1800 },
-  { currentMaxChars: 6500, repoMaxChars: 900 },
-  { currentMaxChars: 4200, repoMaxChars: 300 },
-  { currentMaxChars: 3200, repoMaxChars: 0 }
+  { currentMaxChars: 9000, repoMaxChars: 3000, siblingMaxChars: 2000 },
+  { currentMaxChars: 7000, repoMaxChars: 1800, siblingMaxChars: 1000 },
+  { currentMaxChars: 5000, repoMaxChars: 900,  siblingMaxChars: 400 },
+  { currentMaxChars: 3200, repoMaxChars: 300,  siblingMaxChars: 0 }
 ];
 
 const MAX_RATE_LIMIT_RETRIES = 5;
 const BASE_RATE_LIMIT_DELAY_MS = 2000;
-const CONTEXT_CHARS_PER_FILE = Number(process.env.AI_CONTEXT_CHARS_PER_FILE || 2500);
+// If retry-after exceeds this threshold the quota is exhausted for the day;
+// fail fast instead of sleeping for hours inside an Actions job.
+const MAX_RATE_LIMIT_WAIT_MS = Number(process.env.AI_MAX_RATE_LIMIT_WAIT_MS || 10 * 60 * 1000); // 10 min
+// Minimum pause inserted between every API call (before the next file starts).
+// Set AI_INTER_REQUEST_DELAY_MS=65000 when using gpt-5 (1 RPM) or other
+// heavily constrained models to avoid back-to-back 429s.
+const INTER_REQUEST_DELAY_MS = Number(process.env.AI_INTER_REQUEST_DELAY_MS ?? 0);
+const CONTEXT_CHARS_PER_FILE = Number(process.env.AI_CONTEXT_CHARS_PER_FILE || 3500);
+// How many chars to take from the top of CHANGELOG.md (most-recent entries first).
+const CHANGELOG_CHARS = Number(process.env.AI_CHANGELOG_CHARS || 3000);
+// How many chars of the *other* report to include as sibling context.
+const SIBLING_REPORT_CHARS = Number(process.env.AI_SIBLING_REPORT_CHARS || 2000);
+const MAX_COMPLETION_TOKENS = Number(process.env.AI_MAX_COMPLETION_TOKENS || 3200);
 
 if (!apiToken) {
   console.error("Missing AI token. Set AI_API_TOKEN, OPENAI_API_KEY, or GITHUB_TOKEN.");
@@ -47,7 +59,7 @@ async function readOptional(path) {
 }
 
 async function collectRepositoryContext() {
-  const files = [
+  const readmeFiles = [
     "README.md",
     "apps/backend/README.md",
     "apps/dashboard/README.md",
@@ -57,10 +69,31 @@ async function collectRepositoryContext() {
   ];
 
   const parts = [];
-  for (const file of files) {
+
+  for (const file of readmeFiles) {
     const content = await readOptional(file);
     if (content) {
       parts.push(`### ${file}\n${content.slice(0, CONTEXT_CHARS_PER_FILE)}`);
+    }
+  }
+
+  // Domain model: describes allowed protocols, analytics query shapes, etc.
+  const domainDsl = await readOptional("apps/backend/config/domain.dsl.yaml");
+  if (domainDsl) {
+    parts.push(`### apps/backend/config/domain.dsl.yaml\n${domainDsl}`);
+  }
+
+  // Deployment topology: actual services, ports, volumes, and networking.
+  const compose = await readOptional("docker-compose.yml");
+  if (compose) {
+    parts.push(`### docker-compose.yml\n${compose}`);
+  }
+
+  // Recent changelog: best source for what has changed in recent versions.
+  if (CHANGELOG_CHARS > 0) {
+    const changelog = await readOptional("CHANGELOG.md");
+    if (changelog) {
+      parts.push(`### CHANGELOG.md (most recent entries)\n${changelog.slice(0, CHANGELOG_CHARS)}`);
     }
   }
 
@@ -77,15 +110,19 @@ function truncateMiddle(text, maxChars) {
   return `${head}\n\n... [TRUNCATED FOR TOKEN LIMIT] ...\n\n${tail}`;
 }
 
-function buildPrompt({ path, currentContent, repoContext, currentMaxChars, repoMaxChars }) {
+function buildPrompt({ path, currentContent, siblingContent, repoContext, currentMaxChars, repoMaxChars, siblingMaxChars }) {
   const safeCurrent = truncateMiddle(currentContent, currentMaxChars);
   const safeRepo = truncateMiddle(repoContext, repoMaxChars);
+  const safeSibling = siblingContent ? truncateMiddle(siblingContent, siblingMaxChars) : "";
 
   return [
     "Task: refresh a university LaTeX report for this monorepo.",
     "Output: ONLY full LaTeX source for the target file, no markdown fences or explanations.",
     "Constraints: keep structure/style coherent, keep package choices unless required for validity, keep claims grounded in provided context.",
     "Validity: must include \\begin{document} and \\end{document}.",
+    safeSibling
+      ? "Sibling report: the other report file is included for scope reference — avoid duplicating its content verbatim."
+      : "",
     safeCurrent !== currentContent
       ? "Current file content can be truncated in the middle; preserve continuity and avoid large rewrites."
       : "",
@@ -96,7 +133,9 @@ function buildPrompt({ path, currentContent, repoContext, currentMaxChars, repoM
     `Target file: ${path}`,
     "\nCurrent file content:\n",
     safeCurrent,
-    safeRepo ? "\nRepository context:\n" : "",
+    safeSibling ? "\nSibling report (scope reference only):\n" : "",
+    safeSibling,
+    safeRepo ? "\nRepository context (READMEs, domain model, deployment, changelog):\n" : "",
     safeRepo
   ]
     .filter(Boolean)
@@ -187,16 +226,18 @@ function summarizeResponseShape(data) {
   }
 }
 
-async function generateUpdatedLatex({ path, currentContent, repoContext }) {
+async function generateUpdatedLatex({ path, currentContent, siblingContent, repoContext }) {
   let lastError;
 
   for (const attempt of PROMPT_ATTEMPTS) {
     const prompt = buildPrompt({
       path,
       currentContent,
+      siblingContent,
       repoContext,
       currentMaxChars: attempt.currentMaxChars,
-      repoMaxChars: attempt.repoMaxChars
+      repoMaxChars: attempt.repoMaxChars,
+      siblingMaxChars: attempt.siblingMaxChars ?? 0
     });
 
     let response;
@@ -219,7 +260,7 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
           provider === "github"
             ? JSON.stringify({
                 model,
-                max_completion_tokens: 3200,
+                max_completion_tokens: MAX_COMPLETION_TOKENS,
                 messages: [
                   {
                     role: "system",
@@ -253,7 +294,22 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
         throw new Error(`AI API request failed (429) after retries: ${body}`);
       }
 
-      console.warn(`Rate limited for ${path}; retrying in ${waitMs}ms...`);
+      // If the server asks us to wait longer than our cap, the daily quota is
+      // likely exhausted.  Fail fast with an actionable message instead of
+      // silently blocking the Actions job until it times out.
+      if (waitMs > MAX_RATE_LIMIT_WAIT_MS) {
+        const rlType = response.headers.get("x-ratelimit-type") ?? "unknown";
+        const body = await response.text();
+        throw new Error(
+          `AI API rate limit wait (${waitMs}ms) exceeds cap of ${MAX_RATE_LIMIT_WAIT_MS}ms ` +
+          `(x-ratelimit-type: ${rlType}). Daily quota is likely exhausted. ` +
+          `Switch to a model with higher limits (e.g. openai/gpt-4.1) or wait for the quota to reset. ` +
+          `Raw response: ${body}`
+        );
+      }
+
+      const rlType = response.headers.get("x-ratelimit-type") ?? "";
+      console.warn(`Rate limited for ${path} (${rlType}); retrying in ${waitMs}ms...`);
       await sleep(waitMs);
     }
 
@@ -295,9 +351,32 @@ async function generateUpdatedLatex({ path, currentContent, repoContext }) {
 async function main() {
   const repoContext = await collectRepositoryContext();
 
+  // Pre-read all report contents so each file can reference its siblings.
+  const reportContents = new Map();
   for (const path of reportFiles) {
-    const currentContent = await readFile(path, "utf8");
-    const updated = await generateUpdatedLatex({ path, currentContent, repoContext });
+    reportContents.set(path, await readFile(path, "utf8"));
+  }
+
+  for (let i = 0; i < reportFiles.length; i++) {
+    const path = reportFiles[i];
+
+    // Respect per-minute rate limits by inserting a delay between files.
+    // For gpt-5 (1 RPM) set AI_INTER_REQUEST_DELAY_MS=65000 so requests
+    // never fire within the same minute window.
+    if (i > 0 && INTER_REQUEST_DELAY_MS > 0) {
+      console.log(`Waiting ${INTER_REQUEST_DELAY_MS}ms before next file to respect RPM limit...`);
+      await sleep(INTER_REQUEST_DELAY_MS);
+    }
+
+    const currentContent = reportContents.get(path);
+    // Provide the other reports as sibling context so the AI understands
+    // scope boundaries and avoids duplicating content between reports.
+    const siblingContent = reportFiles
+      .filter((p) => p !== path)
+      .map((p) => `=== ${p} ===\n${reportContents.get(p)}`)
+      .join("\n\n");
+
+    const updated = await generateUpdatedLatex({ path, currentContent, siblingContent, repoContext });
     if (updated !== currentContent) {
       await writeFile(path, updated, "utf8");
       console.log(`Updated ${path}`);
