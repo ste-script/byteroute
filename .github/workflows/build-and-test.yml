@@ -2,14 +2,16 @@ name: Build & Test CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - '**'
     branches-ignore:
-      - 'main'
-      - 'release/**'
+      - main
+
+  push:
+    branches-ignore:
+      - main
+      - release/**
     tags-ignore:
       - '*'
+
   workflow_dispatch:
 
 concurrency:
