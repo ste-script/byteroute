@@ -22,9 +22,11 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage[export]{adjustbox}
-\usetikzlibrary{petri,positioning}
+\usetikzlibrary{petri,positioning,shapes.geometric,arrows,fit,backgrounds}
 \usepackage{listings}
 \usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{longtable}
 
 \titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
 
@@ -75,86 +77,772 @@
 \tableofcontents{}
 \newpage
 
+% =========================================================
 \chapter{Introduction}
-This document is the ASW report template for the ByteRoute project. It summarizes the web-oriented architecture, components, and operational choices used to provide real-time visibility into network traffic destinations within a monorepo.
+% =========================================================
 
-\chapter{Project Context}
-The ByteRoute project is developed as part of the ASW (Architetture Software per il Web) course assignment. Its objective is to provide real-time visibility into network traffic destinations, enabling users to identify which servers and services their computer connects to. The scope includes designing and implementing a multi-component system for traffic monitoring, enrichment, and visualization. Constraints include Linux-only client support, authenticated backend ingestion, and reliance on MaxMind GeoLite2 databases for GeoIP enrichment. The monorepo is also used in a university SPE context, but this report focuses on ASW aspects (backend, API, and web dashboard).
+ByteRoute is a real-time network traffic monitoring platform developed as a university project
+for the ASW (\emph{Architetture Software per il Web}) course. Its core objective is to give users
+live, geolocated visibility into the internet destinations their computer reaches: which servers,
+autonomous systems, and countries receive their traffic, and in what volume.
 
-\chapter{Architecture and Design}
-The system is structured as a monorepo and consists of three main components:
+The system is built as a pnpm monorepo containing three independently deployable components:
+a lightweight Linux packet capture agent written in Go, a Node.js/Express backend with
+GeoIP enrichment and Socket.IO broadcasting, and a Vue.js~3 single-page dashboard. All
+components are packaged as Docker images and integrated through Docker Compose behind a
+Traefik reverse proxy, providing a production grade topology that can be started with a
+single command.
+
+The remainder of this report is organised as follows.
+Chapter~\ref{ch:requirements} describes user, functional, and non-functional requirements.
+Chapter~\ref{ch:design} presents the overall system architecture, data flow, domain model, and
+design decisions.
+Chapter~\ref{ch:technologies} surveys the key technologies employed.
+Chapter~\ref{ch:implementation} details notable implementation aspects of each component.
+Chapter~\ref{ch:testing} discusses testing strategy and coverage results.
+Chapter~\ref{ch:deployment} describes how the system is deployed.
+Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
+
+% =========================================================
+\chapter{Requirements}
+\label{ch:requirements}
+% =========================================================
+
+\section{User Requirements}
+
+The target users of ByteRoute are technically literate individuals---developers, system
+administrators, security researchers---who want transparent, real-time insight into the network
+activity of their workstations or servers.
+
 \begin{itemize}
-    \item \textbf{Client}: A Go-based Linux agent utilizing libpcap to capture packets, generate a BPF filter from local context (direction and local IPv4s) when not provided, deduplicate destination IPs, and batch-send connection records to the backend.
-    \item \textbf{Backend}: A Node.js/Express application that receives connection data, performs GeoIP enrichment using MaxMind GeoLite2, stores records in MongoDB, and broadcasts updates via Socket.IO. Authentication (bearer JWT) is enforced for ingestion and API endpoints. Data is stored per-tenant, and the backend exposes health and API endpoints.
-    \item \textbf{Dashboard}: A Vue.js 3 frontend (built with Vite) displaying a world map of traffic flows, live connection lists, statistics by ASN/country, and time-based charts. The dashboard communicates with the backend via REST and WebSocket.
+    \item Register an account on the platform and manage personal credentials.
+    \item Create one or more \emph{tenants} (logical monitoring contexts, e.g.\ one per host).
+    \item View a live world map showing where outbound connections are directed.
+    \item Inspect an up to date list of active connections enriched with country, city, and
+          ASN information.
+    \item Browse statistical breakdowns of traffic by country, ASN, and protocol.
+    \item Examine time series charts of connection volume.
+    \item Generate and revoke client tokens so that the Go agent can post data without
+          exposing the user's main JWT.
+    \item Switch between tenants to inspect different monitored hosts from the same dashboard.
 \end{itemize}
 
-Containerization is achieved with Docker and Docker Compose, enabling production-like deployments behind Traefik for routing. The dashboard is typically reachable at \url{http://localhost:8080}, and backend health at \url{http://localhost:8080/health}.
+\section{Functional Requirements}
 
-Shared code lives in \texttt{packages/shared} and includes MongoDB models (users, tenants, connections) and helpers intended to be reused by backend and seeding apps.
-
-\paragraph{Data flow}
 \begin{enumerate}
-    \item The client captures packets on a specified interface, applies a BPF, and emits flow/connection information.
-    \item The client deduplicates by either flow (5-tuple) or IP, aggregates into batches respecting record and payload size limits, and posts to the backend with bearer authentication.
-    \item The backend authenticates, resolves tenant access, enriches records via GeoLite2, upserts into MongoDB, and emits real-time updates over Socket.IO.
-    \item The dashboard consumes REST endpoints for initial state and Socket.IO for live updates and visualization.
+    \item \textbf{Packet capture}: The agent must capture IP packets on a specified network
+          interface using libpcap and derive $5$-tuple connection records.
+    \item \textbf{Deduplication}: The agent must deduplicate records either by full flow
+          ($5$-tuple: source IP, source port, destination IP, destination port, protocol) or by
+          source/destination IP pair before batching.
+    \item \textbf{Batching}: The agent must aggregate records into batches, respecting
+          configurable upper bounds on the number of records and the total JSON payload size.
+    \item \textbf{Authenticated ingestion}: The backend must accept batched connection records
+          only from authenticated clients presenting a valid bearer token.
+    \item \textbf{GeoIP enrichment}: The backend must resolve destination IP addresses to
+          geographic location (country, city, latitude/longitude) and autonomous system (ASN,
+          organisation name) using the MaxMind GeoLite2 databases.
+    \item \textbf{Persistence}: The backend must upsert enriched connection records into
+          MongoDB, partitioned by tenant.
+    \item \textbf{Real-time broadcasting}: The backend must push live connection updates and
+          periodic statistics snapshots to the dashboard via Socket.IO.
+    \item \textbf{REST API}: The backend must expose REST endpoints for authentication, tenant
+          management, connection ingestion, and statistics queries.
+    \item \textbf{Multi-tenancy}: Each user may own multiple tenants; data is always scoped to
+          a single tenant and never visible across tenant boundaries.
+    \item \textbf{Dashboard visualisation}: The frontend must render a world map, a paginated
+          connection list, and statistical charts, all updating in real time.
+    \item \textbf{Domain DSL}: The backend must load an optional YAML domain DSL at startup to
+          configure allowed protocols, ingestion rules, and analytics query parameters without
+          code changes.
 \end{enumerate}
 
-\paragraph{Security and multi-tenancy}
+\section{Non-Functional Requirements}
+
 \begin{itemize}
-    \item User signup/signin returns a JWT used for protected \texttt{/api/*} endpoints.
-    \item Tenants are created by authenticated users; ingestion and metrics are stored per-tenant.
-    \item Client tokens are created from a user session and used by the Go client for authenticated posting.
+    \item \textbf{Performance}: The backend should handle continuous ingestion from multiple
+          agents without perceptible latency on the dashboard.
+    \item \textbf{Security}: All \texttt{/api/*} and ingestion endpoints must be protected by
+          bearer JWT authentication; tokens for the agent are short lived (default 12 h).
+    \item \textbf{Portability}: The server side components must run on any platform via Docker;
+          the capture agent is Linux only due to libpcap dependency.
+    \item \textbf{Observability}: The system must expose a \texttt{/health} endpoint and
+          publish code coverage reports in CI.
+    \item \textbf{Maintainability}: The monorepo must support independent versioning and
+          testing of each package via pnpm workspaces and Turborepo.
+    \item \textbf{Scalability}: The tenant partitioned data model must accommodate multiple
+          monitored hosts without schema changes.
 \end{itemize}
 
+% =========================================================
+\chapter{Architecture and Design}
+\label{ch:design}
+% =========================================================
+
+\section{System Overview}
+
+The system is structured as a monorepo with the following top-level packages:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Package} & \textbf{Language} & \textbf{Role} \\
+\midrule
+\texttt{apps/client-go}   & Go              & Packet capture agent \\
+\texttt{apps/backend}     & TypeScript / Node.js & REST API + ingestion + Socket.IO \\
+\texttt{apps/dashboard}   & TypeScript / Vue.js~3 & SPA dashboard \\
+\texttt{packages/shared}  & TypeScript      & Shared Mongoose models and helpers \\
+\texttt{packages/typescript} & --           & Shared TypeScript base configuration \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Figure~\ref{fig:arch} shows the high-level deployment topology. Traefik acts as a single
+public entry point and routes requests based on path prefixes: \texttt{/api},
+\texttt{/auth}, \texttt{/socket.io}, and \texttt{/health} go to the backend container, while
+everything else is served by the dashboard's nginx container.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.4cm and 2.2cm,
+    box/.style={draw, rounded corners=3pt, minimum width=2.6cm, minimum height=0.9cm,
+                font=\small, align=center},
+    arr/.style={->, thick},
+    lbl/.style={font=\scriptsize\itshape}
+]
+
+% External
+\node[box, fill=gray!15] (client)  {Go Client\\(libpcap)};
+\node[box, fill=gray!15, below=0.8cm of client] (browser) {Browser\\(User)};
+
+% Traefik
+\node[box, fill=orange!20, right=2.2cm of client, yshift=-0.55cm] (traefik) {Traefik\\(reverse proxy)};
+
+% Backend
+\node[box, fill=blue!15, right=2.2cm of traefik, yshift=0.7cm] (backend) {Backend\\Node.js/Express};
+\node[box, fill=green!15, right=2.2cm of traefik, yshift=-0.7cm] (dashboard) {Dashboard\\nginx/Vue.js};
+
+% MongoDB
+\node[box, fill=yellow!20, right=2.0cm of backend] (mongo) {MongoDB};
+
+% Arrows
+\draw[arr] (client)  -- node[above, lbl]{POST /api/connections} (traefik);
+\draw[arr] (browser) -- node[below, lbl]{HTTP / WS} (traefik);
+\draw[arr] (traefik) -- node[above, lbl]{/api /auth} (backend);
+\draw[arr] (traefik) -- node[below, lbl]{/} (dashboard);
+\draw[arr] (backend) -- node[above, lbl]{Mongoose} (mongo);
+\draw[arr, dashed] (backend) to[bend right=20] node[right, lbl]{Socket.IO} (dashboard);
+
+\end{tikzpicture}
+\caption{Deployment topology of the ByteRoute system.}
+\label{fig:arch}
+\end{figure}
+
+\section{Data Flow}
+
+The end-to-end flow of a connection record through the system is as follows.
+
+\begin{enumerate}
+    \item The Go client opens a live capture on the specified interface with gopacket/pcap.
+          A BPF filter is applied: either user-supplied via \texttt{--bpf} or auto-generated
+          from the capture direction and the host's local IPv4 addresses.
+    \item Captured packets are decoded into flow records. Depending on the \texttt{--dedupe}
+          mode, records are deduplicated by 5-tuple (\texttt{flow}) or by source/destination
+          IP pair (\texttt{ip}).
+    \item On each flush interval (configurable via \texttt{--flush}), the flow table is
+          snapshotted, flows idle longer than \texttt{--idle-ttl} are dropped, and the
+          remaining records are split into batches respecting \texttt{--max-batch-conns} and
+          \texttt{--max-batch-bytes}.
+    \item Each batch is posted to \texttt{POST /api/connections} with a bearer token in the
+          \texttt{Authorization} header. The JSON body contains a
+          \texttt{reporterIp} field and a \texttt{connections} array.
+    \item The backend's Passport.js middleware validates the JWT and resolves the owning
+          tenant (from the \texttt{X-Tenant-Id} header, query parameter, or the user's first
+          tenant).
+    \item The Domain DSL is consulted to filter connections by allowed protocols and apply
+          ingestion rules.
+    \item For each connection, the backend performs a GeoIP lookup against the local MaxMind
+          GeoLite2 databases, resolving city, country, coordinates, ASN, and organisation.
+    \item Enriched records are upserted into MongoDB's \texttt{connections} collection,
+          partitioned by tenant ID.
+    \item The backend emits a \texttt{connections:update} Socket.IO event to all dashboard
+          clients subscribed to the affected tenant room.
+    \item Periodically (every \texttt{STATS\_EMIT\_INTERVAL} ms, default 30\,s), the backend
+          computes and emits aggregated statistics (by country, ASN, and protocol) via
+          Socket.IO.
+    \item The dashboard receives live events over its persistent Socket.IO connection and
+          updates the Pinia stores, which reactively re-render the map, list, and charts.
+\end{enumerate}
+
+\section{Backend Internal Architecture}
+
+The backend follows a layered architecture, as depicted in Figure~\ref{fig:backend}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.35cm
+]
+\node[draw, rounded corners=2pt, minimum width=9cm, minimum height=0.75cm,
+      font=\small\bfseries, align=center, fill=orange!20] (routes)
+      {Routes (\texttt{routes/})};
+\node[draw, rounded corners=2pt, minimum width=9cm, minimum height=0.75cm,
+      font=\small\bfseries, align=center, fill=blue!10, below=of routes] (ctrl)
+      {Controllers (\texttt{controllers/})};
+\node[draw, rounded corners=2pt, minimum width=9cm, minimum height=0.75cm,
+      font=\small\bfseries, align=center, fill=green!10, below=of ctrl] (svc)
+      {Services (\texttt{services/})};
+\node[draw, rounded corners=2pt, minimum width=9cm, minimum height=0.75cm,
+      font=\small\bfseries, align=center, fill=yellow!10, below=of svc] (infra)
+      {Infrastructure: Mongoose models, GeoIP, Auth, DSL (\texttt{infrastructure/})};
+\node[draw, rounded corners=2pt, minimum width=9cm, minimum height=0.75cm,
+      font=\small\bfseries, align=center, fill=gray!15, below=of infra] (db)
+      {MongoDB (via \texttt{packages/shared} Mongoose schemas)};
+\end{tikzpicture}
+\caption{Layered architecture of the Node.js backend.}
+\label{fig:backend}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Routes} (\texttt{src/routes/}): Register Express routers for
+          \texttt{/auth}, \texttt{/api/tenants}, \texttt{/api/connections},
+          \texttt{/api/metrics}, and \texttt{/health}.
+    \item \textbf{Controllers} (\texttt{src/controllers/}): Handle request parsing, input
+          validation, and response formation; delegate to services. A dedicated
+          \texttt{socket.controller.ts} manages Socket.IO connection lifecycle.
+    \item \textbf{Services} (\texttt{src/services/}): Contain business logic for connection
+          ingestion, statistics aggregation, and Socket.IO event emission.
+    \item \textbf{Infrastructure} (\texttt{src/infrastructure/}): Houses Mongoose model
+          definitions (mirroring those in \texttt{packages/shared}), Passport.js JWT
+          strategy, the GeoIP lookup wrapper, the Domain DSL compiler/loader, and
+          authentication primitives.
+    \item \textbf{Middleware} (\texttt{src/middleware/}): Express and Socket.IO middleware
+          for authentication, error handling, and tenant resolution.
+\end{itemize}
+
+\section{Domain Model}
+
+The persistent entities managed by the system are:
+
+\begin{center}
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Entity} & \textbf{Description} \\
+\midrule
+\texttt{User}       & An authenticated platform user. Stores hashed credentials and
+                       owns one or more tenants. \\
+\texttt{Tenant}     & A logical monitoring context (e.g.\ one per host or network
+                       segment). All connection and metrics records are scoped to a
+                       tenant. \\
+\texttt{Connection} & An enriched connection record with source/destination IPs,
+                       port, protocol, GeoIP data (country, city, coordinates, ASN,
+                       organisation), timestamp, and status. Indexed by tenant ID and
+                       destination IP for efficient upsert and query. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Security and Multi-Tenancy Design}
+
+Authentication is implemented with Passport.js using a JWT strategy. Two token types exist:
+
+\begin{itemize}
+    \item \textbf{User JWT} (default TTL: \texttt{1d}): issued at
+          \texttt{POST /auth/signup} and \texttt{POST /auth/signin}. Used by the dashboard and
+          for management API calls.
+    \item \textbf{Client token} (default TTL: \texttt{12h}): issued at
+          \texttt{POST /auth/client-token}. Used exclusively by the Go agent for ingestion, so
+          the user's primary credential is never stored on a host.
+\end{itemize}
+
+Tenants provide data isolation: every database query includes a \texttt{tenantId} filter, and
+the backend refuses to serve or store data for a tenant the authenticated user does not own.
+Tenant resolution follows a precedence chain: \texttt{X-Tenant-Id} header, then
+\texttt{tenantId} query parameter, then the user's first owned tenant, then the fallback
+string \texttt{"default"}.
+
+\section{Domain DSL}
+
+A YAML Domain DSL (\texttt{apps/backend/config/domain.dsl.yaml}) is compiled at startup and
+governs two concern areas without requiring code changes:
+
+\begin{itemize}
+    \item \texttt{ingestion.connection}: specifies allowed protocols
+          (\texttt{TCP}, \texttt{UDP}, \texttt{ICMP}, \texttt{OTHER}), default protocol and
+          status, and optionally a list of source IPs to deny.
+    \item \texttt{analytics.queries}: controls the sort field, order, and optional record
+          limit for each grouped statistics query (\texttt{byCountry}, \texttt{byAsn},
+          \texttt{byProtocol}).
+\end{itemize}
+
+\section{Go Client Internal Design}
+
+The Go client is organised into internal packages under \texttt{apps/client-go/internal/}:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Package} & \textbf{Responsibility} \\
+\midrule
+\texttt{capture}  & Opens the pcap handle, applies the BPF filter, and decodes packets
+                    into raw flow records. \\
+\texttt{flow}     & Maintains the in-memory flow table, handles deduplication and idle
+                    eviction. \\
+\texttt{backend}  & HTTP client that serialises batches into JSON and posts them to the
+                    backend with bearer authentication. \\
+\texttt{config}   & Parses CLI flags and environment variables into a unified
+                    configuration struct. \\
+\texttt{metrics}  & Collects and periodically posts system and capture metrics. \\
+\texttt{util}     & Shared utilities (IP parsing, BPF generation, etc.). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Dashboard Design}
+
+The Vue.js~3 SPA is structured following the Composition API pattern, with Pinia for state
+management and Vue Router for client-side navigation. Key areas of the source tree
+(\texttt{apps/dashboard/src/}) include:
+
+\begin{itemize}
+    \item \textbf{Views} (\texttt{views/}): Page-level components (map view, connections
+          list view, statistics view, login/register).
+    \item \textbf{Components} (\texttt{components/}): Reusable UI building blocks (charts,
+          tables, tenant selector, header).
+    \item \textbf{Stores} (\texttt{stores/}): Pinia stores keyed by feature
+          (connections, statistics, authentication); updated reactively by Socket.IO events.
+    \item \textbf{Services} (\texttt{services/}): Wrappers around the REST API (Axios
+          instance) and the Socket.IO client.
+    \item \textbf{Composables} (\texttt{composables/}): Reusable Composition API hooks
+          (e.g.\ for tenant resolution, locale formatting).
+    \item \textbf{Router} (\texttt{router/}): Route definitions with navigation guards that
+          redirect unauthenticated users to the login page.
+    \item \textbf{API} (\texttt{api/}): Typed function wrappers for each backend endpoint.
+\end{itemize}
+
+The development server (Vite) proxies \texttt{/api}, \texttt{/auth}, and
+\texttt{/socket.io} to the backend on port 4000, eliminating CORS issues during development.
+In production, Traefik provides the same unified origin.
+
+% =========================================================
+\chapter{Technologies}
+\label{ch:technologies}
+% =========================================================
+
+\section{Go and gopacket/libpcap}
+
+The capture agent is written in Go (version $\geq$~1.26) and relies on the
+\texttt{gopacket} library with the \texttt{pcap} backend to perform kernel assisted, BPF filtered
+packet capture. Go's concurrency model (goroutines and channels) is used to pipeline packet
+decoding and flow-table maintenance without blocking the pcap loop.
+
+\section{Node.js and Express}
+
+The backend targets Node.js with the Express~5 framework. Express provides a minimal,
+middleware oriented HTTP server. The \texttt{express.json()} body parser is configured with a
+2\,MB limit to match the client's \texttt{--max-batch-bytes} default. A
+\texttt{requestTimeout} of 30\,s is set on the underlying \texttt{http.Server} to prevent
+stalled connections from blocking the event loop.
+
+\section{Socket.IO}
+
+Socket.IO is layered directly on the same \texttt{http.Server} as Express. It is used
+exclusively for server-to-client push: the backend emits \texttt{connections:update} events
+when new batches arrive, and aggregated statistics events every 30 seconds. CORS is enabled
+for all origins in development (restricted in production by Traefik).
+
+\section{Passport.js and JWT}
+
+Authentication uses Passport.js with the \texttt{passport-jwt} strategy. JWTs are signed with
+a configurable HSA256 secret (\texttt{JWT\_SECRET}). Separate token lifetimes apply to user
+sessions (\texttt{AUTH\_TOKEN\_TTL}) and client tokens
+(\texttt{AUTH\_CLIENT\_TOKEN\_TTL}).
+
+\section{MongoDB and Mongoose}
+
+MongoDB~8 is the persistence layer. Mongoose provides a schema on write ODM. The
+\texttt{connections} collection is upserted on each ingestion batch (matching on
+\texttt{tenantId} and destination IP) to avoid duplicates. The
+\texttt{packages/shared} package centralises Mongoose schemas (\texttt{UserModel},
+\texttt{TenantModel}, \texttt{ConnectionModel}) to prevent divergence between the backend and
+seeding scripts.
+
+\section{Vue.js 3 and Pinia}
+
+The dashboard is a Vue.js~3 SPA compiled with Vite. The Composition API and
+\texttt{<script setup>} syntax are used throughout. Pinia replaces Vuex as the state
+management library, providing a simpler, TypeScript friendly API with full devtools support.
+
+\section{Docker Compose and Traefik}
+
+Four services are defined in \texttt{docker-compose.yml}: \texttt{traefik},
+\texttt{mongodb}, \texttt{backend}, and \texttt{dashboard}. Traefik~3.6 acts as the single
+public entry point on port 8080 (configurable) and routes requests by path prefix using Docker
+label rules. MongoDB health checks ensure the backend container only starts once the database
+is ready. The backend container downloads GeoLite2 databases automatically on first start via
+a Docker entrypoint script.
+
+\section{CI/CD: GitHub Actions and semantic-release}
+
+The CI pipeline (\texttt{.github/workflows/build-and-test.yml}) runs on each push and pull
+request: it installs dependencies, builds all packages, runs backend unit and end-to-end
+tests, and runs Go tests with coverage. Coverage is merged and published as a Markdown
+summary using the \texttt{irongut/CodeCoverageSummary} action. Releases are fully automated
+with \texttt{semantic-release} + \texttt{@semantic-release/git}: conventional commits drive
+version bumps, changelog updates, and GitHub Release creation.
+
+% =========================================================
 \chapter{Implementation Notes}
-The monorepo leverages pnpm for dependency management and workspace orchestration. The Go client is built from source or run via Docker, requiring elevated privileges for packet capture. Relevant flags include:
+\label{ch:implementation}
+% =========================================================
+
+\section{Client: BPF Filter Generation}
+
+When the user does not supply \texttt{--bpf}, the client introspects the capture interface
+to enumerate its IPv4 addresses and constructs a directional BPF expression. For
+\texttt{--direction=out} (the default), the filter matches outbound packets:
+\texttt{src host <local\_ip>}. This ensures that the agent does not record traffic
+originating from other hosts on the same broadcast domain.
+
+\section{Client: Batching and Flush}
+
+The flush loop runs on a configurable ticker. On each tick, the flow table is atomically
+snapshotted and cleared. Idle flows (not seen within \texttt{--idle-ttl}) are evicted before
+the snapshot. The remaining records are serialised and split at the first boundary that would
+exceed \texttt{--max-batch-conns} or \texttt{--max-batch-bytes}, then each batch is posted
+sequentially to the backend.
+
+\section{Backend: Ingestion Pipeline}
+
+Code~\ref{lst:ingest} shows a simplified view of the ingestion handler:
+the Domain DSL is consulted to filter connections by allowed protocol, GeoIP enrichment is
+applied, and records are bulk-upserted via Mongoose.
+
+\begin{lstlisting}[language={}, caption={Simplified ingestion pipeline (TypeScript).}, label=lst:ingest]
+async function ingestConnections(ctx, tenantId, body) {
+  const { connections, reporterIp } = body;
+
+  // 1. Apply Domain DSL ingestion rules
+  const filtered = compiledDsl.filterConnections(connections);
+
+  // 2. GeoIP enrichment
+  const enriched = filtered.map((conn) => ({
+    ...conn,
+    geo: geoipLookup(conn.destIp),
+    asn: asnLookup(conn.destIp),
+  }));
+
+  // 3. Upsert into MongoDB (partitioned by tenant)
+  await ConnectionModel.bulkWrite(
+    enriched.map((c) => ({
+      updateOne: {
+        filter: { tenantId, destIp: c.destIp },
+        update: { $set: { ...c, tenantId } },
+        upsert: true,
+      },
+    }))
+  );
+
+  // 4. Push live update to connected dashboard clients
+  io.to(tenantId).emit("connections:update", enriched);
+}
+\end{lstlisting}
+
+\section{Backend: Statistics Emission}
+
+Every \texttt{STATS\_EMIT\_INTERVAL} milliseconds the backend runs MongoDB aggregation
+pipelines to compute grouped statistics (by country, ASN, and protocol) for every active
+tenant, and emits the results as Socket.IO events. The aggregation sort order and optional
+limit are driven by the Domain DSL \texttt{analytics.queries} configuration, allowing the
+operator to tune result sets without redeployment.
+
+\section{Backend: Environment Configuration}
+
+Table~\ref{tab:env} lists the most important backend environment variables.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{5.5cm}}
+\toprule
+\textbf{Variable} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{MONGODB\_URI}                  & \texttt{mongodb://mongodb:27017/byteroute} & MongoDB connection string \\
+\texttt{JWT\_SECRET}                   & (required)   & HMAC-SHA256 signing key \\
+\texttt{PORT}                          & \texttt{4000} & HTTP listening port \\
+\texttt{MAXMIND\_USER\_ID}             & --           & MaxMind account ID \\
+\texttt{MAXMIND\_API\_KEY}             & --           & MaxMind license key \\
+\texttt{CONNECTIONS\_BOOTSTRAP\_LIMIT} & \texttt{500} & Max connections loaded on startup \\
+\texttt{STATS\_EMIT\_INTERVAL}         & \texttt{30000} & Statistics emission period (ms) \\
+\texttt{AUTH\_TOKEN\_TTL}              & \texttt{1d}  & User JWT expiry \\
+\texttt{AUTH\_CLIENT\_TOKEN\_TTL}      & \texttt{12h} & Client token expiry \\
+\bottomrule
+\end{tabular}
+\caption{Key backend environment variables.}
+\label{tab:env}
+\end{table}
+
+\section{Client: Environment Variables}
+
+The Go client supports both CLI flags and environment variable equivalents:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Variable} & \textbf{CLI flag} \\
+\midrule
+\texttt{BYTEROUTE\_BACKEND\_URL}  & \texttt{--backend} \\
+\texttt{BYTEROUTE\_AUTH\_TOKEN}   & \texttt{--auth-token} \\
+\texttt{BYTEROUTE\_IFACE}         & \texttt{--iface} \\
+\texttt{BYTEROUTE\_BPF}           & \texttt{--bpf} \\
+\texttt{BYTEROUTE\_REPORTER\_IP}  & \texttt{--reporter-ip} \\
+\texttt{BYTEROUTE\_HOST\_ID}      & (host identifier) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{REST API Reference}
+
+Code~\ref{lst:curl} demonstrates the standard authentication and setup workflow using
+\texttt{curl}, showing the exact sequence a new user would follow to start ingesting data.
+
+\begin{lstlisting}[language=bash, caption={Authentication and setup via cURL.}, label=lst:curl]
+# 1. Register and obtain a user JWT
+AUTH_TOKEN=$(curl -sS -X POST http://localhost:8080/auth/signup \
+  -H 'content-type: application/json' \
+  -d '{"name":"Demo","email":"demo@byteroute.dev","password":"secret"}' \
+  | jq -r '.token')
+
+# 2. Create a tenant
+curl -sS -X POST http://localhost:8080/api/tenants \
+  -H "authorization: Bearer $AUTH_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"name":"My Laptop"}'
+
+# 3. Generate a short-lived client token for the Go agent
+CLIENT_TOKEN=$(curl -sS -X POST http://localhost:8080/auth/client-token \
+  -H "authorization: Bearer $AUTH_TOKEN" \
+  | jq -r '.token')
+
+# 4. Start the capture agent
+sudo ./byteroute-client \
+  --iface eth0 \
+  --backend http://localhost:8080 \
+  --auth-token "$CLIENT_TOKEN" \
+  --flush 5s
+\end{lstlisting}
+
+Table~\ref{tab:api} summarises the full API surface.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{5.5cm}}
+\toprule
+\textbf{Method \& Path} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+\texttt{POST /auth/signup}        & No  & Create account; returns user JWT \\
+\texttt{POST /auth/signin}        & No  & Authenticate; returns user JWT \\
+\texttt{GET  /auth/me}            & Yes & Current user info \\
+\texttt{POST /auth/client-token}  & Yes & Issue a short-lived agent token \\
+\texttt{GET  /api/tenants}        & Yes & List tenants owned by user \\
+\texttt{POST /api/tenants}        & Yes & Create a new tenant \\
+\texttt{POST /api/connections}    & Yes & Ingest a batch of connections \\
+\texttt{POST /api/metrics}        & Yes & Ingest metrics snapshots \\
+\texttt{GET  /health}             & No  & Returns \texttt{200 OK} when ready \\
+\bottomrule
+\end{tabular}
+\caption{Backend REST API endpoints.}
+\label{tab:api}
+\end{table}
+
+\section{Ingestion Payload Schema}
+
+The client posts the following JSON structure to \texttt{POST /api/connections}:
+
+\begin{lstlisting}[language={}, caption={Connection ingestion payload.}, label=lst:payload]
+{
+  "reporterIp": "203.0.113.10",
+  "connections": [
+    {
+      "id": "tcp-192.0.2.5:443-203.0.113.10:52301",
+      "sourceIp": "192.0.2.5",
+      "sourcePort": 443,
+      "destIp": "203.0.113.10",
+      "destPort": 52301,
+      "protocol": "TCP"
+    }
+  ]
+}
+\end{lstlisting}
+
+The backend responds with HTTP~202 Accepted after enqueuing the enrichment and upsert
+operations.
+
+% =========================================================
+\chapter{Testing and Validation}
+\label{ch:testing}
+% =========================================================
+
+\section{Backend Testing Strategy}
+
+The backend test suite is located in \texttt{apps/backend/test/} and is executed with Vitest.
+Two test categories are distinguished:
+
 \begin{itemize}
-    \item \texttt{--iface}: capture interface (required)
-    \item \texttt{--direction}: \texttt{out} (default), \texttt{in}, or \texttt{both}
-    \item \texttt{--bpf}: custom BPF filter; if omitted, a default is generated
-    \item \texttt{--reporter-ip}: optional WAN IP to geo-locate private sources
-    \item \texttt{--dedupe}: \texttt{flow} or \texttt{ip}
-    \item \texttt{--max-batch-conns}, \texttt{--max-batch-bytes}: batch sizing
-    \item \texttt{--idle-ttl}, \texttt{--flush} (alias: \texttt{--flow})
-    \item \texttt{--auth-token}: bearer token for backend requests
+    \item \textbf{Unit tests}: cover individual services, middleware, utility functions, and
+          domain logic in isolation. External dependencies (MongoDB, MaxMind) are replaced
+          with mocks defined in \texttt{test/mocks/}.
+    \item \textbf{End-to-end (E2E) tests}: spin up the full Express application (including
+          a real MongoDB instance and an in process Socket.IO server) and exercise complete
+          request-response cycles. Test fixtures cover authentication flows, connection
+          ingestion, tenant creation, and statistics emission. The E2E suite is located in
+          \texttt{test/features/}.
 \end{itemize}
 
-Backend environment variables configure MongoDB, authentication, and MaxMind credentials. For Docker Compose quickstart, set:
-\begin{itemize}
-    \item \texttt{MAXMIND\_USER\_ID}
-    \item \texttt{MAXMIND\_API\_KEY}
-    \item \texttt{JWT\_SECRET}
-\end{itemize}
-Client environment variables include:
-\begin{itemize}
-    \item \texttt{BYTEROUTE\_BACKEND\_URL}
-    \item \texttt{BYTEROUTE\_AUTH\_TOKEN}
-    \item \texttt{BYTEROUTE\_IFACE}, \texttt{BYTEROUTE\_BPF}
-    \item \texttt{BYTEROUTE\_REPORTER\_IP}
-    \item \texttt{BYTEROUTE\_HOST\_ID}
-\end{itemize}
+Scripts in \texttt{apps/backend/scripts/} handle coverage merging between the two test
+runs (\texttt{merge-coverage.mjs}) so that a unified coverage report is produced for the
+GitHub Actions job summary.
 
-\paragraph{API overview}
+\section{Go Client Testing}
+
+Go unit tests accompany each internal package. The coverage output is produced with
+\texttt{go test -coverprofile=coverage.out ./...} and converted to Cobertura XML for
+consumption by the \texttt{irongut/CodeCoverageSummary} action.
+
+\section{CI Coverage Reporting}
+
+The GitHub Actions workflow merges backend (Vitest V8) and Go coverage reports and publishes
+a line-coverage summary as a job annotation. Artifacts uploaded per run include:
+
 \begin{itemize}
-    \item \texttt{POST /auth/signup}, \texttt{POST /auth/signin}: returns user JWT
-    \item \texttt{POST /api/tenants}: create a tenant (authenticated)
-    \item \texttt{POST /auth/client-token}: create a client token (authenticated)
-    \item \texttt{POST /api/connections}: ingest batched connections (authenticated, per-tenant)
-    \item \texttt{GET /health}: backend health check
+    \item \texttt{coverage-reports}: HTML coverage report and
+          \texttt{code-coverage-results.md} for the backend.
+    \item \texttt{coverage-go}: raw \texttt{coverage.out} and Cobertura XML for Go.
 \end{itemize}
 
-\paragraph{Payload}
-The client posts to \texttt{POST /api/connections} a JSON body with reporter IP and an array of connections. The backend enriches with GeoLite2 and upserts records in MongoDB.
+\section{Integration Validation}
 
-\paragraph{CI/CD and releases}
-CI uses GitHub Actions to build and test components, validate LaTeX compilation of docs, and publish coverage. Coverage is generated for backend and Go client; a Markdown summary is published via \texttt{irongut/CodeCoverageSummary}. Artifacts include \texttt{coverage-reports} (HTML report and summary) and \texttt{coverage-go} (Go coverage files). Releases are automated with \texttt{semantic-release}, producing GitHub releases and committing changelog/version bumps.
+The system was validated end-to-end by:
 
-\chapter{Validation and Results}
-Testing includes unit and end-to-end tests for backend logic, as well as integration tests for client-backend communication. Coverage summaries are published in CI job outputs. The system was validated by deploying the stack via Docker Compose, registering users and tenants, generating a client token, and ingesting live traffic from the Go client. The dashboard was reachable at \texttt{http://localhost:8080}, and backend health at \texttt{/health}. Limitations include Linux-only client support and dependency on external GeoIP databases. The CI artifacts \texttt{coverage-reports} and \texttt{coverage-go} provide reproducible coverage evidence.
+\begin{enumerate}
+    \item Deploying the full stack with \texttt{docker compose up -d}.
+    \item Verifying \texttt{GET /health} returns \texttt{200 OK}.
+    \item Registering a user and creating a tenant via the dashboard UI.
+    \item Generating a client token and launching the Go agent against a local interface.
+    \item Observing real-time connection updates appearing on the live map and connection
+          list in the dashboard.
+    \item Confirming GeoIP enrichment by checking that known public IP destinations were
+          resolved to their correct country and ASN.
+\end{enumerate}
 
+% =========================================================
+\chapter{Deployment}
+\label{ch:deployment}
+% =========================================================
+
+\section{Prerequisites}
+
+\begin{itemize}
+    \item Docker and Docker Compose.
+    \item A free MaxMind account to obtain a \texttt{MAXMIND\_USER\_ID} and
+          \texttt{MAXMIND\_API\_KEY} (required for GeoLite2 database download at container
+          startup).
+    \item On the capture host: Linux with  libpcap headers, or the ability to run the
+          pre-built Docker image with \texttt{--network host} and the
+          \texttt{cap\_net\_raw,cap\_net\_admin} Linux capabilities.
+\end{itemize}
+
+\section{Docker Compose Quickstart}
+
+\begin{lstlisting}[language=bash, caption={Production deployment with Docker Compose.}, label=lst:deploy]
+# 1. Create .env in the repo root
+cat > .env <<EOF
+MAXMIND_USER_ID=<your_id>
+MAXMIND_API_KEY=<your_key>
+JWT_SECRET=$(openssl rand -hex 32)
+EOF
+
+# 2. Start the stack (Traefik + MongoDB + backend + dashboard)
+docker compose up -d
+
+# 3. Verify
+curl http://localhost:8080/health   # should return 200 OK
+\end{lstlisting}
+
+The backend Docker entrypoint (\texttt{docker-entrypoint.sh}) runs a MaxMind download
+script before starting the Node.js process, ensuring the GeoLite2 databases are present at
+runtime.
+
+\section{Development Setup}
+
+From the repository root (requires Node.js $\geq$~the version pinned in
+\texttt{package.json} and pnpm):
+
+\begin{lstlisting}[language=bash, caption={Local development setup.}, label=lst:devsetup]
+pnpm install           # install all workspaces
+pnpm -F @byteroute/backend dev      # backend on :4000
+pnpm -F @byteroute/dashboard dev    # dashboard on :3000
+\end{lstlisting}
+
+For the Go client (requires Go $\geq$~1.26 and \texttt{libpcap-dev}):
+
+\begin{lstlisting}[language=bash, caption={Building and running the Go client from source.}, label=lst:gobuild]
+cd apps/client-go
+go mod tidy
+go build -o byteroute-client ./cmd/byteroute-client
+
+# Run with elevated privileges
+sudo ./byteroute-client \
+  --iface eth0 \
+  --backend http://localhost:4000 \
+  --auth-token "$CLIENT_TOKEN" \
+  --flush 5s
+\end{lstlisting}
+
+\section{CI/CD and Release Process}
+
+On every push to the default branch that contains conventional commits, \texttt{semantic-release}:
+
+\begin{enumerate}
+    \item Analyses commit messages to determine the next semantic version.
+    \item Updates \texttt{CHANGELOG.md} and workspace \texttt{package.json} files.
+    \item Creates a tagged GitHub Release with auto-generated release notes.
+    \item Triggers Docker image builds for \texttt{byteroute-backend} and
+          \texttt{byteroute-dashboard}, which are pushed to the GitHub Container
+          Registry (\texttt{ghcr.io/ste-script/}).
+\end{enumerate}
+
+% =========================================================
 \chapter{Conclusion}
-ByteRoute demonstrates a modular approach to real-time network traffic monitoring and visualization. The architecture supports authenticated multi-tenant ingestion, enrichment, and live analytics through a web-oriented stack (Node.js/Express, Socket.IO, Vue.js). Future improvements may include cross-platform client support, enhanced enrichment sources, and expanded analytics features.
+\label{ch:conclusion}
+% =========================================================
+
+ByteRoute delivers a complete, end-to-end solution for real-time network traffic monitoring
+and geo-visualisation. The architecture cleanly separates concerns across three independently
+deployable components---Go capture agent, Node.js/Express backend, and Vue.js~3 dashboard---
+connected through well defined REST and WebSocket contracts.
+
+Key design strengths include the multi-tenancy model, which allows a single backend instance
+to serve multiple monitored hosts; the Domain DSL, which externalises configuration concerns
+such as protocol filtering and statistics shaping; and the short-lived client token, which
+decouples the capture agent's credential lifetime from the user session.
+
+The testing strategy combines Vitest unit and end-to-end tests for the backend with Go
+coverage, all integrated in a single GitHub Actions workflow that publishes reproducible
+coverage summaries and enforces a quality gate on every pull request.
+
+Possible directions for future work include:
+
+\begin{itemize}
+    \item \textbf{Cross-platform client}: porting the capture agent to macOS and Windows
+          using platform-appropriate packet-capture APIs.
+    \item \textbf{Enhanced enrichment}: integrating additional sources such as RDAP or
+          threat-intelligence feeds to label connections as potentially malicious.
+    \item \textbf{Alert rules}: allowing users to configure threshold based or
+          pattern based alerts with dashboard notifications or email delivery.
+    \item \textbf{Horizontal scalability}: replacing the single in process Socket.IO
+          server with a Redis adapter to support multiple backend instances behind
+          a load balancer.
+\end{itemize}
 
 \end{document}
