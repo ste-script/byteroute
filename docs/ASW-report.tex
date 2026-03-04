@@ -76,85 +76,91 @@
 \newpage
 
 \chapter{Introduction}
-This document is the ASW report template for the ByteRoute project. It summarizes the web-oriented architecture, components, and operational choices used to provide real-time visibility into network traffic destinations within a monorepo.
+This document details the ASW domains for the ByteRoute project, a web-oriented traffic monitoring platform. The focus is on system architecture, components, and operational choices for real-time visibility into network connection destinations using a monorepo structure.
 
 \chapter{Project Context}
-The ByteRoute project is developed as part of the ASW (Architetture Software per il Web) course assignment. Its objective is to provide real-time visibility into network traffic destinations, enabling users to identify which servers and services their computer connects to. The scope includes designing and implementing a multi-component system for traffic monitoring, enrichment, and visualization. Constraints include Linux-only client support, authenticated backend ingestion, and reliance on MaxMind GeoLite2 databases for GeoIP enrichment. The monorepo is also used in a university SPE context, but this report focuses on ASW aspects (backend, API, and web dashboard).
+ByteRoute is a university project for the ASW (Architetture Software per il Web) course. Its aim is to deliver live network destination visibility, helping users discover the services and servers their computers connect to. The project encompasses the design and implementation of multi-component monitoring, enrichment, and visualization, limited to Linux clients, authentication for backend ingestion, and GeoIP enrichment (MaxMind GeoLite2). ASW scope centers on backend, APIs, and dashboard; the project also serves SPE coursework, but this report isolates web aspects.
 
 \chapter{Architecture and Design}
-The system is structured as a monorepo and consists of three main components:
+The monorepo organizes the application into three main web-centric modules:
+
 \begin{itemize}
-    \item \textbf{Client}: A Go-based Linux agent utilizing libpcap to capture packets, generate a BPF filter from local context (direction and local IPv4s) when not provided, deduplicate destination IPs, and batch-send connection records to the backend.
-    \item \textbf{Backend}: A Node.js/Express application that receives connection data, performs GeoIP enrichment using MaxMind GeoLite2, stores records in MongoDB, and broadcasts updates via Socket.IO. Authentication (bearer JWT) is enforced for ingestion and API endpoints. Data is stored per-tenant, and the backend exposes health and API endpoints.
-    \item \textbf{Dashboard}: A Vue.js 3 frontend (built with Vite) displaying a world map of traffic flows, live connection lists, statistics by ASN/country, and time-based charts. The dashboard communicates with the backend via REST and WebSocket.
+    \item \textbf{Client}: A Go agent for Linux, built on libpcap. It auto-generates BPF filters based on direction and local IPs or accepts custom filters, deduplicates destination IPs, and batch-posts network connection records to the backend.
+    \item \textbf{Backend}: Node.js/Express app. It authenticates incoming events (bearer JWT), resolves tenants, runs GeoIP enrichment (MaxMind GeoLite2), stores data in MongoDB, and emits real-time updates via Socket.IO. All ingestion and API endpoints require authentication, and data is isolated by tenant.
+    \item \textbf{Dashboard}: Vue.js 3 SPA developed with Vite. Shows a world map, live connection flow, top ASN/country statistics, and time charts. Fetches state via REST, receives live updates via Socket.IO.
 \end{itemize}
 
-Containerization is achieved with Docker and Docker Compose, enabling production-like deployments behind Traefik for routing. The dashboard is typically reachable at \url{http://localhost:8080}, and backend health at \url{http://localhost:8080/health}.
+Containerization is provided through Docker and Docker Compose. The stack is routed via Traefik and typically exposes the dashboard at \url{http://localhost:8080} and backend health at \url{http://localhost:8080/health}.
 
-Shared code lives in \texttt{packages/shared} and includes MongoDB models (users, tenants, connections) and helpers intended to be reused by backend and seeding apps.
+Shared code and models are placed in \texttt{packages/shared}, including MongoDB schemas (users, tenants, connections) and code reused by backend and utilities.
 
 \paragraph{Data flow}
 \begin{enumerate}
-    \item The client captures packets on a specified interface, applies a BPF, and emits flow/connection information.
-    \item The client deduplicates by either flow (5-tuple) or IP, aggregates into batches respecting record and payload size limits, and posts to the backend with bearer authentication.
-    \item The backend authenticates, resolves tenant access, enriches records via GeoLite2, upserts into MongoDB, and emits real-time updates over Socket.IO.
-    \item The dashboard consumes REST endpoints for initial state and Socket.IO for live updates and visualization.
+    \item The client captures packets from a specific interface with a BPF filter, emits connection data.
+    \item It deduplicates connections by flow or IP, aggregates to batch respecting limits, and posts to the backend with authentication.
+    \item The backend authenticates, maps tenants, enriches connections via GeoLite2, inserts/upserts in MongoDB, and broadcasts through Socket.IO.
+    \item The dashboard queries state via REST and displays live updates received through Socket.IO.
 \end{enumerate}
 
 \paragraph{Security and multi-tenancy}
 \begin{itemize}
-    \item User signup/signin returns a JWT used for protected \texttt{/api/*} endpoints.
-    \item Tenants are created by authenticated users; ingestion and metrics are stored per-tenant.
-    \item Client tokens are created from a user session and used by the Go client for authenticated posting.
+    \item User signup/signin returns a JWT for private API endpoints.
+    \item Tenants are managed under users; connection ingestion and stats are scoped per tenant.
+    \item Client-specific tokens are issued and used on the Go client for authenticated reporting.
 \end{itemize}
 
 \chapter{Implementation Notes}
-The monorepo leverages pnpm for dependency management and workspace orchestration. The Go client is built from source or run via Docker, requiring elevated privileges for packet capture. Relevant flags include:
+The repository uses pnpm for managing dependencies and workspace orchestration. The Go client is built or run in a container, requiring root privileges for packet capture.
+
+Relevant client flags:
 \begin{itemize}
-    \item \texttt{--iface}: capture interface (required)
-    \item \texttt{--direction}: \texttt{out} (default), \texttt{in}, or \texttt{both}
-    \item \texttt{--bpf}: custom BPF filter; if omitted, a default is generated
-    \item \texttt{--reporter-ip}: optional WAN IP to geo-locate private sources
-    \item \texttt{--dedupe}: \texttt{flow} or \texttt{ip}
+    \item \texttt{--iface}: network interface (required)
+    \item \texttt{--direction}: \texttt{out} (default), \texttt{in}, \texttt{both}
+    \item \texttt{--bpf}: custom BPF filter, else auto-generated
+    \item \texttt{--reporter-ip}: optional WAN IP for geo-location
+    \item \texttt{--dedupe}: deduplication mode (\texttt{flow} or \texttt{ip})
     \item \texttt{--max-batch-conns}, \texttt{--max-batch-bytes}: batch sizing
-    \item \texttt{--idle-ttl}, \texttt{--flush} (alias: \texttt{--flow})
-    \item \texttt{--auth-token}: bearer token for backend requests
+    \item \texttt{--idle-ttl}, \texttt{--flush}
+    \item \texttt{--auth-token}: authentication for backend
 \end{itemize}
 
-Backend environment variables configure MongoDB, authentication, and MaxMind credentials. For Docker Compose quickstart, set:
+Backend configuration via env variables:
 \begin{itemize}
     \item \texttt{MAXMIND\_USER\_ID}
     \item \texttt{MAXMIND\_API\_KEY}
     \item \texttt{JWT\_SECRET}
+    \item \texttt{MONGO\_URL}
 \end{itemize}
-Client environment variables include:
+
+Client environment variables:
 \begin{itemize}
     \item \texttt{BYTEROUTE\_BACKEND\_URL}
     \item \texttt{BYTEROUTE\_AUTH\_TOKEN}
-    \item \texttt{BYTEROUTE\_IFACE}, \texttt{BYTEROUTE\_BPF}
+    \item \texttt{BYTEROUTE\_IFACE}
+    \item \texttt{BYTEROUTE\_BPF}
     \item \texttt{BYTEROUTE\_REPORTER\_IP}
     \item \texttt{BYTEROUTE\_HOST\_ID}
 \end{itemize}
 
 \paragraph{API overview}
 \begin{itemize}
-    \item \texttt{POST /auth/signup}, \texttt{POST /auth/signin}: returns user JWT
-    \item \texttt{POST /api/tenants}: create a tenant (authenticated)
-    \item \texttt{POST /auth/client-token}: create a client token (authenticated)
-    \item \texttt{POST /api/connections}: ingest batched connections (authenticated, per-tenant)
-    \item \texttt{GET /health}: backend health check
+    \item \texttt{POST /auth/signup}, \texttt{POST /auth/signin}: issues a JWT
+    \item \texttt{POST /api/tenants}: creates a tenant (requires authentication)
+    \item \texttt{POST /auth/client-token}: generates client token (authenticated)
+    \item \texttt{POST /api/connections}: ingests connection batches (authenticated, tenant-scoped)
+    \item \texttt{GET /health}: checks backend health
 \end{itemize}
 
 \paragraph{Payload}
-The client posts to \texttt{POST /api/connections} a JSON body with reporter IP and an array of connections. The backend enriches with GeoLite2 and upserts records in MongoDB.
+The client sends a JSON body to \texttt{POST /api/connections} with reporter IP and an array of connection objects; the backend enriches and upserts in MongoDB.
 
 \paragraph{CI/CD and releases}
-CI uses GitHub Actions to build and test components, validate LaTeX compilation of docs, and publish coverage. Coverage is generated for backend and Go client; a Markdown summary is published via \texttt{irongut/CodeCoverageSummary}. Artifacts include \texttt{coverage-reports} (HTML report and summary) and \texttt{coverage-go} (Go coverage files). Releases are automated with \texttt{semantic-release}, producing GitHub releases and committing changelog/version bumps.
+CI is orchestrated with GitHub Actions: it builds/tests components, checks LaTeX documentation compilation, and publishes coverage. Coverage is reported for backend and client; summaries are posted via \texttt{irongut/CodeCoverageSummary}. Release processes are automated with \texttt{semantic-release}, producing GitHub releases with version bumps and changelogs.
 
 \chapter{Validation and Results}
-Testing includes unit and end-to-end tests for backend logic, as well as integration tests for client-backend communication. Coverage summaries are published in CI job outputs. The system was validated by deploying the stack via Docker Compose, registering users and tenants, generating a client token, and ingesting live traffic from the Go client. The dashboard was reachable at \texttt{http://localhost:8080}, and backend health at \texttt{/health}. Limitations include Linux-only client support and dependency on external GeoIP databases. The CI artifacts \texttt{coverage-reports} and \texttt{coverage-go} provide reproducible coverage evidence.
+Verification includes unit and integration tests for backend, as well as client-backend communication and coverage checks. Deployments via Docker Compose, user/tenant registration, client token setup, and ingestion from the client demonstrated live operation. The dashboard and health endpoints were accessible as expected. Linux-only client support and reliance on external GeoIP databases are current limitations. CI provides coverage evidence via \texttt{coverage-reports} and \texttt{coverage-go}.
 
 \chapter{Conclusion}
-ByteRoute demonstrates a modular approach to real-time network traffic monitoring and visualization. The architecture supports authenticated multi-tenant ingestion, enrichment, and live analytics through a web-oriented stack (Node.js/Express, Socket.IO, Vue.js). Future improvements may include cross-platform client support, enhanced enrichment sources, and expanded analytics features.
+ByteRoute delivers modular, authenticated, multi-tenant network monitoring and visualization. The architecture supports data enrichment and realtime analytics through a modern web stack. Potential improvements are cross-platform clients, richer enrichment data, and extended analytics.
 
 \end{document}

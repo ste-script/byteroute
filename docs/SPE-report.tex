@@ -132,37 +132,31 @@ Contracts and models in the shared package reduce mismatch risks between produce
 
 \section{Backend Application}
 
-The backend application is implemented in TypeScript (Node.js/Express) and organized by domain-focused modules (auth, controllers, routes, services, middleware, and infrastructure). It includes:
-\begin{itemize}
-  \item GeoIP enrichment and Socket.IO broadcasting for live updates;
-  \item MongoDB persistence for connection records and analytics;
-  \item dedicated unit and feature test directories;
-  \item scripts for coverage aggregation and database preparation;
-  \item Docker support for containerized execution.
-\end{itemize}
+The backend application is implemented in TypeScript (Node.js/Express) and exposes APIs for client ingestion and dashboard consumption. Real-time updates are delivered via Socket.IO. The backend is responsible for managing received batches, performing GeoIP enrichment, persisting data to MongoDB, and emitting events to frontend subscribers.
 
-This reflects a mature service architecture with explicit separation between HTTP interfaces, real-time channels, business logic, and persistence concerns.
+Authentication and user/tenant separation are supported. Enrichment leverages the latest versions of GeoIP databases; the backend handles mapping to ASN and country information for each connection.
 
 \section{Dashboard Application}
 
-The dashboard follows a modern frontend structure with dedicated folders for components, composables, stores, services, and views. This promotes:
+The dashboard is a Vue.js SPA, built with Vite for performance. It receives real-time telemetry from the backend over WebSockets. The UI features:
 \begin{itemize}
-  \item reusable UI logic and predictable state management;
-  \item live visualization of geospatial traffic flows and trend charts;
-  \item improved testability of isolated view logic.
+  \item a world map visualizing geographic flows;
+  \item live updating connection lists;
+  \item statistics by autonomous system number (ASN) and country;
+  \item charts of recent activity.
 \end{itemize}
 
-Integration with Vite and Vitest supports fast iteration and frontend quality checks.
+The dashboard design enables immediate insight into network destinations and flowing connections.
 
 \section{Go Client}
 
-The Go client introduces language diversity in the same repository while preserving modularity through \texttt{cmd/} and \texttt{internal/} packages. It is oriented to traffic capture on Linux via libpcap, destination extraction and deduplication, batching, backend communication, and runtime metrics collection.
+The Go client is a command-line utility for Linux, using libpcap for packet capture. Responsibilities include traffic capture on Linux via libpcap, destination extraction and deduplication, batching, backend communication, and runtime metrics collection.
 
-Keeping the client close to server and shared contracts reduces integration drift and simplifies release coordination.
+Close integration with server contracts minimizes friction in release coordination. The client offers metrics for user feedback and supports authentication with backend-issued tokens.
 
 \section{Shared Package}
 
-The shared package centralizes common models and types. In a multi-application environment, this is critical to avoid contract divergence and to ensure compile-time compatibility between producers and consumers.
+The shared package centralizes common models and types for communication between all applications. This enables compile-time safety and reduces the risk of serialization issues or contract divergence. It contains definitions for connection records, enriched metadata, events, and protocol contracts.
 
 \chapter{Quality and Delivery}
 
@@ -175,7 +169,7 @@ The monorepo shows evidence of a layered testing approach:
   \item aggregated coverage reports surfaced through Codecov.
 \end{itemize}
 
-A unified quality baseline across applications is one of the key advantages of this monorepo setup.
+Unified test and coverage baselines across applications demonstrate good practice in multi-service environments.
 
 \section{CI/CD Workflows}
 
@@ -186,11 +180,11 @@ The repository integrates GitHub Actions for automation:
   \item optional AI-assisted workflow (\texttt{.github/workflows/ai-docs-update.yml}) can update \texttt{docs/SPE-report.tex} and \texttt{docs/ASW-report.tex}, compile them, and open a pull request using GitHub Models with \texttt{GITHUB\_TOKEN}.
 \end{itemize}
 
-Selective execution based on changed paths and workspace awareness keeps pipelines efficient as the repository grows.
+Selective execution based on changed paths and workspace awareness keeps pipelines fast and scalable.
 
 \section{Developer Experience}
 
-The repository includes common governance and automation files (commit linting, semantic release configuration, renovate settings, and workspace synchronization scripts). These conventions contribute to:
+Common governance and automation files (commit linting, semantic release configuration, renovate settings, and workspace synchronization scripts) are included. These conventions contribute to:
 \begin{itemize}
   \item consistent contribution standards;
   \item easier onboarding;
@@ -202,37 +196,37 @@ The repository includes common governance and automation files (commit linting, 
 \section{Strengths}
 
 \begin{itemize}
-  \item \textbf{Unified lifecycle}: build, test, documentation, and release are coordinated from one workspace.
-  \item \textbf{Contract consistency}: shared models reduce mismatch across backend, dashboard, and client.
+  \item \textbf{Unified lifecycle}: coordinated build, test, documentation, and release from one workspace.
+  \item \textbf{Contract consistency}: shared models prevent mismatch across backend, dashboard, and client.
   \item \textbf{Operational readiness}: Docker, CI, coverage, and release assets indicate deployment awareness.
-  \item \textbf{Real-time experience}: Socket.IO enables live telemetry to the dashboard.
-  \item \textbf{Observability potential}: persisted records in MongoDB support statistics by ASN/country and time-series analysis.
+  \item \textbf{Real-time experience}: Socket.IO enables live telemetry to the dashboard UI.
+  \item \textbf{Observability potential}: persisted records in MongoDB support statistics and time-series analysis.
 \end{itemize}
 
 \section{Potential Risks}
 
 \begin{itemize}
   \item \textbf{Cross-language complexity}: TypeScript and Go require dual expertise and toolchain maintenance.
-  \item \textbf{Packet capture overhead}: libpcap may impose CPU overhead and require elevated privileges on some systems.
-  \item \textbf{GeoIP accuracy}: enrichment quality depends on database freshness and may affect analytics precision.
-  \item \textbf{Pipeline coupling}: broad CI jobs may become slower as the repository scales.
+  \item \textbf{Packet capture overhead}: libpcap may impose CPU load and require elevated privileges on systems.
+  \item \textbf{GeoIP accuracy}: enrichment quality depends on database freshness and influences analytics precision.
+  \item \textbf{Pipeline coupling}: broad CI jobs may grow slower as the repository scales.
   \item \textbf{Shared package impact}: breaking contract changes can affect multiple applications simultaneously.
 \end{itemize}
 
 \section{Recommended Improvements}
 
 \begin{itemize}
-  \item enforce stricter contract versioning rules for shared models and automate compatibility checks;
-  \item expand architecture documentation for cross-component data flows and real-time event schemas;
-  \item adopt selective CI execution based on affected projects and optimize cache usage;
-  \item track non-functional metrics (build time, test duration, packet capture throughput, dashboard render latency);
-  \item schedule GeoIP database refresh and validate enrichment accuracy in CI.
+  \item Enforce stricter contract versioning rules in the shared package and automate compatibility checks.
+  \item Expand architecture documentation for data flows and event schemas.
+  \item Adopt selective CI execution for affected projects and optimize cache usage.
+  \item Track non-functional metrics (build/test duration, capture throughput, dashboard render latency).
+  \item Schedule GeoIP database refresh and validate enrichment accuracy in CI.
 \end{itemize}
 
 \chapter{Conclusion}
 
-The ByteRoute monorepo demonstrates a well-structured and production-oriented organization. It balances modularity and integration by combining independent applications with shared contracts and centralized tooling. The explicit CI/CD around documentation and release assets strengthens reproducibility and communication.
+The ByteRoute monorepo demonstrates a well-structured, modular, and production-ready organization. The repository balances independent application development with shared contracts and centralized tooling. CI/CD around documentation and release assets reinforces reproducibility and communication.
 
-From a university project perspective, this repository is a strong example of modern multi-service software engineering practice, with particular value in maintainability, consistency, and end-to-end coordination for network traffic monitoring.
+For SPE university project requirements, ByteRoute is a strong example of contemporary multi-service engineering with clear strengths in maintainability, consistency, and end-to-end coordination for network traffic monitoring.
 
 \end{document}
