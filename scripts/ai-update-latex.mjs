@@ -16,12 +16,8 @@ const reportFiles = (process.env.REPORT_FILES || "docs/SPE-report.tex,docs/ASW-r
   .filter(Boolean);
 const extraContext = process.env.EXTRA_CONTEXT || "";
 
-const PROMPT_ATTEMPTS = [
-  { currentMaxChars: 9000, repoMaxChars: 3000, siblingMaxChars: 2000 },
-  { currentMaxChars: 7000, repoMaxChars: 1800, siblingMaxChars: 1000 },
-  { currentMaxChars: 5000, repoMaxChars: 900,  siblingMaxChars: 400 },
-  { currentMaxChars: 3200, repoMaxChars: 300,  siblingMaxChars: 0 }
-];
+// Maximum number of agentic steps (tool-call rounds) per report before giving up.
+const MAX_AGENT_STEPS = Number(process.env.AI_MAX_AGENT_STEPS || 20);
 
 const MAX_RATE_LIMIT_RETRIES = 5;
 const BASE_RATE_LIMIT_DELAY_MS = 2000;
@@ -35,8 +31,6 @@ const INTER_REQUEST_DELAY_MS = Number(process.env.AI_INTER_REQUEST_DELAY_MS ?? 0
 const CONTEXT_CHARS_PER_FILE = Number(process.env.AI_CONTEXT_CHARS_PER_FILE || 3500);
 // How many chars to take from the top of CHANGELOG.md (most-recent entries first).
 const CHANGELOG_CHARS = Number(process.env.AI_CHANGELOG_CHARS || 3000);
-// How many chars of the *other* report to include as sibling context.
-const SIBLING_REPORT_CHARS = Number(process.env.AI_SIBLING_REPORT_CHARS || 2000);
 const MAX_COMPLETION_TOKENS = Number(process.env.AI_MAX_COMPLETION_TOKENS || 3200);
 
 if (!apiToken) {
@@ -110,36 +104,100 @@ function truncateMiddle(text, maxChars) {
   return `${head}\n\n... [TRUNCATED FOR TOKEN LIMIT] ...\n\n${tail}`;
 }
 
-function buildPrompt({ path, currentContent, siblingContent, repoContext, currentMaxChars, repoMaxChars, siblingMaxChars }) {
-  const safeCurrent = truncateMiddle(currentContent, currentMaxChars);
-  const safeRepo = truncateMiddle(repoContext, repoMaxChars);
-  const safeSibling = siblingContent ? truncateMiddle(siblingContent, siblingMaxChars) : "";
+// ---------------------------------------------------------------------------
+// Agentic tool definitions
+// ---------------------------------------------------------------------------
+const AGENT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "read_file",
+      description:
+        "Read the contents of any file in the repository. Use this to gather detailed context about the codebase (source code, configs, READMEs, etc.).",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Relative path to the file from the workspace root."
+          }
+        },
+        required: ["path"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_directory",
+      description:
+        "List the files and sub-directories inside a directory. Use this to discover what exists before reading files.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Relative path to the directory. Use '.' for the workspace root."
+          }
+        },
+        required: ["path"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_report",
+      description:
+        "Write the final updated LaTeX source for the target report file. Call this once you have gathered sufficient context and are confident the document is complete and valid.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description:
+              "Complete, valid LaTeX source including \\begin{document} and \\end{document}. No markdown fences."
+          }
+        },
+        required: ["content"]
+      }
+    }
+  }
+];
 
-  return [
-    "Task: refresh a university LaTeX report for this monorepo.",
-    "Output: ONLY full LaTeX source for the target file, no markdown fences or explanations.",
-    "Constraints: keep structure/style coherent, keep package choices unless required for validity, keep claims grounded in provided context.",
-    "Validity: must include \\begin{document} and \\end{document}.",
-    safeSibling
-      ? "Sibling report: the other report file is included for scope reference — avoid duplicating its content verbatim."
-      : "",
-    safeCurrent !== currentContent
-      ? "Current file content can be truncated in the middle; preserve continuity and avoid large rewrites."
-      : "",
-    safeRepo !== repoContext
-      ? "Repository context can be truncated; prefer conservative updates grounded in explicit context only."
-      : "",
-    extraContext ? `Additional user context: ${extraContext}` : "",
-    `Target file: ${path}`,
-    "\nCurrent file content:\n",
-    safeCurrent,
-    safeSibling ? "\nSibling report (scope reference only):\n" : "",
-    safeSibling,
-    safeRepo ? "\nRepository context (READMEs, domain model, deployment, changelog):\n" : "",
-    safeRepo
-  ]
-    .filter(Boolean)
-    .join("\n");
+// Execute a single tool call requested by the agent.
+async function executeTool(name, args) {
+  if (name === "read_file") {
+    const content = await readOptional(args.path);
+    if (!content) return `File not found or empty: ${args.path}`;
+    return content.length > CONTEXT_CHARS_PER_FILE
+      ? `${content.slice(0, CONTEXT_CHARS_PER_FILE)}\n...[content truncated at ${CONTEXT_CHARS_PER_FILE} chars]...`
+      : content;
+  }
+
+  if (name === "list_directory") {
+    const { readdir, stat } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const dirPath = args.path || ".";
+    try {
+      const entries = await readdir(dirPath);
+      const withTypes = await Promise.all(
+        entries.map(async (e) => {
+          try {
+            const s = await stat(join(dirPath, e));
+            return s.isDirectory() ? `${e}/` : e;
+          } catch {
+            return e;
+          }
+        })
+      );
+      return withTypes.join("\n");
+    } catch (err) {
+      return `Error listing directory '${dirPath}': ${err.message}`;
+    }
+  }
+
+  return `Unknown tool: ${name}`;
 }
 
 function sleep(ms) {
@@ -226,126 +284,208 @@ function summarizeResponseShape(data) {
   }
 }
 
-async function generateUpdatedLatex({ path, currentContent, siblingContent, repoContext }) {
-  let lastError;
+// Send one API request with rate-limit retry logic.
+// Returns the parsed JSON response body.
+async function callApi(messages, useTools, label) {
+  let response;
+  for (let rateAttempt = 0; rateAttempt <= MAX_RATE_LIMIT_RETRIES; rateAttempt += 1) {
+    const body = {
+      model,
+      max_completion_tokens: MAX_COMPLETION_TOKENS,
+      messages,
+      temperature: 1 // gpt-4.1 / gpt-5 require temperature=1
+    };
+    if (useTools) {
+      body.tools = AGENT_TOOLS;
+    }
 
-  for (const attempt of PROMPT_ATTEMPTS) {
-    const prompt = buildPrompt({
-      path,
-      currentContent,
-      siblingContent,
-      repoContext,
-      currentMaxChars: attempt.currentMaxChars,
-      repoMaxChars: attempt.repoMaxChars,
-      siblingMaxChars: attempt.siblingMaxChars ?? 0
+    response = await fetch(apiUrl, {
+      method: "POST",
+      headers:
+        provider === "github"
+          ? {
+              "Content-Type": "application/json",
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              Authorization: `Bearer ${apiToken}`
+            }
+          : {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiToken}`
+            },
+      body: JSON.stringify(body)
     });
 
-    let response;
-    for (let rateAttempt = 0; rateAttempt <= MAX_RATE_LIMIT_RETRIES; rateAttempt += 1) {
-      response = await fetch(apiUrl, {
-        method: "POST",
-        headers:
-          provider === "github"
-            ? {
-                "Content-Type": "application/json",
-                Accept: "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-                Authorization: `Bearer ${apiToken}`
-              }
-            : {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiToken}`
-              },
-        body:
-          provider === "github"
-            ? JSON.stringify({
-                model,
-                max_completion_tokens: MAX_COMPLETION_TOKENS,
-                messages: [
-                  {
-                    role: "system",
-                    content:
-                      "You update LaTeX technical reports conservatively. Return only valid LaTeX source code for the full target file."
-                  },
-                  {
-                    role: "user",
-                    content: prompt
-                  }
-                ],
-                temperature: 1, //gpt5 only allows 1
-              })
-            : JSON.stringify({
-                model,
-                input: prompt
-              })
-      });
+    if (response.status !== 429) break;
 
-      if (response.status !== 429) {
-        break;
-      }
+    const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+    const backoffMs = BASE_RATE_LIMIT_DELAY_MS * 2 ** rateAttempt;
+    const jitterMs = Math.floor(Math.random() * 600);
+    const waitMs = Math.max(retryAfterMs ?? 0, backoffMs + jitterMs);
 
-      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-      const backoffMs = BASE_RATE_LIMIT_DELAY_MS * 2 ** rateAttempt;
-      const jitterMs = Math.floor(Math.random() * 600);
-      const waitMs = Math.max(retryAfterMs ?? 0, backoffMs + jitterMs);
-
-      if (rateAttempt >= MAX_RATE_LIMIT_RETRIES) {
-        const body = await response.text();
-        throw new Error(`AI API request failed (429) after retries: ${body}`);
-      }
-
-      // If the server asks us to wait longer than our cap, the daily quota is
-      // likely exhausted.  Fail fast with an actionable message instead of
-      // silently blocking the Actions job until it times out.
-      if (waitMs > MAX_RATE_LIMIT_WAIT_MS) {
-        const rlType = response.headers.get("x-ratelimit-type") ?? "unknown";
-        const body = await response.text();
-        throw new Error(
-          `AI API rate limit wait (${waitMs}ms) exceeds cap of ${MAX_RATE_LIMIT_WAIT_MS}ms ` +
-          `(x-ratelimit-type: ${rlType}). Daily quota is likely exhausted. ` +
-          `Switch to a model with higher limits (e.g. openai/gpt-4.1) or wait for the quota to reset. ` +
-          `Raw response: ${body}`
-        );
-      }
-
-      const rlType = response.headers.get("x-ratelimit-type") ?? "";
-      console.warn(`Rate limited for ${path} (${rlType}); retrying in ${waitMs}ms...`);
-      await sleep(waitMs);
+    if (rateAttempt >= MAX_RATE_LIMIT_RETRIES) {
+      const errBody = await response.text();
+      throw new Error(`AI API request failed (429) after retries: ${errBody}`);
     }
 
-    if (!response) {
-      throw new Error("AI request did not produce a response.");
+    if (waitMs > MAX_RATE_LIMIT_WAIT_MS) {
+      const rlType = response.headers.get("x-ratelimit-type") ?? "unknown";
+      const errBody = await response.text();
+      throw new Error(
+        `AI API rate limit wait (${waitMs}ms) exceeds cap of ${MAX_RATE_LIMIT_WAIT_MS}ms ` +
+        `(x-ratelimit-type: ${rlType}). Daily quota is likely exhausted. ` +
+        `Switch to a model with higher limits (e.g. openai/gpt-4.1) or wait for the quota to reset. ` +
+        `Raw response: ${errBody}`
+      );
     }
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      const isPayloadTooLarge = response.status === 413 || /tokens_limit_reached|too large/i.test(errorBody);
-      if (isPayloadTooLarge) {
-        lastError = new Error(`AI API request too large (${response.status}) at attempt ${attempt.currentMaxChars}/${attempt.repoMaxChars}: ${errorBody}`);
-        console.warn(`Prompt too large for ${path}, retrying with smaller context...`);
-        continue;
-      }
-      throw new Error(`AI API request failed (${response.status}): ${errorBody}`);
-    }
-
-    const data = await response.json();
-    const text =
-      provider === "github"
-        ? sanitizeModelOutput(extractGithubText(data))
-        : data.output_text?.trim();
-
-    if (!text) {
-      throw new Error(`AI response did not contain generated text. Response shape: ${summarizeResponseShape(data)}`);
-    }
-
-    if (!text.includes("\\begin{document}") || !text.includes("\\end{document}")) {
-      throw new Error(`Generated LaTeX for ${path} is invalid (missing document markers).`);
-    }
-
-    return provider === "github" ? text : text.endsWith("\n") ? text : `${text}\n`;
+    const rlType = response.headers.get("x-ratelimit-type") ?? "";
+    console.warn(`Rate limited${label ? ` [${label}]` : ""} (${rlType}); retrying in ${waitMs}ms...`);
+    await sleep(waitMs);
   }
 
-  throw lastError || new Error(`Unable to generate LaTeX for ${path}.`);
+  if (!response) throw new Error("AI request did not produce a response.");
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`AI API request failed (${response.status}): ${errBody}`);
+  }
+
+  return response.json();
+}
+
+// Agentic generation: the model iteratively calls read_file / list_directory
+// to gather context, then finalises the report via write_report.
+async function generateUpdatedLatex({ path, currentContent, siblingContent, repoContext }) {
+  const systemMessage = [
+    "You are an expert technical writer updating university LaTeX reports for a software engineering monorepo.",
+    "You have tools to read files and list directories in the repository so you can gather the full context you need.",
+    "Work methodically: explore the codebase, read relevant source files, and then call write_report with the complete updated LaTeX.",
+    "Rules:",
+    "  - The final document must be complete, valid LaTeX containing \\begin{document} and \\end{document}.",
+    "  - Keep the existing structure, section ordering, and package choices unless a change is required for correctness.",
+    "  - Update technical details (architecture, API shape, deployment, features) to match what you find in the repository.",
+    "  - Keep claims grounded in evidence found in the repository — do not invent details.",
+    "  - Prefer conservative, targeted edits over large rewrites.",
+    extraContext ? `Additional context from the user: ${extraContext}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const userMessage = [
+    `Target report to update: ${path}`,
+    "",
+    "Current content of the target file:",
+    currentContent,
+    siblingContent
+      ? `\nOther report files (for scope reference — do not duplicate verbatim):\n${siblingContent}`
+      : "",
+    repoContext
+      ? `\nPre-loaded repository context (READMEs, domain model, deployment, changelog):\n${repoContext}`
+      : "",
+    "",
+    "Use your tools to read any additional source files, configs, or documentation you need, then call write_report."
+  ]
+    .filter((l) => l !== undefined)
+    .join("\n");
+
+  const messages = [
+    { role: "system", content: systemMessage },
+    { role: "user", content: userMessage }
+  ];
+
+  let finalContent = null;
+
+  for (let step = 0; step < MAX_AGENT_STEPS; step += 1) {
+    console.log(`  [agent step ${step + 1}/${MAX_AGENT_STEPS}] calling API...`);
+    const data = await callApi(messages, /* useTools */ true, path);
+
+    const choice = data?.choices?.[0];
+    if (!choice) {
+      throw new Error(`No choices in API response. Shape: ${summarizeResponseShape(data)}`);
+    }
+
+    const message = choice.message;
+    // Append the assistant turn to the conversation history.
+    messages.push(message);
+
+    const toolCalls = message?.tool_calls;
+    const finishReason = choice.finish_reason;
+
+    // No tool calls — check for a plain-text write_report fallback or error.
+    if (!toolCalls || toolCalls.length === 0) {
+      if (finishReason === "stop") {
+        // The model may have returned LaTeX directly instead of using the tool.
+        const rawText = extractGithubText(data);
+        const sanitized = sanitizeModelOutput(rawText);
+        if (sanitized.includes("\\begin{document}") && sanitized.includes("\\end{document}")) {
+          console.warn(
+            `  [agent] Model returned LaTeX as plain text instead of calling write_report — accepting it.`
+          );
+          finalContent = sanitized;
+          break;
+        }
+        throw new Error(
+          `Agent stopped without calling write_report and without producing valid LaTeX. ` +
+          `Response shape: ${summarizeResponseShape(data)}`
+        );
+      }
+      throw new Error(
+        `Unexpected finish_reason '${finishReason}' with no tool calls. Shape: ${summarizeResponseShape(data)}`
+      );
+    }
+
+    // Process all tool calls in this turn.
+    const toolResults = [];
+    for (const toolCall of toolCalls) {
+      const toolName = toolCall.function?.name;
+      let toolArgs;
+      try {
+        toolArgs = JSON.parse(toolCall.function?.arguments || "{}");
+      } catch {
+        toolArgs = {};
+      }
+
+      console.log(`  [agent tool] ${toolName}(${JSON.stringify(toolArgs)})`);
+
+      if (toolName === "write_report") {
+        const content = typeof toolArgs.content === "string" ? toolArgs.content : "";
+        const sanitized = sanitizeModelOutput(content);
+        if (!sanitized.includes("\\begin{document}") || !sanitized.includes("\\end{document}")) {
+          throw new Error(
+            `write_report called for ${path} but LaTeX is invalid (missing document markers).`
+          );
+        }
+        finalContent = sanitized;
+        // Push a synthetic tool result so the message list stays valid.
+        toolResults.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: "Report written successfully."
+        });
+      } else {
+        const result = await executeTool(toolName, toolArgs);
+        toolResults.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: result
+        });
+      }
+    }
+
+    // Extend the conversation with tool results.
+    messages.push(...toolResults);
+
+    if (finalContent !== null) break;
+  }
+
+  if (finalContent === null) {
+    throw new Error(
+      `Agent exhausted ${MAX_AGENT_STEPS} steps without calling write_report for ${path}.`
+    );
+  }
+
+  return finalContent;
 }
 
 async function main() {
@@ -369,11 +509,17 @@ async function main() {
     }
 
     const currentContent = reportContents.get(path);
-    // Provide the other reports as sibling context so the AI understands
-    // scope boundaries and avoids duplicating content between reports.
+    // Provide a brief excerpt of the other reports so the agent understands
+    // scope boundaries without exhausting the initial-message token budget.
+    // The agent can call read_file on any sibling to get the full content.
+    const SIBLING_PREVIEW_CHARS = Number(process.env.AI_SIBLING_PREVIEW_CHARS || 2000);
     const siblingContent = reportFiles
       .filter((p) => p !== path)
-      .map((p) => `=== ${p} ===\n${reportContents.get(p)}`)
+      .map((p) => {
+        const full = reportContents.get(p);
+        const preview = SIBLING_PREVIEW_CHARS > 0 ? truncateMiddle(full, SIBLING_PREVIEW_CHARS) : full;
+        return `=== ${p} (preview — use read_file for full content) ===\n${preview}`;
+      })
       .join("\n\n");
 
     const updated = await generateUpdatedLatex({ path, currentContent, siblingContent, repoContext });
