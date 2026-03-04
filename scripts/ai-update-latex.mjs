@@ -32,6 +32,15 @@ const CONTEXT_CHARS_PER_FILE = Number(process.env.AI_CONTEXT_CHARS_PER_FILE || 3
 // How many chars to take from the top of CHANGELOG.md (most-recent entries first).
 const CHANGELOG_CHARS = Number(process.env.AI_CHANGELOG_CHARS || 3000);
 const MAX_COMPLETION_TOKENS = Number(process.env.AI_MAX_COMPLETION_TOKENS || 3200);
+// Max chars of the *current report* included in the initial agent message.
+// The agent can always call read_file on the target path to get the full content.
+const INITIAL_CURRENT_CHARS = Number(process.env.AI_INITIAL_CURRENT_CHARS || 4000);
+// Max chars of pre-loaded repo context included in the initial agent message.
+const INITIAL_REPO_CHARS = Number(process.env.AI_INITIAL_REPO_CHARS || 2000);
+// Max chars stored in the conversation history for each tool result.
+// The model already processed the full content when it was first returned;
+// history only needs enough to remind it what it read.
+const MAX_TOOL_RESULT_HISTORY_CHARS = Number(process.env.AI_TOOL_RESULT_HISTORY_CHARS || 400);
 
 if (!apiToken) {
   console.error("Missing AI token. Set AI_API_TOKEN, OPENAI_API_KEY, or GITHUB_TOKEN.");
@@ -166,13 +175,32 @@ const AGENT_TOOLS = [
 ];
 
 // Execute a single tool call requested by the agent.
-async function executeTool(name, args) {
+// readCache: Map<path, string> — avoids re-fetching already-read files.
+async function executeTool(name, args, readCache) {
   if (name === "read_file") {
-    const content = await readOptional(args.path);
-    if (!content) return `File not found or empty: ${args.path}`;
-    return content.length > CONTEXT_CHARS_PER_FILE
-      ? `${content.slice(0, CONTEXT_CHARS_PER_FILE)}\n...[content truncated at ${CONTEXT_CHARS_PER_FILE} chars]...`
-      : content;
+    const filePath = args.path;
+    if (readCache && readCache.has(filePath)) {
+      return `[already read — cached content for '${filePath}' available from earlier in this session]`;
+    }
+    // Detect directories before attempting to read.
+    try {
+      const { stat } = await import("node:fs/promises");
+      const s = await stat(filePath);
+      if (s.isDirectory()) {
+        // Transparently serve a directory listing instead of failing.
+        return await executeTool("list_directory", { path: filePath }, readCache);
+      }
+    } catch {
+      return `File not found: ${filePath}`;
+    }
+    const content = await readOptional(filePath);
+    if (!content) return `File not found or empty: ${filePath}`;
+    const result =
+      content.length > CONTEXT_CHARS_PER_FILE
+        ? `${content.slice(0, CONTEXT_CHARS_PER_FILE)}\n...[content truncated at ${CONTEXT_CHARS_PER_FILE} chars]...`
+        : content;
+    if (readCache) readCache.set(filePath, result);
+    return result;
   }
 
   if (name === "list_directory") {
@@ -198,6 +226,34 @@ async function executeTool(name, args) {
   }
 
   return `Unknown tool: ${name}`;
+}
+
+/**
+ * Before making an API call, compress all tool-result messages that are older
+ * than the most-recent assistant turn. The model gets full content the first
+ * time a result is delivered; subsequent turns only need a short reminder.
+ */
+function compressOldToolResults(messages) {
+  // Find the last assistant message so we know which tool results are "fresh".
+  let lastAssistantIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "assistant") {
+      lastAssistantIdx = i;
+      break;
+    }
+  }
+  for (let i = 0; i < lastAssistantIdx; i++) {
+    const msg = messages[i];
+    if (msg.role === "tool" && typeof msg.content === "string" &&
+        msg.content.length > MAX_TOOL_RESULT_HISTORY_CHARS) {
+      messages[i] = {
+        ...msg,
+        content:
+          msg.content.slice(0, MAX_TOOL_RESULT_HISTORY_CHARS) +
+          `\n...[compressed for history; ${msg.content.length} chars total]`
+      };
+    }
+  }
 }
 
 function sleep(ms) {
@@ -284,6 +340,14 @@ function summarizeResponseShape(data) {
   }
 }
 
+// Thrown when the request payload exceeds the model's token limit (HTTP 413).
+class PayloadTooLargeError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PayloadTooLargeError";
+  }
+}
+
 // Send one API request with rate-limit retry logic.
 // Returns the parsed JSON response body.
 async function callApi(messages, useTools, label) {
@@ -348,18 +412,67 @@ async function callApi(messages, useTools, label) {
 
   if (!response.ok) {
     const errBody = await response.text();
+    const isPayloadTooLarge =
+      response.status === 413 || /tokens_limit_reached|too large/i.test(errBody);
+    if (isPayloadTooLarge) {
+      throw new PayloadTooLargeError(
+        `AI API request too large (${response.status}): ${errBody}`
+      );
+    }
     throw new Error(`AI API request failed (${response.status}): ${errBody}`);
   }
 
   return response.json();
 }
 
+// Attempt sizes for the initial message when the payload is too large.
+// Each entry halves the previous budget so we degrade gracefully.
+const INITIAL_ATTEMPT_SCALES = [1, 0.5, 0.25, 0.1];
+
+/**
+ * Remove the oldest intermediate assistant+tool-results exchange from the
+ * conversation so the next API call fits within the token limit.
+ *
+ * Layout we expect:
+ *   [0] system
+ *   [1] user (initial)
+ *   [2] assistant  <-- oldest intermediate, drop from here
+ *   [3..k] tool results belonging to [2]
+ *   [k+1] assistant
+ *   ...
+ *
+ * Returns true if something was trimmed, false if nothing left to remove.
+ */
+function trimConversationHistory(messages) {
+  // Need at least: system + user + 1 assistant + something after it to trim.
+  if (messages.length <= 3) return false;
+
+  // Find the first assistant message after the initial user turn (index 1).
+  const firstAssistantIdx = messages.findIndex((m, i) => i >= 2 && m.role === "assistant");
+  if (firstAssistantIdx === -1) return false;
+
+  // Find the end of the tool-results block that follows it (next assistant or end).
+  let endIdx = firstAssistantIdx + 1;
+  while (endIdx < messages.length && messages[endIdx].role === "tool") {
+    endIdx += 1;
+  }
+
+  // Only trim if there is still more conversation after this block.
+  if (endIdx >= messages.length) return false;
+
+  messages.splice(firstAssistantIdx, endIdx - firstAssistantIdx);
+  return true;
+}
+
 // Agentic generation: the model iteratively calls read_file / list_directory
 // to gather context, then finalises the report via write_report.
 async function generateUpdatedLatex({ path, currentContent, siblingContent, repoContext }) {
+  // Per-session cache: avoids re-fetching already-read files after history trim.
+  const readCache = new Map();
   const systemMessage = [
     "You are an expert technical writer updating university LaTeX reports for a software engineering monorepo.",
     "You have tools to read files and list directories in the repository so you can gather the full context you need.",
+    `The target file path is '${path}'. If the content shown below is truncated, call read_file('${path}') to retrieve the full source before making changes.`,
     "Work methodically: explore the codebase, read relevant source files, and then call write_report with the complete updated LaTeX.",
     "Rules:",
     "  - The final document must be complete, valid LaTeX containing \\begin{document} and \\end{document}.",
@@ -367,39 +480,152 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
     "  - Update technical details (architecture, API shape, deployment, features) to match what you find in the repository.",
     "  - Keep claims grounded in evidence found in the repository — do not invent details.",
     "  - Prefer conservative, targeted edits over large rewrites.",
-    "  - Always avoid em dashes and en dashes. Opt for commas, parentheses, or alternative punctuation",
+    "  - Always avoid em dashes and en dashes. Opt for commas, parentheses, or alternative punctuation.",
     extraContext ? `Additional context from the user: ${extraContext}` : ""
   ]
     .filter(Boolean)
     .join("\n");
 
-  const userMessage = [
-    `Target report to update: ${path}`,
-    "",
-    "Current content of the target file:",
-    currentContent,
-    siblingContent
-      ? `\nOther report files (for scope reference — do not duplicate verbatim):\n${siblingContent}`
-      : "",
-    repoContext
-      ? `\nPre-loaded repository context (READMEs, domain model, deployment, changelog):\n${repoContext}`
-      : "",
-    "",
-    "Use your tools to read any additional source files, configs, or documentation you need, then call write_report."
-  ]
-    .filter((l) => l !== undefined)
-    .join("\n");
+  function buildInitialUserMessage(currentChars, repoChars) {
+    const safeCurrent = truncateMiddle(currentContent, currentChars);
+    const safeRepo = truncateMiddle(repoContext, repoChars);
+    return [
+      `Target report to update: ${path}`,
+      "",
+      safeCurrent !== currentContent
+        ? `Current content of the target file (truncated — call read_file('${path}') for the full source):`
+        : "Current content of the target file:",
+      safeCurrent,
+      siblingContent
+        ? `\nOther report files (preview — call read_file for full content):\n${siblingContent}`
+        : "",
+      safeRepo
+        ? `\nPre-loaded repository context (READMEs, domain model, deployment, changelog):\n${safeRepo}`
+        : "",
+      "",
+      "Use your tools to read any additional source files, configs, or documentation you need, then call write_report."
+    ]
+      .filter((l) => l !== undefined)
+      .join("\n");
+  }
 
-  const messages = [
-    { role: "system", content: systemMessage },
-    { role: "user", content: userMessage }
-  ];
+  let messages = null;
+
+  // Try progressively smaller initial payloads if the model rejects the request
+  // as too large (HTTP 413 / tokens_limit_reached).
+  for (const scale of INITIAL_ATTEMPT_SCALES) {
+    const currentChars = Math.floor(INITIAL_CURRENT_CHARS * scale);
+    const repoChars = Math.floor(INITIAL_REPO_CHARS * scale);
+    const userMessage = buildInitialUserMessage(currentChars, repoChars);
+    const candidate = [
+      { role: "system", content: systemMessage },
+      { role: "user", content: userMessage }
+    ];
+    try {
+      // Dry-run: attempt the very first API call with this payload size.
+      console.log(
+        `  [agent] initial context budget: current=${currentChars} chars, repo=${repoChars} chars`
+      );
+      const data = await callApi(candidate, /* useTools */ true, path);
+
+      const choice = data?.choices?.[0];
+      if (!choice) {
+        throw new Error(`No choices in API response. Shape: ${summarizeResponseShape(data)}`);
+      }
+      messages = candidate;
+      messages.push(choice.message);
+
+      // Handle the first response inline before entering the main loop.
+      const firstToolCalls = choice.message?.tool_calls;
+      const firstFinishReason = choice.finish_reason;
+
+      if (!firstToolCalls || firstToolCalls.length === 0) {
+        if (firstFinishReason === "stop") {
+          const rawText = extractGithubText(data);
+          const sanitized = sanitizeModelOutput(rawText);
+          if (sanitized.includes("\\begin{document}") && sanitized.includes("\\end{document}")) {
+            console.warn(
+              `  [agent] Model returned LaTeX as plain text instead of calling write_report — accepting it.`
+            );
+            return sanitized;
+          }
+          throw new Error(
+            `Agent stopped without calling write_report and without producing valid LaTeX. ` +
+            `Response shape: ${summarizeResponseShape(data)}`
+          );
+        }
+        throw new Error(
+          `Unexpected finish_reason '${firstFinishReason}' with no tool calls. Shape: ${summarizeResponseShape(data)}`
+        );
+      }
+
+      // Process first-turn tool calls.
+      let firstFinalContent = null;
+      const firstToolResults = [];
+      for (const toolCall of firstToolCalls) {
+        const toolName = toolCall.function?.name;
+        let toolArgs;
+        try { toolArgs = JSON.parse(toolCall.function?.arguments || "{}"); } catch { toolArgs = {}; }
+        console.log(`  [agent tool] ${toolName}(${JSON.stringify(toolArgs)})`);
+        if (toolName === "write_report") {
+          const content = typeof toolArgs.content === "string" ? toolArgs.content : "";
+          const sanitized = sanitizeModelOutput(content);
+          if (!sanitized.includes("\\begin{document}") || !sanitized.includes("\\end{document}")) {
+            throw new Error(`write_report called for ${path} but LaTeX is invalid (missing document markers).`);
+          }
+          firstFinalContent = sanitized;
+          firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: "Report written successfully." });
+        } else {
+          const result = await executeTool(toolName, toolArgs, readCache);
+          firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: result });
+        }
+      }
+      messages.push(...firstToolResults);
+      if (firstFinalContent !== null) return firstFinalContent;
+
+      break; // Initial call succeeded; exit scale loop and enter agentic loop.
+    } catch (err) {
+      if (err instanceof PayloadTooLargeError) {
+        console.warn(
+          `  [agent] Initial payload too large at scale=${scale} (current=${currentChars}, repo=${repoChars}). Retrying with smaller context...`
+        );
+        if (scale === INITIAL_ATTEMPT_SCALES[INITIAL_ATTEMPT_SCALES.length - 1]) {
+          throw err; // All scales exhausted.
+        }
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!messages) throw new Error(`Unable to build initial agent messages for ${path}.`);
 
   let finalContent = null;
 
-  for (let step = 0; step < MAX_AGENT_STEPS; step += 1) {
+  // Continue the agentic loop (step 0 was handled above, start from step 1).
+  for (let step = 1; step < MAX_AGENT_STEPS; step += 1) {
     console.log(`  [agent step ${step + 1}/${MAX_AGENT_STEPS}] calling API...`);
-    const data = await callApi(messages, /* useTools */ true, path);
+
+    let data;
+    // If the accumulated conversation exceeds the model's token limit, drop the
+    // oldest intermediate exchanges one-by-one until the request succeeds.
+    for (;;) {
+      try {
+        compressOldToolResults(messages);
+        data = await callApi(messages, /* useTools */ true, path);
+        break;
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          const trimmed = trimConversationHistory(messages);
+          if (!trimmed) throw err; // Nothing left to trim — give up.
+          console.warn(
+            `  [agent] Conversation too large at step ${step + 1}; trimmed oldest exchange and retrying...`
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
 
     const choice = data?.choices?.[0];
     if (!choice) {
@@ -465,7 +691,7 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
           content: "Report written successfully."
         });
       } else {
-        const result = await executeTool(toolName, toolArgs);
+        const result = await executeTool(toolName, toolArgs, readCache);
         toolResults.push({
           role: "tool",
           tool_call_id: toolCall.id,

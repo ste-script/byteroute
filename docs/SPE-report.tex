@@ -22,9 +22,11 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage[export]{adjustbox}
-\usetikzlibrary{petri,positioning}
+\usetikzlibrary{petri,positioning,shapes.geometric}
 \usepackage{listings}
 \usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
 
 \titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
 
@@ -75,164 +77,937 @@
 \tableofcontents{}
 \newpage
 
+% ============================================================
 \chapter{Introduction}
+% ============================================================
 
-This document presents a technical review of the \textbf{ByteRoute} monorepo, a multi-application project organized around network traffic analysis, visualization, and client tooling. The repository combines a TypeScript/Node.js backend, a Vue-based dashboard, a Go command-line client, and shared packages in a single coordinated workspace.
+This report documents the design, architecture, implementation, and development
+process of \textbf{ByteRoute}, a network traffic monitoring platform developed
+as a university project for the SPE (Software Performance Engineering) and ASW
+(Architetture Software per il Web) curricula at the University of Bologna.
 
-The objective of this report is to evaluate how the monorepo structure supports software quality, collaboration, and delivery in a distributed-systems-oriented project. The project is part of the SPE (Software Performance Engineering) and ASW (Architetture Software per il Web) university curricula and targets real-time visibility of internet traffic destinations.
+ByteRoute enables users to gain real-time visibility into the internet traffic
+produced by their Linux hosts. By capturing network packets at the operating
+system level, enriching connection records with geographic and organizational
+metadata, and presenting the results through an interactive web dashboard, the
+system answers a concrete operational need: understanding which remote servers
+and autonomous systems a machine communicates with at any given moment.
 
-\section{Review Scope}
+\section{Motivation}
 
-The analysis focuses on:
+Modern network activity is complex and often opaque. Desktop and server
+machines establish dozens of concurrent connections to third-party services,
+content delivery networks, and cloud providers. Without dedicated tooling,
+identifying those destinations requires either deep packet inspection expertise
+or expensive commercial software. ByteRoute addresses this gap with a
+lightweight, open-source, and self-hosted solution that any developer or system
+administrator can deploy with Docker Compose.
+
+\section{Report Structure}
+
+The remainder of this document is organized as follows. Chapter~\ref{chap:problem}
+presents the problem analysis, the proposed solution, and the involved user
+roles. Chapter~\ref{chap:requirements} enumerates functional and non-functional
+requirements. Chapter~\ref{chap:domain} defines the domain model and the
+ubiquitous language. Chapter~\ref{chap:architecture} describes the physical and
+logical architecture. Chapter~\ref{chap:implementation} details the
+implementation of each component. Chapter~\ref{chap:devops} covers the DevOps
+pipeline. Chapter~\ref{chap:validation} reports on testing and validation
+results. Chapter~\ref{chap:conclusion} concludes with a summary and future
+directions.
+
+% ============================================================
+\chapter{Problem Analysis}
+\label{chap:problem}
+% ============================================================
+
+\section{Context}
+
+Network monitoring is a well-established field, yet most available tools target
+either professional network engineers (with complex configuration overhead) or
+enterprise environments (with licensing costs). Individual developers and small
+teams running Linux workstations or home servers have limited access to
+user-friendly, self-hosted monitoring that shows, in real time, the geographic
+and organizational distribution of their outbound traffic.
+
+\section{Problem Statement}
+
+The absence of accessible, real-time network traffic dashboards leads to several
+practical difficulties:
+
+\begin{enumerate}
+  \item \textbf{Lack of visibility}: there is no simple way to observe which
+    Autonomous Systems (ASNs) or countries a host is contacting at a given
+    moment.
+  \item \textbf{Fragmented tooling}: existing options such as \texttt{tcpdump}
+    or \texttt{Wireshark} require specialized knowledge and do not provide
+    persistent, aggregated, or geographically enriched records.
+  \item \textbf{No multi-host support}: administrators managing several machines
+    cannot correlate their traffic in a single view without custom
+    infrastructure.
+\end{enumerate}
+
+\section{Proposed Solution}
+
+ByteRoute solves these problems through a three-tier architecture:
+
+\begin{enumerate}
+  \item A \textbf{lightweight Linux client} written in Go captures packets from
+    a network interface, aggregates them into connection-level records,
+    deduplicates them, and forwards batches to the backend over HTTPS.
+  \item A \textbf{Node.js backend} receives the connection batches, enriches
+    each record with GeoIP metadata (country, city, latitude/longitude, ASN,
+    organization name) from MaxMind GeoLite2 databases, persists the records in
+    MongoDB, and broadcasts live updates to connected dashboard clients via
+    Socket.IO.
+  \item A \textbf{Vue.js 3 dashboard} presents a world map of traffic flows, a
+    live connection list, and statistics panels grouped by country, ASN, and
+    protocol.
+\end{enumerate}
+
+The entire stack is containerized with Docker and orchestrated with Docker
+Compose, keeping deployment reproducible and independent of the host
+operating system.
+
+\section{User Roles}
+
+The system recognises two distinct roles, summarised in
+Table~\ref{tab:roles}.
+
+\begin{table}[H]
+  \centering
+  \caption{User roles in ByteRoute.}
+  \label{tab:roles}
+  \begin{tabularx}{\textwidth}{llX}
+    \toprule
+    \textbf{Role} & \textbf{Interaction model} & \textbf{Primary goals} \\
+    \midrule
+    \textbf{User} & Passive viewer &
+      Monitors real-time traffic on the dashboard. Selects a tenant to observe.
+      Does not configure the capture pipeline. \\
+    \addlinespace
+    \textbf{Admin} & Active manager &
+      Registers accounts, creates and manages tenants, generates client tokens
+      for the Go client, and controls access to ingestion endpoints. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+% ============================================================
+\chapter{Requirements Analysis}
+\label{chap:requirements}
+% ============================================================
+
+\section{System Requirements}
+
+\begin{enumerate}
+  \item \textbf{Packet capture}: the client must intercept IP-level network
+    traffic on a specified Linux interface using libpcap, without modifying
+    kernel settings beyond the required capabilities (\texttt{cap\_net\_raw},
+    \texttt{cap\_net\_admin}).
+  \item \textbf{Connection enrichment}: the backend must annotate each
+    connection record with geographic coordinates, country code, ASN, and
+    organization name sourced from the MaxMind GeoLite2 databases.
+  \item \textbf{Persistent storage}: enriched connection records and traffic
+    metrics must be stored in a MongoDB collection, organized per tenant, and
+    queryable for historical statistics.
+  \item \textbf{Real-time propagation}: state changes (new connections, updated
+    statistics) must be propagated to connected dashboard clients within seconds,
+    using a push model based on WebSockets.
+  \item \textbf{Multi-tenancy}: connection data must be isolated per tenant so
+    that different hosts or organizational units do not share records.
+  \item \textbf{Containerization}: all services must be deployable via Docker
+    Compose and must not depend on host-specific configuration beyond the
+    provided environment files.
+\end{enumerate}
+
+\section{Functional Requirements}
+
+\begin{enumerate}
+  \item As a user, I want to see a world map that shows where my machine's
+    outbound connections are directed, with pins or flow lines indicating
+    destination countries.
+  \item As a user, I want to view a live list of active connections, each
+    showing the destination IP, country, ASN, organization name, and protocol.
+  \item As a user, I want statistics panels that aggregate connections by
+    country, by ASN, and by protocol, updated in real time.
+  \item As a user, I want to switch between tenants to observe the traffic of
+    different monitored hosts.
+  \item As an admin, I want to register an account, sign in, and receive a JWT
+    token for subsequent authenticated requests.
+  \item As an admin, I want to create tenants and generate client tokens for
+    the Go client, so that the capture agent can authenticate its ingestion
+    requests.
+  \item As a Go client operator, I want to specify the capture interface,
+    direction filter, BPF expression, deduplication strategy, batch size,
+    and flush interval on the command line or via environment variables.
+\end{enumerate}
+
+\section{Non-Functional Requirements}
+
+\begin{enumerate}
+  \item \textbf{Performance}: the Go client must handle sustained packet rates
+    without dropping events; aggregation and deduplication must occur in memory
+    before each batch is sent to the backend.
+  \item \textbf{Security}: all \texttt{/api/*} routes must be protected by
+    bearer authentication; client tokens must carry an expiration time and must
+    be separate from user session tokens.
+  \item \textbf{Portability}: the Go client targets Linux only (libpcap
+    dependency); all other components must run on any platform supported by the
+    container runtime.
+  \item \textbf{Maintainability}: the project must be organized as a monorepo
+    with clear per-component boundaries, shared typed contracts, and automated
+    dependency updates via Renovate.
+  \item \textbf{Observability}: the coverage pipeline must publish machine-readable
+    Cobertura XML and human-readable HTML reports as CI artifacts after every
+    test run.
+  \item \textbf{Configurability}: ingestion rules and analytics query parameters
+    must be externalized in a YAML domain DSL, allowing behaviour changes without
+    modifying source code.
+\end{enumerate}
+
+% ============================================================
+\chapter{Domain Model}
+\label{chap:domain}
+% ============================================================
+
+This chapter defines the conceptual model of the ByteRoute domain, establishing
+the ubiquitous language shared between the client, backend, and dashboard
+components.
+
+\section{Ubiquitous Language}
+
+Table~\ref{tab:ubiquitous} lists the core terms used throughout the codebase
+and this report.
+
+\begin{table}[H]
+  \centering
+  \caption{Ubiquitous language for the ByteRoute domain.}
+  \label{tab:ubiquitous}
+  \begin{tabularx}{\textwidth}{lX}
+    \toprule
+    \textbf{Term} & \textbf{Definition} \\
+    \midrule
+    \textbf{Connection} &
+      A record representing a single observed network flow between a source IP
+      and a destination IP, annotated with protocol, port, timestamps, byte
+      counts, and GeoIP metadata. This is the primary aggregate of the
+      domain. \\
+    \addlinespace
+    \textbf{PacketEvent} &
+      A raw event emitted by the Go capture layer containing the source IP,
+      destination IP, ports, protocol, and packet length extracted from a
+      single captured IP datagram. \\
+    \addlinespace
+    \textbf{Flow} &
+      The in-memory, deduplicated accumulation of packet events that share the
+      same five-tuple (or IP pair, depending on deduplication strategy). Flows
+      are produced by the Go client and converted to Connection records before
+      being sent to the backend. \\
+    \addlinespace
+    \textbf{Tenant} &
+      A logical namespace that isolates connection data for a specific user or
+      monitored host. Each connection record is tagged with a tenant identifier,
+      and all queries are scoped accordingly. \\
+    \addlinespace
+    \textbf{GeoIpEnrichment} &
+      A value object attached to each Connection after backend processing,
+      containing the destination country, country code, city, latitude,
+      longitude, ASN number, and AS organization name. \\
+    \addlinespace
+    \textbf{TrafficFlow} &
+      A lightweight projection of a Connection used by the dashboard to render
+      map arcs. It carries source and destination coordinates and the connection
+      count. \\
+    \addlinespace
+    \textbf{Snapshot} &
+      A metric record capturing aggregated statistics at a point in time, used
+      by the metrics ingestion endpoint and the statistics panels. \\
+    \addlinespace
+    \textbf{Token} &
+      A signed JWT containing the user identity, role, and expiration time.
+      Two token types exist: the user session token (TTL of 1 day by default)
+      and the client token (TTL of 12 hours by default). \\
+    \addlinespace
+    \textbf{Domain DSL} &
+      A YAML configuration file (default: \texttt{config/domain.dsl.yaml})
+      compiled at backend startup. It governs ingestion rules (allowed
+      protocols, denied source IPs) and analytics query parameters (sort order,
+      limit) without requiring code changes. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Domain Structure}
+
+The backend domain is organized into three sub-domains, each residing under
+\texttt{apps/backend/src/domain/}:
+
 \begin{itemize}
-  \item architectural decomposition across applications and packages;
-  \item development workflow and dependency management;
-  \item testing, coverage, and CI/CD integration;
-  \item strengths, limitations, and potential improvements.
+  \item \texttt{connection/}: defines the \texttt{Connection} type, the
+    \texttt{GeoIpEnrichment} value object, the \texttt{IngestResult} type, and
+    the interfaces for the connection repository and the GeoIP service. This
+    sub-domain is the core of the system.
+  \item \texttt{metrics/}: defines the snapshot types used by the metrics
+    ingestion pipeline.
+  \item \texttt{identity/}: defines the principal type representing the
+    authenticated caller, used by the middleware layer to propagate identity
+    across request handlers.
 \end{itemize}
 
-\chapter{Repository Overview}
+The \texttt{packages/shared} package acts as a shared kernel: it exports the
+\texttt{Connection} and \texttt{TrafficFlow} types together with the Mongoose
+models, guaranteeing that the TypeScript type definitions used in the backend
+services are identical to those referenced in the dashboard's API layer.
 
-\section{Top-Level Organization}
+% ============================================================
+\chapter{Architecture and Design}
+\label{chap:architecture}
+% ============================================================
 
-The project follows a workspace-driven layout with clear separation of concerns:
+\section{Physical Architecture}
+
+ByteRoute is a client-server system executed inside Docker containers and
+coordinated through Docker Compose. Figure~\ref{fig:physical} illustrates the
+high-level deployment topology.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners=4pt,
+                minimum width=2.8cm, minimum height=1cm,
+                align=center, font=\small},
+    dashed box/.style={rectangle, draw, dashed, rounded corners=4pt,
+                       minimum width=8cm, minimum height=3.8cm,
+                       align=center, font=\small\itshape},
+    arr/.style={->, >=stealth, thick},
+    node distance=1.6cm and 2.2cm
+  ]
+    % Linux host (outside containers)
+    \node[box, fill=backcolour] (client)
+      {\textbf{Go Client}\\libpcap};
+
+    % Docker Compose group
+    \node[box, fill=backcolour, right=2.6cm of client] (traefik)
+      {\textbf{Traefik}\\Reverse Proxy};
+
+    \node[box, fill=backcolour, right=2.0cm of traefik] (backend)
+      {\textbf{Backend}\\Node.js / Express};
+
+    \node[box, fill=backcolour, below=1.4cm of traefik] (dashboard)
+      {\textbf{Dashboard}\\Vue.js 3 / Nginx};
+
+    \node[box, fill=backcolour, right=2.0cm of backend] (mongo)
+      {\textbf{MongoDB}};
+
+    % Arrows
+    \draw[arr] (client) -- node[above, font=\scriptsize]{HTTPS POST} (traefik);
+    \draw[arr] (traefik) -- node[above, font=\scriptsize]{proxy} (backend);
+    \draw[arr] (traefik) -- node[left, font=\scriptsize]{serve} (dashboard);
+    \draw[arr] (backend) -- node[above, font=\scriptsize]{read / write} (mongo);
+    \draw[arr, <->] (dashboard.east)
+      -- ++(0.6,0)
+      |- node[right, font=\scriptsize, pos=0.3]{Socket.IO\\+ HTTP} (backend.south);
+  \end{tikzpicture}
+  \caption{Physical deployment topology of ByteRoute.}
+  \label{fig:physical}
+\end{figure}
+
+The four deployed services are:
+
 \begin{itemize}
-  \item \texttt{apps/backend}: Node.js/Express backend services and real-time APIs via Socket.IO;
-  \item \texttt{apps/dashboard}: frontend dashboard built with Vite and Vue;
-  \item \texttt{apps/client-go}: Go-based lightweight Linux client using libpcap;
-  \item \texttt{packages/shared}: shared contracts, models, and reusable types;
-  \item \texttt{scripts}: workspace-level automation scripts.
+  \item \textbf{Go Client}: runs on the monitored Linux host (or inside a
+    privileged container). It accesses the raw network interface via libpcap
+    and pushes connection batches to the backend over HTTPS.
+  \item \textbf{Backend (Node.js/Express)}: the central service. It handles
+    authentication, connection ingestion, GeoIP enrichment, MongoDB persistence,
+    and real-time broadcasts to dashboard clients via Socket.IO.
+  \item \textbf{Dashboard (Vue.js 3 / Nginx)}: a Single Page Application
+    served by Nginx inside a Docker container. It communicates with the backend
+    through HTTP REST calls and a persistent Socket.IO connection.
+  \item \textbf{MongoDB}: a NoSQL database instance that stores connection
+    records, user accounts, and tenant definitions.
 \end{itemize}
 
-This structure makes ownership boundaries explicit while preserving high discoverability of shared resources.
+Traefik acts as the ingress reverse proxy, routing browser and client
+requests to the appropriate backend or dashboard container by host and path
+rules. In development, the Vite dev server provides an equivalent proxy for
+\texttt{/api}, \texttt{/auth}, and \texttt{/socket.io} paths.
 
-\section{Monorepo Tooling}
+\section{Logical Architecture}
 
-The repository uses \texttt{pnpm} workspaces together with Turbo orchestration. This combination provides:
+Within the backend, the codebase follows a layered organization inspired by
+Hexagonal Architecture (Ports and Adapters). The three layers are:
+
+\begin{enumerate}
+  \item \textbf{Domain layer}: contains type definitions, interfaces (ports),
+    and pure business logic. It has no dependency on Express, MongoDB, or any
+    external library. The \texttt{normalizeConnection} function and the
+    \texttt{applyIngestionDsl} function both reside in this layer or at the
+    boundary to the application layer.
+  \item \textbf{Application/Service layer}: contains the services that
+    orchestrate domain logic. Notable services include \texttt{ingest.ts}
+    (connection ingestion pipeline), \texttt{geoip.ts} (enrichment
+    coordination), \texttt{auth.service.ts} (JWT issuance and verification),
+    and \texttt{tenant.service.ts} (tenant resolution and management).
+  \item \textbf{Infrastructure layer}: contains Express route handlers,
+    Mongoose models, the Socket.IO server wrapper, and the compiled domain DSL
+    adapter. This layer depends on all external frameworks and libraries.
+\end{enumerate}
+
+The repository is organized as a \texttt{pnpm} monorepo using Turbo for task
+orchestration. The top-level layout is:
+
 \begin{itemize}
-  \item deterministic dependency installation;
-  \item efficient task execution and caching;
-  \item consistent build/test commands across projects.
+  \item \texttt{apps/backend}: the Node.js backend application;
+  \item \texttt{apps/dashboard}: the Vue.js 3 frontend application;
+  \item \texttt{apps/client-go}: the Go capture client;
+  \item \texttt{packages/shared}: shared TypeScript types and Mongoose models;
+  \item \texttt{packages/typescript}: shared TypeScript base configuration;
+  \item \texttt{scripts}: workspace-level automation and documentation scripts.
 \end{itemize}
 
-\chapter{System Architecture}
+\section{Data Flow}
 
-\section{End-to-End Data Flow}
+The complete ingestion-to-visualization pipeline proceeds through the following
+stages:
 
-The system implements a near-real-time pipeline:
-\begin{itemize}
-  \item the Go client captures packets via libpcap, extracts destination IPs, deduplicates, and sends batched connections to the backend;
-  \item the backend receives batches, enriches entries with GeoIP metadata, persists records in MongoDB, and broadcasts updates via Socket.IO;
-  \item the Vue dashboard consumes real-time events, renders a world map of traffic flows, shows live connection lists, statistics by ASN/country, and time-based charts.
-\end{itemize}
+\begin{enumerate}
+  \item The Go client opens a libpcap handle on a network interface and emits
+    \texttt{PacketEvent} values for each captured IP datagram.
+  \item The \texttt{Aggregator} (inside \texttt{internal/flow}) groups events
+    by five-tuple key (or by IP pair, depending on the \texttt{--dedupe} flag),
+    updates per-flow byte and packet counters, and marks flows as dirty when
+    they receive new traffic.
+  \item At the end of each flush interval, the aggregator exports a batch of
+    dirty flows, serializes them to a JSON payload, and sends an HTTP POST
+    request to \texttt{/api/connections} on the backend.
+  \item The backend's ingestion service applies the domain DSL ingestion rules
+    (filtering denied source IPs, normalizing protocols), then calls
+    \texttt{enrichBatch} to annotate each record with GeoIP metadata.
+  \item Enriched records are upserted into MongoDB using bulk update operations
+    (filter on \texttt{tenantId} and \texttt{id}).
+  \item The service calls \texttt{emitTrafficFlows} and
+    \texttt{emitStatisticsUpdate} on the Socket.IO server, which broadcasts the
+    new data to all dashboard clients subscribed to the relevant tenant room.
+  \item The Vue.js dashboard receives the Socket.IO events and reactively
+    updates the world map pins, the connection list, and the statistics panels
+    without a page reload.
+\end{enumerate}
 
-Contracts and models in the shared package reduce mismatch risks between producer (client), processor (backend), and consumer (dashboard).
+% ============================================================
+\chapter{Implementation Notes}
+\label{chap:implementation}
+% ============================================================
 
-\chapter{Component Analysis}
+\section{Technologies}
 
-\section{Backend Application}
+Table~\ref{tab:tech} lists the primary technologies used in each component.
 
-The backend application is implemented in TypeScript (Node.js/Express) and organized by domain-focused modules (auth, controllers, routes, services, middleware, and infrastructure). It includes:
-\begin{itemize}
-  \item GeoIP enrichment and Socket.IO broadcasting for live updates;
-  \item MongoDB persistence for connection records and analytics;
-  \item dedicated unit and feature test directories;
-  \item scripts for coverage aggregation and database preparation;
-  \item Docker support for containerized execution.
-\end{itemize}
+\begin{table}[H]
+  \centering
+  \caption{Technology stack of ByteRoute.}
+  \label{tab:tech}
+  \begin{tabularx}{\textwidth}{llX}
+    \toprule
+    \textbf{Component} & \textbf{Language} & \textbf{Key dependencies} \\
+    \midrule
+    Go Client &
+      Go ($\geq$ 1.26) &
+      \texttt{gopacket/pcap} (libpcap bindings), standard library
+      (\texttt{net/http}, \texttt{sync}, \texttt{encoding/json}) \\
+    \addlinespace
+    Backend &
+      TypeScript / Node.js &
+      Express, Socket.IO, Mongoose, \texttt{jsonwebtoken}, \texttt{bcryptjs},
+      \texttt{maxmind} (GeoLite2 reader), Vitest \\
+    \addlinespace
+    Dashboard &
+      TypeScript / Vue.js 3 &
+      Vite, Pinia, Vue Router, \texttt{socket.io-client}, Vitest, Nginx
+      (production serving) \\
+    \addlinespace
+    Shared Package &
+      TypeScript &
+      Mongoose schema definitions, domain type exports \\
+    \addlinespace
+    Infrastructure &
+      YAML / Shell &
+      Docker, Docker Compose, Traefik, GitHub Actions, Renovate \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
-This reflects a mature service architecture with explicit separation between HTTP interfaces, real-time channels, business logic, and persistence concerns.
+\section{Backend}
 
-\section{Dashboard Application}
+\subsection{Connection Ingestion Pipeline}
 
-The dashboard follows a modern frontend structure with dedicated folders for components, composables, stores, services, and views. This promotes:
-\begin{itemize}
-  \item reusable UI logic and predictable state management;
-  \item live visualization of geospatial traffic flows and trend charts;
-  \item improved testability of isolated view logic.
-\end{itemize}
+The ingestion entry point is exposed by the Express router at
+\texttt{POST /api/connections}. After authentication middleware validates the
+bearer token and extracts the tenant identifier, the route handler delegates
+to \texttt{ingestConnections} in \texttt{src/services/ingest.ts}.
 
-Integration with Vite and Vitest supports fast iteration and frontend quality checks.
+The function first applies ingestion rules compiled from the domain DSL.
+Code~\ref{lst:dsl-apply} shows the relevant logic.
+
+\begin{lstlisting}[language=TypeScript, caption={Domain DSL application during ingestion.}, label={lst:dsl-apply}]
+function applyIngestionDsl(connections: Connection[]): Connection[] {
+  const rules = getCompiledDomainDsl().ingestion.connection;
+
+  return connections
+    .filter((c) => !rules.denySourceIps.has(c.sourceIp))
+    .map((c) => {
+      const protocol = rules.allowedProtocols.has(c.protocol)
+        ? c.protocol
+        : rules.defaultProtocol;
+      const status = c.status ?? rules.defaultStatus;
+      return { ...c, protocol, status };
+    });
+}
+\end{lstlisting}
+
+After filtering, the service calls \texttt{enrichBatch}, which reads
+MaxMind GeoLite2 databases (ASN and City) from disk and appends geographic
+and organizational metadata to each connection record. The enriched batch is
+then upserted into MongoDB using a bulk \texttt{updateOne} with
+\texttt{upsert: true} for each record, keyed on \texttt{(tenantId, id)}.
+Finally, the service emits updated traffic-flow projections and statistics
+through Socket.IO to dashboard clients watching the relevant tenant room.
+
+\subsection{Authentication and Token Management}
+
+The backend exposes four authentication routes under \texttt{/auth}:
+\texttt{POST /auth/signup}, \texttt{POST /auth/signin}, \texttt{GET /auth/me},
+and \texttt{POST /auth/client-token}. Passwords are hashed with a
+\texttt{bcryptjs}-based utility (the \texttt{password.ts} service) before
+storage, and never persisted in plain text.
+
+On successful sign-in, the backend issues a signed JWT containing the user
+identifier, email, and role. A second, short-lived token type (the
+\textit{client token}) is issued separately via \texttt{/auth/client-token} and
+is intended for use by the Go client. Both token types carry an expiration time
+configurable via environment variables (\texttt{AUTH\_TOKEN\_TTL} and
+\texttt{AUTH\_CLIENT\_TOKEN\_TTL}).
+
+All \texttt{/api/*} routes are protected by a Passport.js bearer strategy that
+verifies the token signature and expiration before injecting the principal into
+the request context.
+
+\subsection{Multi-Tenancy}
+
+Tenant resolution follows a three-step priority chain: the
+\texttt{X-Tenant-Id} HTTP header is checked first, then the \texttt{tenantId}
+query parameter, and finally the first tenant owned by the authenticated user
+(falling back to the string \texttt{"default"} if none exists). This allows
+the Go client to target a specific tenant without modifying the JWT, and the
+dashboard to switch tenants by re-sending requests with a different header
+value.
+
+\subsection{Real-Time Events via Socket.IO}
+
+The backend maintains a Socket.IO server that operates over the same HTTP
+server as Express. When a client connects, it authenticates with the same
+bearer token and joins a Socket.IO room named after its tenant identifier.
+This room-based isolation ensures that traffic events and statistics updates
+emitted for tenant A are never delivered to dashboard sessions authorized for
+tenant B.
+
+Two distinct emission events are used: \texttt{trafficFlows} (a minimal
+projection carrying source and destination coordinates for map rendering) and
+\texttt{statisticsUpdate} (aggregated counts grouped by country, ASN, and
+protocol, governed by the domain DSL analytics rules).
+
+\subsection{Domain DSL}
+
+The domain DSL is a YAML file compiled once at startup by
+\texttt{src/infrastructure/dsl/domain-dsl.ts}. Code~\ref{lst:dsl-yaml} shows
+the default configuration.
+
+\begin{lstlisting}[language=bash, caption={Default domain DSL configuration (\texttt{config/domain.dsl.yaml}).}, label={lst:dsl-yaml}]
+ingestion:
+  connection:
+    allowedProtocols: [TCP, UDP, ICMP, OTHER]
+    defaultProtocol: OTHER
+    defaultStatus: active
+    denySourceIps: []
+
+analytics:
+  queries:
+    byCountry:
+      sortBy: connections
+      order: desc
+    byAsn:
+      sortBy: connections
+      order: desc
+    byProtocol:
+      sortBy: connections
+      order: desc
+\end{lstlisting}
+
+The \texttt{ingestion.connection} section controls which protocols are accepted
+and which source IPs are denied before enrichment. The
+\texttt{analytics.queries} section shapes the sorting and (optionally) the
+limiting applied when the backend generates statistics groups for Socket.IO
+emission. Both sections can be extended without modifying TypeScript source
+code.
 
 \section{Go Client}
 
-The Go client introduces language diversity in the same repository while preserving modularity through \texttt{cmd/} and \texttt{internal/} packages. It is oriented to traffic capture on Linux via libpcap, destination extraction and deduplication, batching, backend communication, and runtime metrics collection.
+\subsection{Packet Capture}
 
-Keeping the client close to server and shared contracts reduces integration drift and simplifies release coordination.
+The capture layer wraps the \texttt{gopacket/pcap} library. The
+\texttt{capture.Start} function opens a live pcap handle on the specified
+interface and applies an optional BPF filter. Code~\ref{lst:capture} shows
+the core of the capture loop.
+
+\begin{lstlisting}[language=Go, caption={Packet capture loop in the Go client.}, label={lst:capture}]
+func Start(iface, bpf string, snapLen int, promisc bool) (
+    *pcap.Handle, <-chan PacketEvent, error) {
+  handle, err := pcap.OpenLive(iface, int32(snapLen), promisc,
+                               pcap.BlockForever)
+  if err != nil {
+    return nil, nil, err
+  }
+  if bpf != "" {
+    if err := handle.SetBPFFilter(bpf); err != nil {
+      handle.Close()
+      return nil, nil, fmt.Errorf("set BPF: %w", err)
+    }
+  }
+  out := make(chan PacketEvent, 2048)
+  src := gopacket.NewPacketSource(handle, handle.LinkType())
+  go func() {
+    defer close(out)
+    for packet := range src.Packets() {
+      // Extract IP layer, transport layer, and emit PacketEvent
+      // ...
+    }
+  }()
+  return handle, out, nil
+}
+\end{lstlisting}
+
+If no BPF filter is provided by the operator, the client generates a default
+filter string based on the capture \texttt{direction} flag (\texttt{out},
+\texttt{in}, or \texttt{both}) and the local IPv4 addresses of the selected
+interface. This default filter reliably excludes loopback and intra-host
+traffic.
+
+\subsection{Flow Aggregation and Deduplication}
+
+The \texttt{Aggregator} type in \texttt{internal/flow/flow.go} maintains an
+in-memory map keyed by a \texttt{Key} struct containing the five-tuple
+(\texttt{SrcIP}, \texttt{DstIP}, \texttt{SrcPort}, \texttt{DstPort},
+\texttt{Protocol}). When the \texttt{--dedupe ip} mode is selected, the key
+collapses the port fields to zero so that multiple connections between the same
+host pair count as a single flow entry.
+
+Each map entry records first-seen and last-seen timestamps, cumulative byte
+and packet counters split by direction (\texttt{bytesIn}, \texttt{bytesOut},
+\texttt{packetsIn}, \texttt{packetsOut}), and a \texttt{dirty} flag indicating
+uncommitted changes. Entries are marked inactive and evicted once they have
+been idle for longer than the configured \texttt{--idle-ttl} duration.
+
+At each flush interval, \texttt{ExportBatch} collects all dirty, non-pending
+entries, serializes them into a \texttt{backend.ConnectionBatch} struct, and
+sends an HTTP POST to \texttt{/api/connections}. The \texttt{pending} flag
+prevents a flow from appearing in two consecutive batches before the first
+request has completed.
+
+\subsection{Configuration}
+
+The client provides both command-line flags and environment variable equivalents
+for every setting. Table~\ref{tab:client-flags} summarises the most significant
+options.
+
+\begin{table}[H]
+  \centering
+  \caption{Key configuration flags for the Go client.}
+  \label{tab:client-flags}
+  \begin{tabularx}{\textwidth}{llX}
+    \toprule
+    \textbf{Flag} & \textbf{Env var} & \textbf{Description} \\
+    \midrule
+    \texttt{--iface} & \texttt{BYTEROUTE\_IFACE} &
+      Network interface to capture on (required). \\
+    \texttt{--backend} & \texttt{BYTEROUTE\_BACKEND\_URL} &
+      Backend base URL for ingestion requests. \\
+    \texttt{--auth-token} & \texttt{BYTEROUTE\_AUTH\_TOKEN} &
+      Bearer token used to authenticate ingestion requests. \\
+    \texttt{--flush} & & Duration between batch POST requests (e.g., \texttt{5s}). \\
+    \texttt{--direction} & & Capture direction: \texttt{out} (default), \texttt{in}, or \texttt{both}. \\
+    \texttt{--bpf} & \texttt{BYTEROUTE\_BPF} &
+      Custom BPF filter expression; overrides the generated default. \\
+    \texttt{--dedupe} & & Deduplication mode: \texttt{flow} (five-tuple) or \texttt{ip} (IP pair). \\
+    \texttt{--reporter-ip} & \texttt{BYTEROUTE\_REPORTER\_IP} &
+      Public IP of the sensor host, enabling backend geo-location of private
+      source addresses. \\
+    \texttt{--idle-ttl} & & Maximum idle time before a flow entry is evicted. \\
+    \texttt{--max-batch-conns} & & Maximum number of records per POST request. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Dashboard}
+
+The dashboard is a Vue.js 3 Single Page Application built with Vite. It
+communicates with the backend through:
+
+\begin{itemize}
+  \item \textbf{REST API calls}: handled by composables and typed API client
+    functions under \texttt{src/api/}, using the Fetch API or Axios.
+  \item \textbf{Socket.IO}: a persistent connection managed by a dedicated
+    service, receiving \texttt{trafficFlows} and \texttt{statisticsUpdate}
+    events and propagating them to reactive Pinia stores.
+\end{itemize}
+
+Application state is managed with Pinia. Distinct stores handle
+authentication state (user identity, token persistence), tenant selection,
+connection records, and statistics data. Vue Router provides client-side
+navigation between the map view, the connection list, and the statistics panels.
+
+In production, Nginx serves the pre-built static bundle and proxies
+\texttt{/api}, \texttt{/auth}, and \texttt{/socket.io} to the backend
+container. The \texttt{VITE\_SOCKET\_URL} environment variable controls the
+Socket.IO connection target: if unset, the client connects to the same origin,
+which is correct in both the Vite dev-proxy scenario and the Docker Compose
+scenario behind Traefik.
 
 \section{Shared Package}
 
-The shared package centralizes common models and types. In a multi-application environment, this is critical to avoid contract divergence and to ensure compile-time compatibility between producers and consumers.
-
-\chapter{Quality and Delivery}
-
-\section{Testing and Coverage}
-
-The monorepo shows evidence of a layered testing approach:
-\begin{itemize}
-  \item backend unit and feature/e2e coverage;
-  \item dashboard unit testing via Vitest;
-  \item aggregated coverage reports surfaced through Codecov.
-\end{itemize}
-
-A unified quality baseline across applications is one of the key advantages of this monorepo setup.
-
-\section{CI/CD Workflows}
-
-The repository integrates GitHub Actions for automation:
-\begin{itemize}
-  \item release workflow builds documentation artifacts (\texttt{docs/SPE-report.pdf}, \texttt{docs/ASW-report.pdf}) prior to semantic release and publishes them as release assets;
-  \item build/test workflow validates LaTeX compilation by running \texttt{make pdf} in \texttt{docs/};
-  \item optional AI-assisted workflow (\texttt{.github/workflows/ai-docs-update.yml}) can update \texttt{docs/SPE-report.tex} and \texttt{docs/ASW-report.tex}, compile them, and open a pull request using GitHub Models with \texttt{GITHUB\_TOKEN}.
-\end{itemize}
-
-Selective execution based on changed paths and workspace awareness keeps pipelines efficient as the repository grows.
-
-\section{Developer Experience}
-
-The repository includes common governance and automation files (commit linting, semantic release configuration, renovate settings, and workspace synchronization scripts). These conventions contribute to:
-\begin{itemize}
-  \item consistent contribution standards;
-  \item easier onboarding;
-  \item safer dependency lifecycle management.
-\end{itemize}
-
-\chapter{Critical Evaluation}
-
-\section{Strengths}
+The \texttt{packages/shared} package exports:
 
 \begin{itemize}
-  \item \textbf{Unified lifecycle}: build, test, documentation, and release are coordinated from one workspace.
-  \item \textbf{Contract consistency}: shared models reduce mismatch across backend, dashboard, and client.
-  \item \textbf{Operational readiness}: Docker, CI, coverage, and release assets indicate deployment awareness.
-  \item \textbf{Real-time experience}: Socket.IO enables live telemetry to the dashboard.
-  \item \textbf{Observability potential}: persisted records in MongoDB support statistics by ASN/country and time-series analysis.
+  \item TypeScript type definitions for \texttt{Connection}, \texttt{TrafficFlow},
+    and related value objects, ensuring compile-time consistency across the
+    backend and dashboard;
+  \item Mongoose schema definitions and model constructors for
+    \texttt{Connection}, \texttt{User}, and \texttt{Tenant}, allowing the
+    backend to import and register them without duplicating schema code.
 \end{itemize}
 
-\section{Potential Risks}
+Because the shared package is linked as a local workspace dependency (declared
+in both \texttt{apps/backend/package.json} and \texttt{apps/dashboard/package.json}),
+any type change is immediately visible to all consumers without a publish step.
+The \texttt{packages/typescript} package provides a shared
+\texttt{tsconfig.base.json} used by all TypeScript projects in the monorepo.
+
+% ============================================================
+\chapter{DevOps and Quality Assurance}
+\label{chap:devops}
+% ============================================================
+
+\section{DVCS Workflow}
+
+ByteRoute uses \textbf{GitHub Flow}: development happens in short-lived feature
+branches derived directly from \texttt{main}. No long-running integration or
+release branches are maintained. Each change is merged through a Pull Request
+(PR), which must pass all automated checks before merging. Direct pushes to
+\texttt{main} are blocked at the repository level.
+
+This strategy was chosen for its simplicity and its suitability for a small
+team: it minimizes merge debt, keeps the production branch always deployable,
+and integrates naturally with the automated release pipeline triggered on every
+push to \texttt{main}.
+
+\section{Conventional Commits and Semantic Release}
+
+Every commit message must conform to the \textbf{Conventional Commits}
+specification (\texttt{<type>[(scope)][!]: <description>}). Commitlint enforces
+this format via a Husky \texttt{commit-msg} Git hook, ensuring that malformed
+messages are rejected before reaching the remote.
+
+Semantic Release analyses the commit history after each merge to \texttt{main}
+and determines the next version number automatically:
 
 \begin{itemize}
-  \item \textbf{Cross-language complexity}: TypeScript and Go require dual expertise and toolchain maintenance.
-  \item \textbf{Packet capture overhead}: libpcap may impose CPU overhead and require elevated privileges on some systems.
-  \item \textbf{GeoIP accuracy}: enrichment quality depends on database freshness and may affect analytics precision.
-  \item \textbf{Pipeline coupling}: broad CI jobs may become slower as the repository scales.
-  \item \textbf{Shared package impact}: breaking contract changes can affect multiple applications simultaneously.
+  \item \texttt{fix} commits trigger a patch version increment;
+  \item \texttt{feat} commits trigger a minor version increment;
+  \item commits containing a breaking change footer trigger a major version
+    increment.
 \end{itemize}
 
-\section{Recommended Improvements}
+The release workflow then generates an updated \texttt{CHANGELOG.md}, creates
+a GitHub Release with the computed version tag, and (via
+\texttt{@semantic-release/git}) commits the version bump back to the repository.
+A \texttt{sync-workspace-versions.mjs} script propagates the new version to
+all \texttt{package.json} files in the monorepo.
+
+\section{Quality Assurance Tools}
+
+\subsection{Husky and Lint-staged}
+
+Husky manages two pre-commit hooks:
 
 \begin{itemize}
-  \item enforce stricter contract versioning rules for shared models and automate compatibility checks;
-  \item expand architecture documentation for cross-component data flows and real-time event schemas;
-  \item adopt selective CI execution based on affected projects and optimize cache usage;
-  \item track non-functional metrics (build time, test duration, packet capture throughput, dashboard render latency);
-  \item schedule GeoIP database refresh and validate enrichment accuracy in CI.
+  \item \texttt{commit-msg}: runs Commitlint and rejects commits that do not
+    follow the Conventional Commits format.
+  \item \texttt{pre-commit}: runs Lint-staged, which applies ESLint and
+    Prettier only to the files staged for the current commit, keeping the
+    feedback cycle fast without reformatting the entire codebase.
 \end{itemize}
 
+\subsection{ESLint and Prettier}
+
+ESLint configuration files (\texttt{eslint.config.ts} in the backend,
+\texttt{eslint.config.js} in the dashboard) enforce code quality rules
+consistent with the TypeScript style guide. Prettier is configured at the
+workspace root and ensures a uniform formatting style across all
+JavaScript/TypeScript source files.
+
+\subsection{Renovate}
+
+A Renovate configuration (\texttt{renovate.json}) scans the repository for
+outdated dependencies and opens automated PRs to update them. This keeps the
+dependency graph current without requiring manual tracking of upstream releases.
+
+\section{Continuous Integration and Delivery}
+
+The CI/CD pipeline is implemented as GitHub Actions workflows. Two main
+workflows are defined:
+
+\textbf{Build and Test} (\texttt{build-and-test.yml}): triggered on every PR
+and push to \texttt{main}. It:
+\begin{enumerate}
+  \item Installs dependencies with \texttt{pnpm install --frozen-lockfile};
+  \item Runs TypeScript type checks (\texttt{tsc --noEmit}) for the backend and
+    the dashboard;
+  \item Executes backend unit tests and end-to-end tests with Vitest, generating
+    Cobertura XML coverage reports;
+  \item Builds and runs Go client tests, generating a \texttt{coverage.out} file
+    and converting it to Cobertura XML;
+  \item Merges backend unit and e2e coverage reports using a custom merge script;
+  \item Publishes coverage artifacts (\texttt{coverage-reports},
+    \texttt{coverage-go}) and displays a Markdown summary in the GitHub Actions
+    job summary via the \texttt{irongut/CodeCoverageSummary} action;
+  \item Uploads coverage data to Codecov for badge generation.
+\end{enumerate}
+
+\textbf{Release} (\texttt{release.yml}): triggered on push to \texttt{main}
+after all checks pass. It:
+\begin{enumerate}
+  \item Runs Semantic Release to calculate the next version and create the
+    GitHub Release;
+  \item Conditionally builds Docker images for the backend, dashboard, and Go
+    client (only when a new release is published, to avoid creating redundant
+    image tags for non-version commits such as documentation updates);
+  \item Tags images with both the semantic version (e.g., \texttt{1.4.2}) and
+    the \texttt{latest} label, then pushes them to the GitHub Container Registry
+    (\texttt{ghcr.io/ste-script}).
+\end{enumerate}
+
+% ============================================================
+\chapter{Validation and Results}
+\label{chap:validation}
+% ============================================================
+
+\section{Testing Strategy}
+
+The test suite covers the backend at two levels:
+
+\begin{itemize}
+  \item \textbf{Unit tests}: located under \texttt{apps/backend/test/}, they
+    cover individual service functions (ingestion logic, GeoIP enrichment,
+    authentication, tenant resolution) in isolation, using mock objects where
+    infrastructure dependencies would otherwise be required.
+  \item \textbf{End-to-end tests}: also located under
+    \texttt{apps/backend/test/}, they spin up an in-memory MongoDB instance
+    (via \texttt{mongodb-memory-server}) and verify the full request life cycle
+    from the HTTP router through to database state, including authentication,
+    connection ingestion, and tenant isolation.
+\end{itemize}
+
+The test runner is \textbf{Vitest}, configured in \texttt{vitest.config.ts}.
+The end-to-end configuration is kept separate (\texttt{vitest.config.ts} with
+an \texttt{e2e} project entry) to allow the two test types to run independently
+or together.
+
+The Go client uses the standard \texttt{go test} toolchain. Tests exist for the
+BPF filter generation logic (\texttt{capture/bpf\_test.go}) and for the flow
+aggregation and deduplication logic (\texttt{flow/flow\_test.go}).
+
+The dashboard uses Vitest with \texttt{@vue/test-utils} for component and
+composable tests, located under \texttt{apps/dashboard/src/test/}.
+
+\section{Coverage}
+
+Coverage is collected at three levels:
+
+\begin{enumerate}
+  \item \textbf{Backend unit} and \textbf{end-to-end} coverage is gathered by
+    Vitest using V8 instrumentation and exported as Cobertura XML. The two
+    reports are merged by the \texttt{scripts/merge-coverage.mjs} script into a
+    single consolidated file, which is uploaded to Codecov and archived as a CI
+    artifact alongside the HTML report generated by
+    \texttt{scripts/coverage-e2e.mjs}.
+  \item \textbf{Go client} coverage is produced by \texttt{go test --coverprofile}
+    and converted to Cobertura XML by \texttt{gocover-cobertura}. The Cobertura
+    file and the raw \texttt{coverage.out} are published as the \texttt{coverage-go}
+    CI artifact.
+  \item Both Cobertura reports are consumed by the
+    \texttt{irongut/CodeCoverageSummary} GitHub Action, which posts a formatted
+    Markdown table to the job summary, making coverage data immediately visible
+    in the Actions interface without downloading artifacts.
+\end{enumerate}
+
+The overall coverage level is tracked via a Codecov badge displayed in the
+repository \texttt{README.md}, providing a persistent, public quality signal.
+
+\section{Observable System Behavior}
+
+End-to-end correctness is also validated qualitatively through integration
+testing with the running Docker Compose stack:
+
+\begin{itemize}
+  \item A \texttt{scripts/seed.ts} script wipes the database and inserts a
+    baseline user and tenant, enabling a reproducible starting state for manual
+    and automated acceptance tests.
+  \item The \texttt{scripts/ensure-connection-indexes.mjs} script verifies that
+    MongoDB compound indexes (\texttt{tenantId} + \texttt{id},
+    \texttt{tenantId} + \texttt{startTime}) are present, preventing silent
+    performance degradation in larger deployments.
+  \item The backend exposes a \texttt{GET /health} endpoint, which returns an
+    HTTP 200 response when the service is ready to accept traffic. This endpoint
+    is used by Docker Compose health checks and CI smoke tests.
+\end{itemize}
+
+% ============================================================
 \chapter{Conclusion}
+\label{chap:conclusion}
+% ============================================================
 
-The ByteRoute monorepo demonstrates a well-structured and production-oriented organization. It balances modularity and integration by combining independent applications with shared contracts and centralized tooling. The explicit CI/CD around documentation and release assets strengthens reproducibility and communication.
+ByteRoute demonstrates the viability of a full-stack, self-hosted network
+traffic monitoring platform built on modern open-source technologies. The
+combination of a lightweight Go sensor, a Node.js enrichment and broadcasting
+backend, and a Vue.js 3 dashboard provides a complete real-time visibility
+solution that can be deployed with a single \texttt{docker compose up} command.
 
-From a university project perspective, this repository is a strong example of modern multi-service software engineering practice, with particular value in maintainability, consistency, and end-to-end coordination for network traffic monitoring.
+From an engineering standpoint, the project exhibits several qualities that are
+indicative of sound software design practice:
+
+\begin{itemize}
+  \item \textbf{Separation of concerns}: the monorepo layout and the shared
+    typed contracts ensure that the three main components are independently
+    developed and tested while remaining interoperable.
+  \item \textbf{Extensibility}: the domain DSL externalizes behavioral rules,
+    allowing operators to adjust ingestion filtering and analytics parameters
+    without rebuilding the application.
+  \item \textbf{Reproducibility}: the Docker Compose setup, the frozen lockfile,
+    and the seed script together guarantee that any developer can obtain an
+    identical running environment in a few minutes.
+  \item \textbf{Automation}: Conventional Commits, Semantic Release, and GitHub
+    Actions reduce manual overhead at every stage of the delivery pipeline, from
+    commit message validation to Docker image publication.
+\end{itemize}
+
+Future work could extend the platform in several directions. Support for
+additional capture backends (e.g., eBPF-based sensors) would reduce the
+privilege requirements of the client. A time-series storage backend (such as
+InfluxDB or TimescaleDB) would improve the scalability and queryability of
+historical traffic data. An alerting subsystem, modeled on a push notification
+architecture similar to that of AlmaSpot, could notify administrators when
+traffic to unexpected ASNs or countries is detected. Finally, expanding the
+dashboard with per-connection detail views and exportable reports would broaden
+the platform's applicability to security auditing and compliance use cases.
 
 \end{document}
