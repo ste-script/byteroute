@@ -15,8 +15,6 @@ on:
         description: "Optional context/instructions for the update"
         required: false
         default: ""
-  pull_request:
-    types: [opened, synchronize]
 concurrency:
   group: ai-docs-${{ github.ref }}
   cancel-in-progress: true
