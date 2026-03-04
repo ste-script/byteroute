@@ -75,7 +75,7 @@ jobs:
           token: ${{ secrets.DEPLOYMENT_TOKEN || secrets.GITHUB_TOKEN }}
           base: ${{ github.head_ref || github.ref_name }}
           commit-message: "docs: AI refresh LaTeX reports"
-          title: "docs: AI refresh LaTeX reports"
+          title: "docs: refreshed LaTeX reports via AI"
           body: |
             Automated AI update for LaTeX project reports.
 
