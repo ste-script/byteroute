@@ -760,6 +760,14 @@ async function main() {
 }
 
 main().catch((error) => {
+  // Quota-exhausted errors are expected in rate-limited environments.
+  // Exit 0 so the CI pipeline can continue (nothing was written to disk).
+  const isQuotaExhausted =
+    /daily quota|quota.*exhausted|wait.*exceeds cap/i.test(error?.message ?? "");
+  if (isQuotaExhausted) {
+    console.warn(`[ai-update-latex] API quota exhausted — skipping update. ${error.message}`);
+    process.exit(0);
+  }
   console.error(error);
   process.exit(1);
 });

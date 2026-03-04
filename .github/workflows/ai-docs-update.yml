@@ -51,6 +51,8 @@ jobs:
           node-version: 24.14.0
 
       - name: Update LaTeX reports with AI
+        continue-on-error: true
+        id: ai-update
         env:
           AI_PROVIDER: github
           AI_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,6 +64,7 @@ jobs:
         run: node scripts/ai-update-latex.mjs
 
       - name: Install LaTeX
+        if: steps.ai-update.outcome != 'skipped'
         run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
 
       - name: Validate LaTeX compilation
