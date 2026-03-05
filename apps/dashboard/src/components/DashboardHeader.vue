@@ -46,6 +46,8 @@ const emit = defineEmits<{
         :options="tenantOptions"
         option-label="label"
         option-value="value"
+        :disabled="tenantOptions.length === 0"
+        placeholder="Create your first tenant"
         aria-label="Select tenant"
         class="tenant-select"
         @update:model-value="emit('update:selectedTenant', $event as string)"

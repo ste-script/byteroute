@@ -823,8 +823,8 @@ compilation to ensure that changes to the source files do not break the build.
 
 To reduce manual editing effort, an experimental workflow was added to automatically update
 the LaTeX sources using a large language model. The pipeline is implemented as a GitHub
-Actions workflow (\texttt{.github/workflows/ai-docs-update.yml}) that runs a small Node.js
-script (\texttt{scripts/ai-update-latex.mjs}). The idea was to provide the model with the
+Actions workflow (\path{.github/workflows/ai-docs-update.yml}) that runs a small Node.js
+script (\path{scripts/ai-update-latex.mjs}). The idea was to provide the model with the
 report sources and optional repository context, then let it propose edits, commit the
 result, and finally validate the output by compiling the PDFs.
 

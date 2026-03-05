@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";
 import type { TimeSeriesData } from "@byteroute/shared";
-import { resolveTenantIdFromRequest, userHasTenantAccess } from "../utils/tenant.js";
+import { tryResolveTenantIdFromRequest, userHasTenantAccess } from "../utils/tenant.js";
 import { getPrincipal } from "../auth/principal.js";
 
 interface MetricsRequestBody {
@@ -21,7 +21,12 @@ export function createMetricsController(ctx: AppContext) {
         }
 
         const principal = getPrincipal(req);
-        const tenantId = resolveTenantIdFromRequest(req, principal?.tenantIds[0]);
+        const tenantId = tryResolveTenantIdFromRequest(req);
+
+        if (!tenantId) {
+          res.status(401).json({ error: "Unauthorized" });
+          return;
+        }
 
         if (!principal || !userHasTenantAccess(principal.tenantIds, tenantId)) {
           res.status(403).json({ error: "Forbidden: no access to tenant" });

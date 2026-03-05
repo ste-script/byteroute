@@ -39,6 +39,7 @@ const postMetricsAuthed = (app: Express, body: string | object | undefined) =>
   request(app)
     .post('/api/metrics')
     .set('Authorization', `Bearer ${createTestToken()}`)
+    .set('X-Tenant-Id', 'default')
     .send(body)
 
 describe('Metrics API Integration', () => {
@@ -63,6 +64,22 @@ describe('Metrics API Integration', () => {
   })
 
   describe('POST /api/metrics', () => {
+    it('returns 401 when no tenant id is provided', async () => {
+      const snapshots = [{
+        timestamp: new Date().toISOString(),
+        connections: 100,
+        bandwidthIn: 50000,
+        bandwidthOut: 30000,
+        inactive: 5
+      }]
+
+      await request(app)
+        .post('/api/metrics')
+        .set('Authorization', `Bearer ${createTestToken()}`)
+        .send({ snapshots })
+        .expect(401)
+    })
+
     it('should accept and store metrics snapshots', async () => {
       const snapshots = [{
         timestamp: new Date().toISOString(),

@@ -6,6 +6,7 @@ import {
   getTenantRoom,
   resolveTenantIdFromRequest,
   sanitizeTenantId,
+  tryResolveTenantIdFromRequest,
 } from "../../src/utils/tenant.js";
 
 describe("tenant utils", () => {
@@ -43,6 +44,14 @@ describe("tenant utils", () => {
       query: {},
     } as unknown as Request;
     expect(resolveTenantIdFromRequest(reqDefault)).toBe(DEFAULT_TENANT_ID);
+  });
+
+  it("can strictly resolve tenant (no implicit default)", () => {
+    const reqMissing = { headers: {}, query: {} } as unknown as Request;
+    expect(tryResolveTenantIdFromRequest(reqMissing)).toBeUndefined();
+
+    const reqHeader = { headers: { "x-tenant-id": "  tenant-x  " }, query: {} } as unknown as Request;
+    expect(tryResolveTenantIdFromRequest(reqHeader)).toBe("tenant-x");
   });
 
   it("uses explicit fallback (principal tenantId) when no header or query is present", () => {
