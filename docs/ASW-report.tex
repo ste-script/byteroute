@@ -13,6 +13,8 @@
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
 \usepackage[english]{babel}
 \usepackage{float}
 \pagestyle{plain}
@@ -82,7 +84,7 @@
 % =========================================================
 
 ByteRoute is a real-time network traffic monitoring platform developed as a university project
-for the ASW (\emph{Architetture Software per il Web}) course. Its core objective is to give users
+for the ASW (\emph{Applicazioni e Servizi Web}) course. Its core objective is to give users
 live, geolocated visibility into the internet destinations their computer reaches: which servers,
 autonomous systems, and countries receive their traffic, and in what volume.
 
@@ -94,14 +96,16 @@ Traefik reverse proxy, providing a production grade topology that can be started
 single command.
 
 The remainder of this report is organised as follows.
-Chapter~\ref{ch:requirements} describes user, functional, and non-functional requirements.
-Chapter~\ref{ch:design} presents the overall system architecture, data flow, domain model, and
-design decisions.
-Chapter~\ref{ch:technologies} surveys the key technologies employed.
-Chapter~\ref{ch:implementation} details notable implementation aspects of each component.
-Chapter~\ref{ch:testing} discusses testing strategy and coverage results.
-Chapter~\ref{ch:deployment} describes how the system is deployed.
-Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
+\begin{itemize}
+      \item Chapter~\ref{ch:requirements} describes user, functional, and non-functional requirements.
+      \item Chapter~\ref{ch:design} presents the overall system architecture, data flow, domain model, and
+              design decisions.
+      \item Chapter~\ref{ch:technologies} surveys the key technologies employed.
+      \item Chapter~\ref{ch:implementation} details notable implementation aspects of each component.
+      \item Chapter~\ref{ch:testing} discusses testing strategy and coverage results.
+      \item Chapter~\ref{ch:deployment} describes how the system is deployed.
+      \item Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
+\end{itemize}
 
 % =========================================================
 \chapter{Requirements}
@@ -110,8 +114,8 @@ Chapter~\ref{ch:conclusion} draws conclusions and outlines future work.
 
 \section{User Requirements}
 
-The target users of ByteRoute are technically literate individuals---developers, system
-administrators, security researchers---who want transparent, real-time insight into the network
+The target users of ByteRoute are technically literate individuals (developers, system
+administrators, security researchers) who want transparent, real-time insight into the network
 activity of their workstations or servers.
 
 \begin{itemize}
@@ -122,11 +126,12 @@ activity of their workstations or servers.
           ASN information.
     \item Browse statistical breakdowns of traffic by country, ASN, and protocol.
     \item Examine time series charts of connection volume.
-    \item Generate and revoke client tokens so that the Go agent can post data without
+    \item Generate client tokens so that the Go agent can post data without
           exposing the user's main JWT.
     \item Switch between tenants to inspect different monitored hosts from the same dashboard.
 \end{itemize}
 
+\newpage
 \section{Functional Requirements}
 
 \begin{enumerate}
@@ -192,7 +197,7 @@ The system is structured as a monorepo with the following top-level packages:
 \texttt{apps/backend}     & TypeScript / Node.js & REST API + ingestion + Socket.IO \\
 \texttt{apps/dashboard}   & TypeScript / Vue.js~3 & SPA dashboard \\
 \texttt{packages/shared}  & TypeScript      & Shared Mongoose models and helpers \\
-\texttt{packages/typescript} & --           & Shared TypeScript base configuration \\
+\texttt{packages/typescript} & N/A          & Shared TypeScript base configuration \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -204,8 +209,9 @@ everything else is served by the dashboard's nginx container.
 
 \begin{figure}[H]
 \centering
+\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    node distance=1.4cm and 2.2cm,
+    node distance=1.2cm and 1.2cm,
     box/.style={draw, rounded corners=3pt, minimum width=2.6cm, minimum height=0.9cm,
                 font=\small, align=center},
     arr/.style={->, thick},
@@ -234,11 +240,13 @@ everything else is served by the dashboard's nginx container.
 \draw[arr] (backend) -- node[above, lbl]{Mongoose} (mongo);
 \draw[arr, dashed] (backend) to[bend right=20] node[right, lbl]{Socket.IO} (dashboard);
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Deployment topology of the ByteRoute system.}
 \label{fig:arch}
 \end{figure}
 
+\newpage
 \section{Data Flow}
 
 The end-to-end flow of a connection record through the system is as follows.
@@ -570,8 +578,8 @@ Table~\ref{tab:env} lists the most important backend environment variables.
 \texttt{MONGODB\_URI}                  & \texttt{mongodb://mongodb:27017/byteroute} & MongoDB connection string \\
 \texttt{JWT\_SECRET}                   & (required)   & HMAC-SHA256 signing key \\
 \texttt{PORT}                          & \texttt{4000} & HTTP listening port \\
-\texttt{MAXMIND\_USER\_ID}             & --           & MaxMind account ID \\
-\texttt{MAXMIND\_API\_KEY}             & --           & MaxMind license key \\
+\texttt{MAXMIND\_USER\_ID}             & N/A          & MaxMind account ID \\
+\texttt{MAXMIND\_API\_KEY}             & N/A          & MaxMind license key \\
 \texttt{CONNECTIONS\_BOOTSTRAP\_LIMIT} & \texttt{500} & Max connections loaded on startup \\
 \texttt{STATS\_EMIT\_INTERVAL}         & \texttt{30000} & Statistics emission period (ms) \\
 \texttt{AUTH\_TOKEN\_TTL}              & \texttt{1d}  & User JWT expiry \\
@@ -819,7 +827,7 @@ On every push to the default branch that contains conventional commits, \texttt{
 
 ByteRoute delivers a complete, end-to-end solution for real-time network traffic monitoring
 and geo-visualisation. The architecture cleanly separates concerns across three independently
-deployable components---Go capture agent, Node.js/Express backend, and Vue.js~3 dashboard---
+deployable components (Go capture agent, Node.js/Express backend, and Vue.js~3 dashboard),
 connected through well defined REST and WebSocket contracts.
 
 Key design strengths include the multi-tenancy model, which allows a single backend instance

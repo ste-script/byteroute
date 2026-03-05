@@ -13,6 +13,8 @@
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
 \usepackage[english]{babel}
 \usepackage{float}
 \pagestyle{plain}
@@ -407,7 +409,7 @@ high-level deployment topology.
     \draw[arr] (backend) -- node[above, font=\scriptsize]{read / write} (mongo);
     \draw[arr, <->] (dashboard.east)
       -- ++(0.6,0)
-      |- node[right, font=\scriptsize, pos=0.3]{Socket.IO\\+ HTTP} (backend.south);
+      |- node[right, font=\scriptsize, pos=0.3, align=left]{Socket.IO\\+ HTTP} (backend.south);
   \end{tikzpicture}
   \caption{Physical deployment topology of ByteRoute.}
   \label{fig:physical}
