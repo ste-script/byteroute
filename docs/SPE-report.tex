@@ -29,6 +29,7 @@
 \usepackage{titlesec}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{placeins}
 
 \titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
 
@@ -105,18 +106,27 @@ or expensive commercial software. ByteRoute addresses this gap with a
 lightweight, open-source, and self-hosted solution that any developer or system
 administrator can deploy with Docker Compose.
 
+\newpage
 \section{Report Structure}
 
-The remainder of this document is organized as follows. Chapter~\ref{chap:problem}
-presents the problem analysis, the proposed solution, and the involved user
-roles. Chapter~\ref{chap:requirements} enumerates functional and non-functional
-requirements. Chapter~\ref{chap:domain} defines the domain model and the
-ubiquitous language. Chapter~\ref{chap:architecture} describes the physical and
-logical architecture. Chapter~\ref{chap:implementation} details the
-implementation of each component. Chapter~\ref{chap:devops} covers the DevOps
-pipeline. Chapter~\ref{chap:validation} reports on testing and validation
-results. Chapter~\ref{chap:conclusion} concludes with a summary and future
-directions.
+The remainder of this document is organized as follows:
+
+\begin{itemize}
+  \item Chapter~\ref{chap:problem} presents the problem analysis, the proposed
+    solution, and the involved user personas and actors.
+  \item Chapter~\ref{chap:requirements} enumerates functional and non-functional
+    requirements.
+  \item Chapter~\ref{chap:domain} defines the domain model and the ubiquitous
+    language.
+  \item Chapter~\ref{chap:architecture} describes the physical and logical
+    architecture.
+  \item Chapter~\ref{chap:implementation} details the implementation of each
+    component.
+  \item Chapter~\ref{chap:devops} covers the DevOps pipeline.
+  \item Chapter~\ref{chap:validation} reports on testing and validation results.
+  \item Chapter~\ref{chap:conclusion} concludes with a summary and future
+    directions.
+\end{itemize}
 
 % ============================================================
 \chapter{Problem Analysis}
@@ -125,7 +135,7 @@ directions.
 
 \section{Context}
 
-Network monitoring is a well-established field, yet most available tools target
+Network monitoring is a well established field, yet most available tools target
 either professional network engineers (with complex configuration overhead) or
 enterprise environments (with licensing costs). Individual developers and small
 teams running Linux workstations or home servers have limited access to
@@ -149,6 +159,7 @@ practical difficulties:
     infrastructure.
 \end{enumerate}
 
+\newpage
 \section{Proposed Solution}
 
 ByteRoute solves these problems through a three-tier architecture:
@@ -170,30 +181,6 @@ ByteRoute solves these problems through a three-tier architecture:
 The entire stack is containerized with Docker and orchestrated with Docker
 Compose, keeping deployment reproducible and independent of the host
 operating system.
-
-\section{User Roles}
-
-The system recognises two distinct roles, summarised in
-Table~\ref{tab:roles}.
-
-\begin{table}[H]
-  \centering
-  \caption{User roles in ByteRoute.}
-  \label{tab:roles}
-  \begin{tabularx}{\textwidth}{llX}
-    \toprule
-    \textbf{Role} & \textbf{Interaction model} & \textbf{Primary goals} \\
-    \midrule
-    \textbf{User} & Passive viewer &
-      Monitors real-time traffic on the dashboard. Selects a tenant to observe.
-      Does not configure the capture pipeline. \\
-    \addlinespace
-    \textbf{Admin} & Active manager &
-      Registers accounts, creates and manages tenants, generates client tokens
-      for the Go client, and controls access to ingestion endpoints. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
 
 % ============================================================
 \chapter{Requirements Analysis}
@@ -223,6 +210,7 @@ Table~\ref{tab:roles}.
     provided environment files.
 \end{enumerate}
 
+\newpage
 \section{Functional Requirements}
 
 \begin{enumerate}
@@ -235,9 +223,9 @@ Table~\ref{tab:roles}.
     country, by ASN, and by protocol, updated in real time.
   \item As a user, I want to switch between tenants to observe the traffic of
     different monitored hosts.
-  \item As an admin, I want to register an account, sign in, and receive a JWT
+  \item As an account owner, I want to register an account, sign in, and receive a JWT
     token for subsequent authenticated requests.
-  \item As an admin, I want to create tenants and generate client tokens for
+  \item As an account owner, I want to create tenants and generate client tokens for
     the Go client, so that the capture agent can authenticate its ingestion
     requests.
   \item As a Go client operator, I want to specify the capture interface,
@@ -245,6 +233,7 @@ Table~\ref{tab:roles}.
     and flush interval on the command line or via environment variables.
 \end{enumerate}
 
+\newpage
 \section{Non-Functional Requirements}
 
 \begin{enumerate}
@@ -282,11 +271,14 @@ components.
 Table~\ref{tab:ubiquitous} lists the core terms used throughout the codebase
 and this report.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{0.95}
   \caption{Ubiquitous language for the ByteRoute domain.}
   \label{tab:ubiquitous}
-  \begin{tabularx}{\textwidth}{lX}
+  \begin{tabularx}{\textwidth}{p{0.22\textwidth}X}
     \toprule
     \textbf{Term} & \textbf{Definition} \\
     \midrule
@@ -327,9 +319,10 @@ and this report.
       by the metrics ingestion endpoint and the statistics panels. \\
     \addlinespace
     \textbf{Token} &
-      A signed JWT containing the user identity, role, and expiration time.
-      Two token types exist: the user session token (TTL of 1 day by default)
-      and the client token (TTL of 12 hours by default). \\
+      A signed JWT containing the user identity (identifier and email, with an
+      optional display name), the authorized tenant identifiers, and an
+      expiration time. Two token types exist: the user session token (TTL of 1
+      day by default) and the client token (TTL of 12 hours by default). \\
     \addlinespace
     \textbf{Domain DSL} &
       A YAML configuration file (default: \texttt{config/domain.dsl.yaml})
@@ -339,6 +332,8 @@ and this report.
     \bottomrule
   \end{tabularx}
 \end{table}
+
+\FloatBarrier
 
 \section{Domain Structure}
 
@@ -375,6 +370,7 @@ high-level deployment topology.
 
 \begin{figure}[H]
   \centering
+  \begin{adjustbox}{max width=\textwidth, max totalheight=0.75\textheight, keepaspectratio}
   \begin{tikzpicture}[
     box/.style={rectangle, draw, rounded corners=4pt,
                 minimum width=2.8cm, minimum height=1cm,
@@ -411,6 +407,7 @@ high-level deployment topology.
       -- ++(0.6,0)
       |- node[right, font=\scriptsize, pos=0.3, align=left]{Socket.IO\\+ HTTP} (backend.south);
   \end{tikzpicture}
+  \end{adjustbox}
   \caption{Physical deployment topology of ByteRoute.}
   \label{fig:physical}
 \end{figure}
@@ -585,7 +582,8 @@ and \texttt{POST /auth/client-token}. Passwords are hashed with a
 storage, and never persisted in plain text.
 
 On successful sign-in, the backend issues a signed JWT containing the user
-identifier, email, and role. A second, short-lived token type (the
+identifier, email, and the set of tenant identifiers the user can access. A
+second, short-lived token type (the
 \textit{client token}) is issued separately via \texttt{/auth/client-token} and
 is intended for use by the Go client. Both token types carry an expiration time
 configurable via environment variables (\texttt{AUTH\_TOKEN\_TTL} and
