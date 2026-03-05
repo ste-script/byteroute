@@ -597,13 +597,16 @@ the request context.
 
 \subsection{Multi-Tenancy}
 
-Tenant resolution follows a three-step priority chain: the
-\texttt{X-Tenant-Id} HTTP header is checked first, then the \texttt{tenantId}
-query parameter, and finally the first tenant owned by the authenticated user
-(falling back to the string \texttt{"default"} if none exists). This allows
-the Go client to target a specific tenant without modifying the JWT, and the
-dashboard to switch tenants by re-sending requests with a different header
-value.
+Tenant resolution is explicit: the tenant identifier must be provided by the
+client on each request (via the \texttt{X-Tenant-Id} HTTP header or the
+\texttt{tenantId} query parameter). If no tenant identifier is supplied, the
+backend rejects the request as \texttt{401 Unauthorized}. The authenticated
+principal is then checked for access to the requested tenant.
+
+For real-time connections, the Socket.IO handshake must likewise include a
+tenant identifier (via \texttt{handshake.auth.tenantId}, \texttt{handshake.query.tenantId},
+or the \texttt{X-Tenant-Id} header); missing tenant identifiers are rejected
+as unauthorized.
 
 \subsection{Real-Time Events via Socket.IO}
 

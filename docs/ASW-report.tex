@@ -29,6 +29,7 @@
 \usepackage{titlesec}
 \usepackage{booktabs}
 \usepackage{longtable}
+\usepackage{tabularx}
 
 \titleformat{\chapter}[display]{\normalfont\bfseries}{}{0pt}{\Large}
 
@@ -248,6 +249,7 @@ everything else is served by the dashboard's nginx container.
 
 \newpage
 \section{Data Flow}
+\
 
 The end-to-end flow of a connection record through the system is as follows.
 
@@ -266,8 +268,9 @@ The end-to-end flow of a connection record through the system is as follows.
           \texttt{Authorization} header. The JSON body contains a
           \texttt{reporterIp} field and a \texttt{connections} array.
     \item The backend's Passport.js middleware validates the JWT and resolves the owning
-          tenant (from the \texttt{X-Tenant-Id} header, query parameter, or the user's first
-          tenant).
+          tenant from the \texttt{X-Tenant-Id} header or the \texttt{tenantId} query
+          parameter. If no tenant is provided, the request is rejected as
+          \texttt{401 Unauthorized}.
     \item The Domain DSL is consulted to filter connections by allowed protocols and apply
           ingestion rules.
     \item For each connection, the backend performs a GeoIP lookup against the local MaxMind
@@ -366,9 +369,6 @@ Authentication is implemented with Passport.js using a JWT strategy. Two token t
 
 Tenants provide data isolation: every database query includes a \texttt{tenantId} filter, and
 the backend refuses to serve or store data for a tenant the authenticated user does not own.
-Tenant resolution follows a precedence chain: \texttt{X-Tenant-Id} header, then
-\texttt{tenantId} query parameter, then the user's first owned tenant, then the fallback
-string \texttt{"default"}.
 
 \section{Domain DSL}
 
@@ -389,7 +389,7 @@ governs two concern areas without requiring code changes:
 The Go client is organised into internal packages under \texttt{apps/client-go/internal/}:
 
 \begin{center}
-\begin{tabular}{ll}
+\begin{tabular}{lp{0.75\textwidth}}
 \toprule
 \textbf{Package} & \textbf{Responsibility} \\
 \midrule
@@ -407,6 +407,7 @@ The Go client is organised into internal packages under \texttt{apps/client-go/i
 \end{tabular}
 \end{center}
 
+\newpage
 \section{Dashboard Design}
 
 The Vue.js~3 SPA is structured following the Composition API pattern, with Pinia for state
@@ -449,17 +450,14 @@ decoding and flow-table maintenance without blocking the pcap loop.
 
 The backend targets Node.js with the Express~5 framework. Express provides a minimal,
 middleware oriented HTTP server. The \texttt{express.json()} body parser is configured with a
-2\,MB limit to match the client's \texttt{--max-batch-bytes} default. A
-\texttt{requestTimeout} of 30\,s is set on the underlying \texttt{http.Server} to prevent
-stalled connections from blocking the event loop.
-
+2\,MB limit to match the client's \texttt{--max-batch-bytes} default.
 \section{Socket.IO}
 
 Socket.IO is layered directly on the same \texttt{http.Server} as Express. It is used
 exclusively for server-to-client push: the backend emits \texttt{connections:update} events
-when new batches arrive, and aggregated statistics events every 30 seconds. CORS is enabled
-for all origins in development (restricted in production by Traefik).
+when new batches arrive, and aggregated statistics events every 30 seconds.
 
+\newpage
 \section{Passport.js and JWT}
 
 Authentication uses Passport.js with the \texttt{passport-jwt} strategy. JWTs are signed with
@@ -521,6 +519,7 @@ the snapshot. The remaining records are serialised and split at the first bounda
 exceed \texttt{--max-batch-conns} or \texttt{--max-batch-bytes}, then each batch is posted
 sequentially to the backend.
 
+\newpage
 \section{Backend: Ingestion Pipeline}
 
 Code~\ref{lst:ingest} shows a simplified view of the ingestion handler:
@@ -557,6 +556,7 @@ async function ingestConnections(ctx, tenantId, body) {
 }
 \end{lstlisting}
 
+\newpage
 \section{Backend: Statistics Emission}
 
 Every \texttt{STATS\_EMIT\_INTERVAL} milliseconds the backend runs MongoDB aggregation
@@ -571,11 +571,12 @@ Table~\ref{tab:env} lists the most important backend environment variables.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{llp{5.5cm}}
+\small
+\begin{tabularx}{\textwidth}{l p{0.28\textwidth} X}
 \toprule
 \textbf{Variable} & \textbf{Default} & \textbf{Description} \\
 \midrule
-\texttt{MONGODB\_URI}                  & \texttt{mongodb://mongodb:27017/byteroute} & MongoDB connection string \\
+\texttt{MONGODB\_URI}                  & \url{mongodb://mongodb:27017/byteroute} & MongoDB connection string \\
 \texttt{JWT\_SECRET}                   & (required)   & HMAC-SHA256 signing key \\
 \texttt{PORT}                          & \texttt{4000} & HTTP listening port \\
 \texttt{MAXMIND\_USER\_ID}             & N/A          & MaxMind account ID \\
@@ -585,61 +586,13 @@ Table~\ref{tab:env} lists the most important backend environment variables.
 \texttt{AUTH\_TOKEN\_TTL}              & \texttt{1d}  & User JWT expiry \\
 \texttt{AUTH\_CLIENT\_TOKEN\_TTL}      & \texttt{12h} & Client token expiry \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{Key backend environment variables.}
 \label{tab:env}
 \end{table}
 
-\section{Client: Environment Variables}
-
-The Go client supports both CLI flags and environment variable equivalents:
-
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Variable} & \textbf{CLI flag} \\
-\midrule
-\texttt{BYTEROUTE\_BACKEND\_URL}  & \texttt{--backend} \\
-\texttt{BYTEROUTE\_AUTH\_TOKEN}   & \texttt{--auth-token} \\
-\texttt{BYTEROUTE\_IFACE}         & \texttt{--iface} \\
-\texttt{BYTEROUTE\_BPF}           & \texttt{--bpf} \\
-\texttt{BYTEROUTE\_REPORTER\_IP}  & \texttt{--reporter-ip} \\
-\texttt{BYTEROUTE\_HOST\_ID}      & (host identifier) \\
-\bottomrule
-\end{tabular}
-\end{center}
-
+\newpage
 \section{REST API Reference}
-
-Code~\ref{lst:curl} demonstrates the standard authentication and setup workflow using
-\texttt{curl}, showing the exact sequence a new user would follow to start ingesting data.
-
-\begin{lstlisting}[language=bash, caption={Authentication and setup via cURL.}, label=lst:curl]
-# 1. Register and obtain a user JWT
-AUTH_TOKEN=$(curl -sS -X POST http://localhost:8080/auth/signup \
-  -H 'content-type: application/json' \
-  -d '{"name":"Demo","email":"demo@byteroute.dev","password":"secret"}' \
-  | jq -r '.token')
-
-# 2. Create a tenant
-curl -sS -X POST http://localhost:8080/api/tenants \
-  -H "authorization: Bearer $AUTH_TOKEN" \
-  -H 'content-type: application/json' \
-  -d '{"name":"My Laptop"}'
-
-# 3. Generate a short-lived client token for the Go agent
-CLIENT_TOKEN=$(curl -sS -X POST http://localhost:8080/auth/client-token \
-  -H "authorization: Bearer $AUTH_TOKEN" \
-  | jq -r '.token')
-
-# 4. Start the capture agent
-sudo ./byteroute-client \
-  --iface eth0 \
-  --backend http://localhost:8080 \
-  --auth-token "$CLIENT_TOKEN" \
-  --flush 5s
-\end{lstlisting}
-
 Table~\ref{tab:api} summarises the full API surface.
 
 \begin{table}[H]
@@ -663,6 +616,8 @@ Table~\ref{tab:api} summarises the full API surface.
 \label{tab:api}
 \end{table}
 
+
+\newpage
 \section{Ingestion Payload Schema}
 
 The client posts the following JSON structure to \texttt{POST /api/connections}:
@@ -672,7 +627,7 @@ The client posts the following JSON structure to \texttt{POST /api/connections}:
   "reporterIp": "203.0.113.10",
   "connections": [
     {
-      "id": "tcp-192.0.2.5:443-203.0.113.10:52301",
+      "id": "1d476695898e7ff393e8adaedadb7fb0af1e00da",
       "sourceIp": "192.0.2.5",
       "sourcePort": 443,
       "destIp": "203.0.113.10",
@@ -682,6 +637,21 @@ The client posts the following JSON structure to \texttt{POST /api/connections}:
   ]
 }
 \end{lstlisting}
+
+The \texttt{id} field is generated by the Go client and is intended to be a compact,
+deterministic identifier for a flow. In the current Go implementation, the ID is the
+lowercase hex encoding of a SHA-1 hash over the flow key:
+\texttt{sha1(hostId|protocol|sourceIp|destIp|sourcePort|destPort)}.
+
+The \texttt{hostId} component (configured via \texttt{--host-id}) is optional; if it is
+empty, the hash is computed only from the protocol and 5-tuple. This hashing scheme is used
+for stability and compactness rather than for security.
+
+Depending on configuration, the client may canonicalise the tuple before hashing:
+if exactly one endpoint is on the capture host, the local endpoint is normalised to the
+\texttt{sourceIp} side (and ports are swapped accordingly). Additionally, when the
+\texttt{--dedupe=ip} mode is enabled, ports are set to zero before hashing so multiple flows
+between the same IP pair collapse to a single stable ID.
 
 The backend responds with HTTP~202 Accepted after enqueuing the enrichment and upsert
 operations.
@@ -702,7 +672,9 @@ Two test categories are distinguished:
           with mocks defined in \texttt{test/mocks/}.
     \item \textbf{End-to-end (E2E) tests}: spin up the full Express application (including
           a real MongoDB instance and an in process Socket.IO server) and exercise complete
-          request-response cycles. Test fixtures cover authentication flows, connection
+          request-response cycles. Scenarios are written in Gherkin (\texttt{.feature} files)
+          and executed with Cucumber (\texttt{cucumber-js}), with step definitions implemented
+          in TypeScript. Test fixtures cover authentication flows, connection
           ingestion, tenant creation, and statistics emission. The E2E suite is located in
           \texttt{test/features/}.
 \end{itemize}
@@ -783,13 +755,22 @@ runtime.
 
 \section{Development Setup}
 
+The repository includes a VS Code Dev Container configuration in \texttt{.devcontainer/},
+which provides a reproducible development environment based on Docker Compose. It includes
+Node.js tooling, Go (1.26), a MongoDB service, and common system dependencies such as
+\texttt{libpcap-dev} and a TeX Live installation for building this report. The container
+forwards ports 3000 and 4000 so the dashboard and backend are reachable from the host.
+
+To use it, install Docker and the VS Code \emph{Dev Containers} extension, open the
+repository in VS Code, then run \emph{Dev Containers: Reopen in Container}. Once the
+container is ready, run the same workspace commands as below.
+
 From the repository root (requires Node.js $\geq$~the version pinned in
 \texttt{package.json} and pnpm):
 
 \begin{lstlisting}[language=bash, caption={Local development setup.}, label=lst:devsetup]
-pnpm install           # install all workspaces
-pnpm -F @byteroute/backend dev      # backend on :4000
-pnpm -F @byteroute/dashboard dev    # dashboard on :3000
+pnpm install  # install all workspaces
+pnpm dev      # start backend and dashboard with hot reload
 \end{lstlisting}
 
 For the Go client (requires Go $\geq$~1.26 and \texttt{libpcap-dev}):
@@ -807,6 +788,7 @@ sudo ./byteroute-client \
   --flush 5s
 \end{lstlisting}
 
+\newpage
 \section{CI/CD and Release Process}
 
 On every push to the default branch that contains conventional commits, \texttt{semantic-release}:
@@ -819,6 +801,49 @@ On every push to the default branch that contains conventional commits, \texttt{
           \texttt{byteroute-dashboard}, which are pushed to the GitHub Container
           Registry (\texttt{ghcr.io/ste-script/}).
 \end{enumerate}
+
+\section{Documentation}
+
+This report is maintained as a LaTeX project under \texttt{docs/}. The repository provides
+multiple ways to build the PDF, with the goal of keeping the toolchain reproducible across
+machines.
+
+\subsection{LaTeX setup}
+
+The primary build entry point is the \texttt{docs/Makefile}, which wraps the LaTeX
+invocations and produces the final PDFs via \texttt{make pdf}. In addition to local builds,
+the VS Code Dev Container installs a TeX Live distribution as part of its
+\texttt{postCreateCommand}, so LaTeX compilation works in a fresh container without manual
+system setup.
+
+In CI, the documentation job installs a minimal TeX Live package set and validates
+compilation to ensure that changes to the source files do not break the build.
+
+\subsection{Attempted automatic updates with LLMs}
+
+To reduce manual editing effort, an experimental workflow was added to automatically update
+the LaTeX sources using a large language model. The pipeline is implemented as a GitHub
+Actions workflow (\texttt{.github/workflows/ai-docs-update.yml}) that runs a small Node.js
+script (\texttt{scripts/ai-update-latex.mjs}). The idea was to provide the model with the
+report sources and optional repository context, then let it propose edits, commit the
+result, and finally validate the output by compiling the PDFs.
+
+In practice, this approach was not adopted as the primary documentation workflow for three
+reasons:
+
+\begin{itemize}
+    \item \textbf{Rate limiting and quotas}: the available hosted models enforced strict
+          request limits, which made batch updates unreliable.
+    \item \textbf{Budget constraints}: using a higher throughput provider would have
+          required purchasing an external API key, which was not feasible within the
+          project constraints.
+    \item \textbf{Editing quality}: the generated patches often required substantial manual
+          review, and sometimes introduced formatting regressions, inconsistent terminology,
+          or changes that did not align with the intended structure of an academic report.
+\end{itemize}
+
+For these reasons, the final documentation was produced through direct LaTeX editing,
+keeping automation limited to compilation and validation.
 
 % =========================================================
 \chapter{Conclusion}
