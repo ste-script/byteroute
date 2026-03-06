@@ -45,7 +45,7 @@ jobs:
 
       - name: Docker metadata (backend)
         id: meta_backend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_BACKEND }}
           tags: |
@@ -67,7 +67,7 @@ jobs:
 
       - name: Docker metadata (dashboard)
         id: meta_dashboard
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_DASHBOARD }}
           tags: |
@@ -89,7 +89,7 @@ jobs:
 
       - name: Docker metadata (client)
         id: meta_client
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_CLIENT }}
           tags: |
