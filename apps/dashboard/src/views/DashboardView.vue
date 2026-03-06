@@ -94,6 +94,8 @@ function toggleConnectionsPaused() {
 
 const limitedConnections = computed(() => connections.value.slice(0, connectionLimit.value))
 
+const hasTenants = computed(() => discoveredTenants.value.length > 0)
+
 // ── Computed display aliases ──────────────────────────────────────────────────
 const displayStatistics = computed(() => statistics.value)
 const displayTimeSeries = computed(() => statistics.value?.timeSeries ?? [])
@@ -153,16 +155,25 @@ async function handleLogout(): Promise<void> {
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
   const tenants = await loadDiscoveredTenants()
-  if (tenants.length > 0 && !tenants.includes(selectedTenant.value)) {
+  setupSocketListeners()
+
+  if (tenants.length === 0) {
+    selectedTenant.value = ''
+    socket.disconnect()
+    store.clearAll()
+    return
+  }
+
+  if (!tenants.includes(selectedTenant.value)) {
     selectedTenant.value = tenants[0]!
   }
-  setupSocketListeners()
+
   connectTenant(selectedTenant.value, { connectionsLimit: connectionLimit.value })
 })
 
 watch(connectionLimit, (next) => {
   // Request a new bounded snapshot when the user changes the limit.
-  if (!connectionsPaused.value) {
+  if (!connectionsPaused.value && hasTenants.value && isConnected.value) {
     socket.emit('subscribe', { rooms: ['connections'], connectionsLimit: next })
   }
 })
@@ -193,7 +204,12 @@ onUnmounted(() => {
     />
 
     <!-- Main Content -->
-    <main id="main-content" class="dashboard-grid" tabindex="-1">
+    <main
+      v-if="hasTenants"
+      id="main-content"
+      class="dashboard-grid"
+      tabindex="-1"
+    >
       <!-- Map Panel -->
       <section class="panel map-panel" aria-labelledby="world-traffic-title">
         <div class="panel-header">
@@ -273,6 +289,30 @@ onUnmounted(() => {
       </section>
     </main>
 
+    <main
+      v-else
+      id="main-content"
+      class="dashboard-grid dashboard-grid--empty"
+      tabindex="-1"
+    >
+      <section class="panel empty-tenants-panel" aria-labelledby="empty-tenants-title">
+        <div class="panel-header">
+          <h2 id="empty-tenants-title" class="panel-title">Create your first tenant</h2>
+        </div>
+        <div class="panel-content">
+          <p>
+            No tenants found for this account. Create a tenant to start receiving live
+            connections and statistics.
+          </p>
+          <Button
+            icon="pi pi-plus"
+            label="Create tenant"
+            @click="showNewTenantDialog = true"
+          />
+        </div>
+      </section>
+    </main>
+
     <!-- New Tenant Dialog -->
     <NewTenantDialog
       v-model:visible="showNewTenantDialog"
@@ -322,6 +362,17 @@ onUnmounted(() => {
   .charts-panel {
     grid-column: 1;
     grid-row: 2;
+  }
+}
+
+.dashboard-grid--empty {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  height: calc(100dvh - var(--header-height));
+
+  .empty-tenants-panel {
+    grid-column: 1;
+    grid-row: 1;
   }
 }
 

@@ -27,7 +27,7 @@ const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Requ
   socket: any
 } => ({
   body: body ?? {},
-  headers: headers ?? {},
+  headers: { 'x-tenant-id': 'default', ...(headers ?? {}) },
   ip: ip ?? '127.0.0.1',
   user: {
     tenantIds: ['default']
@@ -261,18 +261,17 @@ describe('Connections Controller', () => {
       consoleError.mockRestore()
     })
 
-    it('should derive tenant from principal when no x-tenant-id header is sent', async () => {
+    it('returns 401 when no tenant id is provided', async () => {
       const connections = [createConnection()]
-      const req = createMockRequest({ connections })
+      const req = createMockRequest({ connections }, { 'x-tenant-id': '' })
       req.user = { tenantIds: ['tenant-acme'] }
       const res = createMockResponse()
 
-      vi.mocked(enrichAndStoreConnections).mockRejectedValue(new Error('Enrichment failed'))
-
       await postConnections(req as Request, res as Response)
-      await new Promise(resolve => setTimeout(resolve, 50))
 
-      expect(storeRawConnections).toHaveBeenCalledWith(connections, { tenantId: 'tenant-acme' })
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(storeRawConnections).not.toHaveBeenCalled()
+      expect(enrichAndStoreConnections).not.toHaveBeenCalled()
     })
 
     it('returns 403 when principal is missing', async () => {

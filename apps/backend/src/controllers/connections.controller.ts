@@ -5,7 +5,7 @@ import { createAppContext } from "../config/composition-root.js";
 import type { TypedSocketServer } from "../services/connections.js";
 import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
 import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
-import { resolveTenantContextFromRequest, userHasTenantAccess } from "../utils/tenant.js";
+import { tryResolveTenantIdFromRequest, userHasTenantAccess } from "../utils/tenant.js";
 import { getPrincipal } from "../auth/principal.js";
 
 type ConnectionsBody = {
@@ -26,7 +26,12 @@ export function createConnectionsController(ctx: AppContext) {
 
       const io = req.app.get("io") as TypedSocketServer | undefined;
       const principal = getPrincipal(req);
-      const { tenantId } = resolveTenantContextFromRequest(req, principal?.tenantIds[0]);
+      const tenantId = tryResolveTenantIdFromRequest(req);
+
+      if (!tenantId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
 
       if (!principal || !userHasTenantAccess(principal.tenantIds, tenantId)) {
         res.status(403).json({ error: "Forbidden: no access to tenant" });

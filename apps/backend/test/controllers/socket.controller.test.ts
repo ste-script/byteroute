@@ -19,6 +19,7 @@ import {
 const createMockSocket = (): TypedSocket => {
   const socket: any = {
     id: 'test-socket-id',
+    handshake: { auth: { tenantId: 'default' } },
     data: {},
     emit: vi.fn(),
     on: vi.fn(),

@@ -319,7 +319,12 @@ vi.mock("../../src/services/metrics.js", () => ({
 describe("postMetrics (auth branches)", () => {
   it("returns 403 when principal is missing", async () => {
     const { postMetrics } = await import("../../src/controllers/metrics.controller.js");
-    const req: any = { ...createMockRequest({ snapshots: [createSnapshot()] }), user: undefined, query: {} };
+    const req: any = {
+      ...createMockRequest({ snapshots: [createSnapshot()] }),
+      user: undefined,
+      headers: { "x-tenant-id": "default" },
+      query: {},
+    };
     const res = createMockResponse();
     await postMetrics(req, res as any);
     expect(res.status).toHaveBeenCalledWith(403);

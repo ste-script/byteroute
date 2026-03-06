@@ -8,13 +8,21 @@ on:
         required: true
         default: "docs/SPE-report.tex,docs/ASW-report.tex"
       model:
-        description: "AI model name"
+        description: "AI model name (gpt-5 has 1 RPM / 8-12 req per day — use gpt-4.1 for batch jobs)"
         required: true
-        default: "openai/gpt-5"
+        default: "openai/gpt-4.1"
       extra_context:
         description: "Optional context/instructions for the update"
         required: false
         default: ""
+      changelog_chars:
+        description: "Chars to include from CHANGELOG.md (0 to disable)"
+        required: false
+        default: "3000"
+      sibling_report_chars:
+        description: "Chars of the other .tex report to include as scope reference"
+        required: false
+        default: "2000"
 concurrency:
   group: ai-docs-${{ github.ref }}
   cancel-in-progress: true
@@ -26,7 +34,7 @@ permissions:
 
 jobs:
   update-docs:
-    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.ref != 'chore/ai-latex-docs-update'
+    if: github.actor != 'github-actions[bot]' && github.actor != 'renovate[bot]' && github.event.pull_request.head.ref != 'chore/ai-latex-docs-update'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,15 +49,20 @@ jobs:
           node-version: 24.14.0
 
       - name: Update LaTeX reports with AI
+        continue-on-error: true
+        id: ai-update
         env:
           AI_PROVIDER: github
           AI_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AI_MODEL: ${{ github.event.inputs.model || 'openai/gpt-5' }}
+          AI_MODEL: ${{ github.event.inputs.model || 'openai/gpt-4.1' }}
           REPORT_FILES: ${{ github.event.inputs.reports || 'docs/SPE-report.tex,docs/ASW-report.tex' }}
           EXTRA_CONTEXT: ${{ github.event.inputs.extra_context || '' }}
+          AI_CHANGELOG_CHARS: ${{ github.event.inputs.changelog_chars || '3000' }}
+          AI_SIBLING_REPORT_CHARS: ${{ github.event.inputs.sibling_report_chars || '2000' }}
         run: node scripts/ai-update-latex.mjs
 
       - name: Install LaTeX
+        if: steps.ai-update.outcome != 'skipped'
         run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
 
       - name: Validate LaTeX compilation
@@ -57,13 +70,27 @@ jobs:
           cd docs
           make pdf
 
-      - name: Create Pull Request
+      - name: Commit changes (pull_request trigger)
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: AI refresh LaTeX reports"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
+      - name: Create Pull Request (workflow_dispatch trigger)
+        if: github.event_name == 'workflow_dispatch'
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.DEPLOYMENT_TOKEN || secrets.GITHUB_TOKEN }}
           base: ${{ github.head_ref || github.ref_name }}
           commit-message: "docs: AI refresh LaTeX reports"
-          title: "docs: AI refresh LaTeX reports"
+          title: "docs: refreshed LaTeX reports via AI"
           body: |
             Automated AI update for LaTeX project reports.
 

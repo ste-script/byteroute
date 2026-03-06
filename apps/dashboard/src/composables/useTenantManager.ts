@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useSocket } from '@/services/socket'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
-import { ensureTenantId, normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
+import { normalizeTenantIds, sanitizeTenantId } from '@byteroute/shared/common'
 import { listTenants } from '@/services/tenants'
 
 export const TENANT_STORAGE_KEY = 'byteroute:selected-tenant'
@@ -12,7 +12,7 @@ export function useTenantManager() {
   const socket = useSocket()
   const authStore = useAuthStore()
 
-  const initialTenant = ensureTenantId(import.meta.env.VITE_TENANT_ID)
+  const initialTenant = sanitizeTenantId(import.meta.env.VITE_TENANT_ID) ?? ''
   const savedTenant =
     typeof window !== 'undefined'
       ? sanitizeTenantId(window.localStorage.getItem(TENANT_STORAGE_KEY))
@@ -23,9 +23,7 @@ export function useTenantManager() {
   const selectedTenant = ref(defaultTenant)
 
   const tenantOptions = computed(() => {
-    const uniqueTenants = Array.from(
-      new Set(normalizeTenantIds([defaultTenant, ...discoveredTenants.value]))
-    )
+    const uniqueTenants = Array.from(new Set(normalizeTenantIds(discoveredTenants.value)))
     return uniqueTenants.map((tenant) => ({ label: tenant, value: tenant }))
   })
 
@@ -41,9 +39,13 @@ export function useTenantManager() {
   }
 
   function connectTenant(tenantId: string, options?: { connectionsLimit?: number }) {
+    const normalizedTenantId = sanitizeTenantId(tenantId)
+    if (!normalizedTenantId) {
+      return
+    }
     socket.disconnect()
     store.clearAll()
-    socket.connect(undefined, tenantId, authStore.token ?? undefined)
+    socket.connect(undefined, normalizedTenantId, authStore.token ?? undefined)
     socket.emit('subscribe', {
       rooms: ['connections', 'statistics', 'flows'],
       connectionsLimit: options?.connectionsLimit
@@ -51,6 +53,9 @@ export function useTenantManager() {
   }
 
   function handleTenantChange(connectionsLimit?: number) {
+    if (!sanitizeTenantId(selectedTenant.value)) {
+      return
+    }
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(TENANT_STORAGE_KEY, selectedTenant.value)
     }

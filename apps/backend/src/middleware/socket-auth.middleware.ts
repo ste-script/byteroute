@@ -7,7 +7,7 @@ import {
   verifyAuthToken,
 } from "../auth/passport.js";
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
-import { resolveTenantContextFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
+import { tryResolveTenantIdFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
 import { firstHeaderValue } from "../utils/request.js";
 
 type SocketHandshakeLike = {
@@ -76,7 +76,11 @@ export function createSocketAuthMiddleware(ctx: AppContext) {
           return;
         }
 
-        const { tenantId } = resolveTenantContextFromSocketHandshake(socket.handshake);
+        const tenantId = tryResolveTenantIdFromSocketHandshake(socket.handshake);
+        if (!tenantId) {
+          next(new Error("Unauthorized"));
+          return;
+        }
         if (!userHasTenantAccess(hydratedPrincipal.tenantIds, tenantId)) {
           next(new Error("Forbidden: no access to tenant"));
           return;
@@ -115,7 +119,11 @@ export function socketAuthMiddleware(
         return;
       }
 
-      const { tenantId } = resolveTenantContextFromSocketHandshake(socket.handshake);
+      const tenantId = tryResolveTenantIdFromSocketHandshake(socket.handshake);
+      if (!tenantId) {
+        next(new Error("Unauthorized"));
+        return;
+      }
       if (!userHasTenantAccess(hydratedPrincipal.tenantIds, tenantId)) {
         next(new Error("Forbidden: no access to tenant"));
         return;
