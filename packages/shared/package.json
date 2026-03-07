@@ -28,7 +28,7 @@
   "dependencies": {},
   "devDependencies": {
     "@byteroute/typescript": "workspace:*",
-    "@types/node": "^24.11.0",
+    "@types/node": "^24.12.0",
     "typescript": "^5.9.3"
   }
 }
