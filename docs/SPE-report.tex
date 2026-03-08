@@ -622,8 +622,8 @@ protocol, governed by the domain DSL analytics rules).
 
 \subsection{Domain DSL}
 
-The domain DSL is a YAML file compiled once at startup by\newline
-\texttt{src/infrastructure/dsl/domain-dsl.ts}.\newline Code~\ref{lst:dsl-yaml} shows
+The domain DSL is a YAML file compiled once at startup by
+\texttt{src/infrastructure/dsl/domain-dsl.ts}. Code~\ref{lst:dsl-yaml} shows
 the default configuration.
 
 \begin{lstlisting}[language=bash, caption={Default domain DSL configuration (\texttt{config/domain.dsl.yaml}).}, label={lst:dsl-yaml}]
@@ -653,6 +653,31 @@ and which source IPs are denied before enrichment. The
 limiting applied when the backend generates statistics groups for Socket.IO
 emission. Both sections can be extended without modifying TypeScript source
 code.
+
+\paragraph{DSL file resolution at container startup.}
+When the backend starts inside Docker, it locates the DSL file through the
+following priority chain:
+
+\begin{enumerate}
+  \item \texttt{DOMAIN\_DSL\_PATH} environment variable — explicit container path;
+  \item \texttt{/etc/byteroute/domain.dsl.yaml} — the well-known volume mount point;
+  \item \texttt{config/domain.dsl.yaml} — relative to the working directory;
+  \item \texttt{apps/backend/config/domain.dsl.yaml} — the bundled default.
+\end{enumerate}
+
+The idiomatic deployment pattern is to bind-mount a host file into the container
+at the well-known path (Code~\ref{lst:dsl-vol}), avoiding the need to set any
+environment variable.
+
+\begin{lstlisting}[language=bash, caption={Injecting a custom domain DSL via volume mount.}, label={lst:dsl-vol}]
+docker run \
+  -v /path/to/domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro \
+  ghcr.io/ste-script/byteroute-backend:latest
+\end{lstlisting}
+
+The Docker entrypoint logs which file is being loaded on each start. If
+\texttt{DOMAIN\_DSL\_PATH} is set but the referenced file is absent, a warning
+is printed and the bundled defaults are used without aborting the process.
 
 \newpage
 \section{Go Client}

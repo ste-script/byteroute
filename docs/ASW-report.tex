@@ -372,8 +372,9 @@ the backend refuses to serve or store data for a tenant the authenticated user d
 
 \section{Domain DSL}
 
-A YAML Domain DSL (\texttt{apps/backend/config/domain.dsl.yaml}) is compiled at startup and
-governs two concern areas without requiring code changes:
+A YAML Domain DSL is compiled once at startup by
+\texttt{src/infrastructure/dsl/domain-dsl.ts} and governs two concern areas without
+requiring code changes:
 
 \begin{itemize}
     \item \texttt{ingestion.connection}: specifies allowed protocols
@@ -383,6 +384,32 @@ governs two concern areas without requiring code changes:
           limit for each grouped statistics query (\texttt{byCountry}, \texttt{byAsn},
           \texttt{byProtocol}).
 \end{itemize}
+
+\subsection*{DSL file resolution at container startup}
+
+The backend resolves the DSL file using the following priority order:
+
+\begin{enumerate}
+    \item \texttt{DOMAIN\_DSL\_PATH} environment variable — an explicit path inside the container.
+    \item \texttt{/etc/byteroute/domain.dsl.yaml} — a well-known volume mount point.
+    \item \texttt{config/domain.dsl.yaml} — relative to the working directory.
+    \item \texttt{apps/backend/config/domain.dsl.yaml} — the bundled default.
+\end{enumerate}
+
+The recommended way to inject a custom DSL into the container is to mount a file at the
+well-known path:
+
+\begin{lstlisting}[language=bash, caption={Mounting a custom domain DSL via Docker volume.}, label=lst:dsl-mount]
+docker run \
+  -v /path/to/domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro \
+  ghcr.io/ste-script/byteroute-backend:latest
+\end{lstlisting}
+
+Alternatively, any path can be specified explicitly through \texttt{DOMAIN\_DSL\_PATH}.
+In a Docker Compose deployment the \texttt{volumes} entry under the \texttt{backend}
+service exposes a commented-out example mount.
+The Docker entrypoint logs which file is used at startup; if \texttt{DOMAIN\_DSL\_PATH}
+points to a missing file a warning is emitted and the bundled defaults are applied.
 
 \section{Go Client Internal Design}
 
