@@ -518,12 +518,12 @@ Table~\ref{tab:tech} lists the primary technologies used in each component.
     \addlinespace
     Backend &
       TypeScript / Node.js &
-      Express, Socket.IO, Mongoose, \texttt{jsonwebtoken}, \texttt{bcryptjs},
+      Express, Socket.IO, Mongoose, \texttt{jsonwebtoken},
       \texttt{maxmind} (GeoLite2 reader), Vitest \\
     \addlinespace
     Dashboard &
       TypeScript / Vue.js 3 &
-      Vite, Pinia, Vue Router, \texttt{socket.io-client}, Vitest, Nginx
+      Vite, Pinia, Vue Router, \texttt{socket.io}, Vitest, Nginx
       (production serving) \\
     \addlinespace
     Shared Package &
@@ -578,7 +578,7 @@ through Socket.IO to dashboard clients watching the relevant tenant room.
 The backend exposes four authentication routes under \texttt{/auth}:
 \texttt{POST /auth/signup}, \texttt{POST /auth/signin}, \texttt{GET /auth/me},
 and \texttt{POST /auth/client-token}. Passwords are hashed with a
-\texttt{bcryptjs}-based utility (the \texttt{password.ts} service) before
+\texttt{scrypt} (the \texttt{password.ts} service) before
 storage, and never persisted in plain text.
 
 On successful sign-in, the backend issues a signed JWT containing the user
@@ -622,8 +622,8 @@ protocol, governed by the domain DSL analytics rules).
 
 \subsection{Domain DSL}
 
-The domain DSL is a YAML file compiled once at startup by
-\texttt{src/infrastructure/dsl/domain-dsl.ts}. Code~\ref{lst:dsl-yaml} shows
+The domain DSL is a YAML file compiled once at startup by\newline
+\texttt{src/infrastructure/dsl/domain-dsl.ts}.\newline Code~\ref{lst:dsl-yaml} shows
 the default configuration.
 
 \begin{lstlisting}[language=bash, caption={Default domain DSL configuration (\texttt{config/domain.dsl.yaml}).}, label={lst:dsl-yaml}]
@@ -654,29 +654,21 @@ limiting applied when the backend generates statistics groups for Socket.IO
 emission. Both sections can be extended without modifying TypeScript source
 code.
 
+\newpage
 \section{Go Client}
 
 \subsection{Packet Capture}
 
 The capture layer wraps the \texttt{gopacket/pcap} library. The
 \texttt{capture.Start} function opens a live pcap handle on the specified
-interface and applies an optional BPF filter. Code~\ref{lst:capture} shows
+interface and applies a customizable BPF filter. Code~\ref{lst:capture} shows
 the core of the capture loop.
 
 \begin{lstlisting}[language=Go, caption={Packet capture loop in the Go client.}, label={lst:capture}]
 func Start(iface, bpf string, snapLen int, promisc bool) (
     *pcap.Handle, <-chan PacketEvent, error) {
-  handle, err := pcap.OpenLive(iface, int32(snapLen), promisc,
-                               pcap.BlockForever)
-  if err != nil {
-    return nil, nil, err
-  }
-  if bpf != "" {
-    if err := handle.SetBPFFilter(bpf); err != nil {
-      handle.Close()
-      return nil, nil, fmt.Errorf("set BPF: %w", err)
-    }
-  }
+  handle, err := pcap.OpenLive(iface, int32(snapLen), promisc, pcap.BlockForever)
+
   out := make(chan PacketEvent, 2048)
   src := gopacket.NewPacketSource(handle, handle.LinkType())
   go func() {
@@ -723,34 +715,46 @@ The client provides both command-line flags and environment variable equivalents
 for every setting. Table~\ref{tab:client-flags} summarises the most significant
 options.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{0.9}
   \caption{Key configuration flags for the Go client.}
   \label{tab:client-flags}
-  \begin{tabularx}{\textwidth}{llX}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth}p{0.26\textwidth}X}
     \toprule
     \textbf{Flag} & \textbf{Env var} & \textbf{Description} \\
     \midrule
     \texttt{--iface} & \texttt{BYTEROUTE\_IFACE} &
       Network interface to capture on (required). \\
     \texttt{--backend} & \texttt{BYTEROUTE\_BACKEND\_URL} &
-      Backend base URL for ingestion requests. \\
+      Backend base URL (default: \texttt{http://localhost:4000}). \\
     \texttt{--auth-token} & \texttt{BYTEROUTE\_AUTH\_TOKEN} &
-      Bearer token used to authenticate ingestion requests. \\
-    \texttt{--flush} & & Duration between batch POST requests (e.g., \texttt{5s}). \\
-    \texttt{--direction} & & Capture direction: \texttt{out} (default), \texttt{in}, or \texttt{both}. \\
+      Bearer token used to authenticate backend requests. \\
+    \texttt{--list-ifaces} & & List network interfaces and exit. \\
+    \texttt{--direction} & \texttt{BYTEROUTE\_DIRECTION} &
+      Capture direction: \texttt{out}, \texttt{in}, or \texttt{both} (used for default BPF) (default: \texttt{out}). \\
     \texttt{--bpf} & \texttt{BYTEROUTE\_BPF} &
-      Custom BPF filter expression; overrides the generated default. \\
-    \texttt{--dedupe} & & Deduplication mode: \texttt{flow} (five-tuple) or \texttt{ip} (IP pair). \\
-    \texttt{--reporter-ip} & \texttt{BYTEROUTE\_REPORTER\_IP} &
-      Public IP of the sensor host, enabling backend geo-location of private
-      source addresses. \\
-    \texttt{--idle-ttl} & & Maximum idle time before a flow entry is evicted. \\
-    \texttt{--max-batch-conns} & & Maximum number of records per POST request. \\
+      BPF filter expression (if empty, a default is generated). \\
+    \texttt{--snaplen} & & pcap snapshot length (default: \texttt{1600}). \\
+    \texttt{--promisc} & & Enable promiscuous mode (default: \texttt{true}). \\
+    \texttt{--flush} & & Flush interval (default: \texttt{5s}). \\
+    \texttt{--flow} & \texttt{BYTEROUTE\_FLOW} &
+      Legacy alias for \texttt{--flush} (e.g., \texttt{5s} or \texttt{5}). \\
+    \texttt{--max-batch-conns} & & Max connections per HTTP batch (default: \texttt{200}). \\
+    \texttt{--max-batch-bytes} & & Max JSON payload size per batch in bytes (default: \texttt{1500000}). \\
+    \texttt{--http-timeout} & & HTTP request timeout (default: \texttt{5s}). \\
+    \texttt{--host-id} & \texttt{BYTEROUTE\_HOST\_ID} &
+      Stable host identifier to help de-dup IDs across machines. \\
+    \texttt{--dedupe} & \texttt{BYTEROUTE\_DEDUPE\_MODE} &
+      Dedup mode: \texttt{flow} or \texttt{ip} (default: \texttt{flow}). \\
+    \texttt{--idle-ttl} & & Drop flows idle longer than this (default: \texttt{2m}). \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
+\newpage
 \section{Dashboard}
 
 The dashboard is a Vue.js 3 Single Page Application built with Vite. It
@@ -758,7 +762,7 @@ communicates with the backend through:
 
 \begin{itemize}
   \item \textbf{REST API calls}: handled by composables and typed API client
-    functions under \texttt{src/api/}, using the Fetch API or Axios.
+    functions under \texttt{src/api/}, using Axios.
   \item \textbf{Socket.IO}: a persistent connection managed by a dedicated
     service, receiving \texttt{trafficFlows} and \texttt{statisticsUpdate}
     events and propagating them to reactive Pinia stores.
@@ -838,16 +842,16 @@ all \texttt{package.json} files in the monorepo.
 
 \section{Quality Assurance Tools}
 
-\subsection{Husky and Lint-staged}
+\subsection{Husky Git Hooks}
 
-Husky manages two pre-commit hooks:
+Husky manages local Git hooks to enforce basic contribution rules:
 
 \begin{itemize}
   \item \texttt{commit-msg}: runs Commitlint and rejects commits that do not
     follow the Conventional Commits format.
-  \item \texttt{pre-commit}: runs Lint-staged, which applies ESLint and
-    Prettier only to the files staged for the current commit, keeping the
-    feedback cycle fast without reformatting the entire codebase.
+  \item \texttt{post-commit}: checks whether the latest commit is signed and
+    prompts the developer to use \texttt{git commit -S} (or enable automatic
+    signing) when it is not.
 \end{itemize}
 
 \subsection{ESLint and Prettier}
@@ -932,6 +936,7 @@ aggregation and deduplication logic (\texttt{flow/flow\_test.go}).
 The dashboard uses Vitest with \texttt{@vue/test-utils} for component and
 composable tests, located under \texttt{apps/dashboard/src/test/}.
 
+\newpage
 \section{Coverage}
 
 Coverage is collected at three levels:
@@ -962,9 +967,6 @@ End-to-end correctness is also validated qualitatively through integration
 testing with the running Docker Compose stack:
 
 \begin{itemize}
-  \item A \texttt{scripts/seed.ts} script wipes the database and inserts a
-    baseline user and tenant, enabling a reproducible starting state for manual
-    and automated acceptance tests.
   \item The \texttt{scripts/ensure-connection-indexes.mjs} script verifies that
     MongoDB compound indexes (\texttt{tenantId} + \texttt{id},
     \texttt{tenantId} + \texttt{startTime}) are present, preventing silent
@@ -1004,11 +1006,11 @@ indicative of sound software design practice:
 \end{itemize}
 
 Future work could extend the platform in several directions. Support for
-additional capture backends (e.g., eBPF-based sensors) would reduce the
+additional capture backends, would reduce the
 privilege requirements of the client. A time-series storage backend (such as
-InfluxDB or TimescaleDB) would improve the scalability and queryability of
+InfluxDB, TimescaleDB or ClickHouse) would improve the scalability and queryability of
 historical traffic data. An alerting subsystem, modeled on a push notification
-architecture similar to that of AlmaSpot, could notify administrators when
+architecture, could notify administrators when
 traffic to unexpected ASNs or countries is detected. Finally, expanding the
 dashboard with per-connection detail views and exportable reports would broaden
 the platform's applicability to security auditing and compliance use cases.

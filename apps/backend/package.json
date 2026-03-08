@@ -19,7 +19,6 @@
     "coverage:merge": "node scripts/merge-coverage.mjs",
     "coverage": "pnpm coverage:unit && pnpm coverage:e2e && pnpm coverage:merge",
     "migrate:indexes": "tsx scripts/ensure-connection-indexes.mjs",
-    "seed": "tsx scripts/seed.ts",
     "pretest:e2e": "pnpm -C ../../packages/shared build",
     "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'"
   },
