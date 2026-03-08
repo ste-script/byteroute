@@ -1,3 +1,10 @@
+## [5.3.0](https://github.com/ste-script/byteroute/compare/v5.2.0...v5.3.0) (2026-03-08)
+
+### Features
+
+* **backend:** dsl file selection ([fd98d37](https://github.com/ste-script/byteroute/commit/fd98d37a0426476afa85ff80352054214d2c4d51))
+* first tenant registration ([d82dc57](https://github.com/ste-script/byteroute/commit/d82dc5789168094b120cdb26e5d6f9715763c157))
+
 ## [5.2.0](https://github.com/ste-script/byteroute/compare/v5.1.0...v5.2.0) (2026-03-04)
 
 ### Features
