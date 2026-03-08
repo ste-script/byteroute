@@ -31,6 +31,16 @@ cd docs
 make pdf
 ```
 
+## Watch (auto rebuild)
+
+From the repository root:
+
+```bash
+pnpm dev:docs
+```
+
+This watches `docs/**/*.tex` and re-runs `make pdf` on changes.
+
 ## Clean artifacts
 
 ```bash

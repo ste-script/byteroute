@@ -47,6 +47,12 @@ services:
       MAXMIND_USER_ID: ${MAXMIND_USER_ID:?set in .env}
       MAXMIND_API_KEY: ${MAXMIND_API_KEY:?set in .env}
       JWT_SECRET: ${JWT_SECRET:?set in .env}
+      # Optional: explicitly point to a custom domain DSL inside the container.
+      # Uncomment if you want to use a path other than /etc/byteroute/domain.dsl.yaml.
+      # DOMAIN_DSL_PATH: /etc/byteroute/domain.dsl.yaml
+    volumes:
+      # Optional: mount a custom domain DSL file to customise ingestion and analytics behaviour.
+      # - ./domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik

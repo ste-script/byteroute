@@ -76,6 +76,7 @@ describe("api authentication", () => {
     const response = await request(app)
       .post("/api/metrics")
       .set("Authorization", `Bearer ${token}`)
+      .set("X-Tenant-Id", "default")
       .send({ snapshots: [] })
       .expect(202);
 

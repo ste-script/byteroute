@@ -68,6 +68,20 @@ export function resolveTenantIdFromRequest(req: RequestLike, fallback?: string):
   return headerTenant ?? queryTenant ?? sanitizeTenantId(fallback) ?? DEFAULT_TENANT_ID;
 }
 
+export function tryResolveTenantIdFromRequest(req: RequestLike): string | undefined {
+  const headerTenant = sanitizeTenantId(takeFirstHeaderValue(req.headers?.["x-tenant-id"]));
+  if (headerTenant) {
+    return headerTenant;
+  }
+
+  const queryTenant = sanitizeTenantId(req.query?.tenantId);
+  if (queryTenant) {
+    return queryTenant;
+  }
+
+  return undefined;
+}
+
 export function resolveTenantContextFromRequest(req: RequestLike, fallback?: string): TenantContext {
   return createTenantContext(resolveTenantIdFromRequest(req, fallback));
 }
@@ -88,4 +102,25 @@ export function resolveTenantContextFromSocketHandshake(
     DEFAULT_TENANT_ID;
 
   return createTenantContext(tenantId);
+}
+
+export function tryResolveTenantIdFromSocketHandshake(
+  handshake?: SocketHandshakeLike
+): string | undefined {
+  const authTenant = sanitizeTenantId(handshake?.auth?.tenantId);
+  if (authTenant) {
+    return authTenant;
+  }
+
+  const queryTenant = sanitizeTenantId(handshake?.query?.tenantId);
+  if (queryTenant) {
+    return queryTenant;
+  }
+
+  const headerTenant = sanitizeTenantId(takeFirstHeaderValue(handshake?.headers?.["x-tenant-id"]));
+  if (headerTenant) {
+    return headerTenant;
+  }
+
+  return undefined;
 }

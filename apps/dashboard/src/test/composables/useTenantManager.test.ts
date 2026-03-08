@@ -50,10 +50,9 @@ describe('useTenantManager', () => {
   })
 
   describe('initialization', () => {
-    it('uses default tenant when no saved tenant in localStorage', () => {
+    it('starts with empty selectedTenant when nothing is configured', () => {
       const { selectedTenant } = useTenantManager()
-      // default is from VITE_TENANT_ID env (empty in tests) → ensureTenantId returns some default
-      expect(selectedTenant.value).toBeDefined()
+      expect(selectedTenant.value).toBe('')
     })
 
     it('uses saved tenant from localStorage when available', () => {
@@ -64,9 +63,9 @@ describe('useTenantManager', () => {
   })
 
   describe('tenantOptions computed', () => {
-    it('always includes the default tenant option', () => {
+    it('is empty before tenants are discovered', () => {
       const { tenantOptions } = useTenantManager()
-      expect(tenantOptions.value.length).toBeGreaterThanOrEqual(1)
+      expect(tenantOptions.value).toEqual([])
     })
 
     it('includes discovered tenants in options', async () => {
@@ -167,7 +166,9 @@ describe('useTenantManager', () => {
     })
 
     it('passes connectionsLimit to connectTenant', () => {
-      const { handleTenantChange } = useTenantManager()
+      const { selectedTenant, handleTenantChange } = useTenantManager()
+
+      selectedTenant.value = 'tenant-1'
 
       handleTenantChange(10)
 

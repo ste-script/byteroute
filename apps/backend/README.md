@@ -27,7 +27,7 @@ Optional:
 - `STATS_EMIT_INTERVAL` (default: `30000` ms)
 - `AUTH_TOKEN_TTL` (default: `1d`)
 - `AUTH_CLIENT_TOKEN_TTL` (default: `12h`)
-- `DOMAIN_DSL_PATH` (optional path to YAML domain DSL; defaults to `config/domain.dsl.yaml` or `apps/backend/config/domain.dsl.yaml`)
+- `DOMAIN_DSL_PATH` (optional; explicit path to a YAML domain DSL file — see [Domain DSL (YAML)](#domain-dsl-yaml) for the full resolution order)
 
 See [apps/backend/.env.example](apps/backend/.env.example) for a starter file.
 
@@ -81,9 +81,47 @@ Tenant resolution:
 
 ## Domain DSL (YAML)
 
-The backend can compile a domain DSL at startup and apply it in runtime logic:
+The backend compiles a domain DSL at startup and applies it during request processing:
 
 - `ingestion.connection` rules are applied before enrichment/storage
 - `analytics.queries` rules shape sorting/limiting of statistics groups
 
-Default file: `apps/backend/config/domain.dsl.yaml`.
+Default file: `apps/backend/config/domain.dsl.yaml` (bundled in the Docker image).
+
+### Passing a custom DSL to the container
+
+The container resolves the DSL file using the following priority order:
+
+1. `DOMAIN_DSL_PATH` env var — explicit path inside the container
+2. `/etc/byteroute/domain.dsl.yaml` — well-known volume mount point
+3. `config/domain.dsl.yaml` — relative to the working directory
+4. `apps/backend/config/domain.dsl.yaml` — fallback for the bundled default
+
+**Recommended: volume mount to the well-known path**
+
+```bash
+docker run \
+  -v /path/to/your/domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro \
+  -e MAXMIND_USER_ID=... -e MAXMIND_API_KEY=... -e JWT_SECRET=... \
+  ghcr.io/ste-script/byteroute-backend:latest
+```
+
+**Or use `DOMAIN_DSL_PATH` to point to any path you mounted**
+
+```bash
+docker run \
+  -v /path/to/your/domain.dsl.yaml:/config/my-domain.dsl.yaml:ro \
+  -e DOMAIN_DSL_PATH=/config/my-domain.dsl.yaml \
+  -e MAXMIND_USER_ID=... -e MAXMIND_API_KEY=... -e JWT_SECRET=... \
+  ghcr.io/ste-script/byteroute-backend:latest
+```
+
+In `docker-compose.yml` uncomment the `volumes` entry under the `backend` service:
+
+```yaml
+volumes:
+  - ./domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro
+```
+
+The entrypoint will log which DSL file is being loaded (or warn if `DOMAIN_DSL_PATH` points to a missing file). If no custom file is found the bundled defaults are used without error.
+

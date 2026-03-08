@@ -8,7 +8,9 @@
     "build": "pnpm typecheck && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint --fix --config eslint.config.ts",
+    "pretest": "pnpm -C ../../packages/shared build",
     "test": "pnpm test:unit && pnpm test:e2e",
+    "pretest:unit": "pnpm -C ../../packages/shared build",
     "test:unit": "vitest run",
     "update:maxmind": "node scripts/download-maxmind.mjs",
     "test:watch": "vitest --watch",
@@ -17,7 +19,7 @@
     "coverage:merge": "node scripts/merge-coverage.mjs",
     "coverage": "pnpm coverage:unit && pnpm coverage:e2e && pnpm coverage:merge",
     "migrate:indexes": "tsx scripts/ensure-connection-indexes.mjs",
-    "seed": "tsx scripts/seed.ts",
+    "pretest:e2e": "pnpm -C ../../packages/shared build",
     "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'"
   },
   "devDependencies": {

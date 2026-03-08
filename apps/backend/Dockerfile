@@ -31,10 +31,15 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/apps/backend/scripts ./apps/backend/scripts
+COPY --from=build /app/apps/backend/config ./apps/backend/config
 
 # Copy and set up entrypoint script
 COPY apps/backend/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Well-known mount point for a custom domain DSL file.
+# Mount your domain.dsl.yaml here:  -v /path/to/domain.dsl.yaml:/etc/byteroute/domain.dsl.yaml:ro
+RUN mkdir -p /etc/byteroute
 
 EXPOSE 3000
 ENTRYPOINT ["docker-entrypoint.sh"]

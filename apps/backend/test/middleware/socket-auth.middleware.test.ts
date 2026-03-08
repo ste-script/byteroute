@@ -85,7 +85,7 @@ describe("socketAuthMiddleware", () => {
     const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
 
     socketAuthMiddleware(
-      createSocket({ auth: { token } }) as never,
+      createSocket({ auth: { token, tenantId: "default" } }) as never,
       next
     );
 
@@ -99,7 +99,7 @@ describe("socketAuthMiddleware", () => {
     const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
 
     socketAuthMiddleware(
-      createSocket({ headers: { authorization: `Bearer ${token}` } }) as never,
+      createSocket({ headers: { authorization: `Bearer ${token}` }, auth: { tenantId: "default" } }) as never,
       next
     );
 
