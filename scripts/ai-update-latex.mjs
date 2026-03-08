@@ -156,23 +156,72 @@ const AGENT_TOOLS = [
   {
     type: "function",
     function: {
-      name: "write_report",
+      name: "replace_section",
       description:
-        "Write the final updated LaTeX source for the target report file. Call this once you have gathered sufficient context and are confident the document is complete and valid.",
+        "Replace a specific paragraph or section in the report. old_content must match the current file exactly (character-for-character, including all whitespace and newlines). Call this once per distinct change — do NOT rewrite the whole document.",
       parameters: {
         type: "object",
         properties: {
-          content: {
+          old_content: {
             type: "string",
-            description:
-              "Complete, valid LaTeX source including \\begin{document} and \\end{document}. No markdown fences."
+            description: "The exact LaTeX text to replace, copied verbatim from the current file."
+          },
+          new_content: {
+            type: "string",
+            description: "The replacement LaTeX text for that section."
           }
         },
-        required: ["content"]
+        required: ["old_content", "new_content"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "finish",
+      description:
+        "Signal that you have finished making all necessary changes. Call this when no more updates are needed. You MUST call this (or replace_section) — do not stop silently.",
+      parameters: {
+        type: "object",
+        properties: {
+          summary: {
+            type: "string",
+            description: "Optional short description of what was changed (or 'no changes needed')."
+          }
+        },
+        required: []
       }
     }
   }
 ];
+
+/**
+ * Apply a single patch to content. Returns { success, result } or { success: false, error }.
+ * Only replaces the first occurrence; warns if the text appears more than once.
+ */
+function applyPatch(content, oldText, newText) {
+  if (!oldText) {
+    return { success: false, result: content, error: "old_content must not be empty." };
+  }
+  const idx = content.indexOf(oldText);
+  if (idx === -1) {
+    return {
+      success: false,
+      result: content,
+      error:
+        "old_content not found in the current file. " +
+        "Make sure it is an exact verbatim copy (including all whitespace and newlines)."
+    };
+  }
+  const occurrences = content.split(oldText).length - 1;
+  if (occurrences > 1) {
+    console.warn(
+      `  [agent] replace_section: old_content appears ${occurrences} times; replacing only the first occurrence.`
+    );
+  }
+  const result = content.slice(0, idx) + newText + content.slice(idx + oldText.length);
+  return { success: true, result };
+}
 
 // Execute a single tool call requested by the agent.
 // readCache: Map<path, string> — avoids re-fetching already-read files.
@@ -465,21 +514,27 @@ function trimConversationHistory(messages) {
 }
 
 // Agentic generation: the model iteratively calls read_file / list_directory
-// to gather context, then finalises the report via write_report.
+// to gather context, then patches only the paragraphs that need updating via
+// replace_section, and signals completion via finish.
 async function generateUpdatedLatex({ path, currentContent, siblingContent, repoContext }) {
   // Per-session cache: avoids re-fetching already-read files after history trim.
   const readCache = new Map();
+  // Mutable working copy — each replace_section call updates this in place.
+  let workingContent = currentContent;
+
   const systemMessage = [
     "You are an expert technical writer updating university LaTeX reports for a software engineering monorepo.",
     "You have tools to read files and list directories in the repository so you can gather the full context you need.",
     `The target file path is '${path}'. If the content shown below is truncated, call read_file('${path}') to retrieve the full source before making changes.`,
-    "Work methodically: explore the codebase, read relevant source files, and then call write_report with the complete updated LaTeX.",
+    "Work methodically: explore the codebase, read relevant source files, then make ONLY the necessary targeted changes.",
     "Rules:",
-    "  - The final document must be complete, valid LaTeX containing \\begin{document} and \\end{document}.",
+    "  - Use replace_section to update individual paragraphs or sections — do NOT rewrite the whole document.",
+    "  - Each replace_section call must supply old_content that matches the current file exactly (copy-paste verbatim).",
+    "  - Make as many replace_section calls as needed, one per distinct change.",
+    "  - When all changes are done (or no changes are needed), call finish.",
     "  - Keep the existing structure, section ordering, and package choices unless a change is required for correctness.",
     "  - Update technical details (architecture, API shape, deployment, features) to match what you find in the repository.",
     "  - Keep claims grounded in evidence found in the repository — do not invent details.",
-    "  - Prefer conservative, targeted edits over large rewrites.",
     "  - Always avoid em dashes and en dashes. Opt for commas, parentheses, or alternative punctuation.",
     extraContext ? `Additional context from the user: ${extraContext}` : ""
   ]
@@ -503,7 +558,9 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
         ? `\nPre-loaded repository context (READMEs, domain model, deployment, changelog):\n${safeRepo}`
         : "",
       "",
-      "Use your tools to read any additional source files, configs, or documentation you need, then call write_report."
+      "Use your tools to read any additional source files, configs, or documentation you need.",
+      "Then call replace_section for each paragraph that needs updating, and finish when done.",
+      "IMPORTANT: replace_section old_content must be an exact verbatim copy from the file shown above."
     ]
       .filter((l) => l !== undefined)
       .join("\n");
@@ -541,18 +598,9 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
 
       if (!firstToolCalls || firstToolCalls.length === 0) {
         if (firstFinishReason === "stop") {
-          const rawText = extractGithubText(data);
-          const sanitized = sanitizeModelOutput(rawText);
-          if (sanitized.includes("\\begin{document}") && sanitized.includes("\\end{document}")) {
-            console.warn(
-              `  [agent] Model returned LaTeX as plain text instead of calling write_report — accepting it.`
-            );
-            return sanitized;
-          }
-          throw new Error(
-            `Agent stopped without calling write_report and without producing valid LaTeX. ` +
-            `Response shape: ${summarizeResponseShape(data)}`
-          );
+          // Agent stopped without tool calls — treat as "no changes needed".
+          console.warn(`  [agent] Model stopped without calling any tools — treating as no changes needed.`);
+          return workingContent;
         }
         throw new Error(
           `Unexpected finish_reason '${firstFinishReason}' with no tool calls. Shape: ${summarizeResponseShape(data)}`
@@ -560,28 +608,35 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
       }
 
       // Process first-turn tool calls.
-      let firstFinalContent = null;
+      let firstFinished = false;
       const firstToolResults = [];
       for (const toolCall of firstToolCalls) {
         const toolName = toolCall.function?.name;
         let toolArgs;
         try { toolArgs = JSON.parse(toolCall.function?.arguments || "{}"); } catch { toolArgs = {}; }
         console.log(`  [agent tool] ${toolName}(${JSON.stringify(toolArgs)})`);
-        if (toolName === "write_report") {
-          const content = typeof toolArgs.content === "string" ? toolArgs.content : "";
-          const sanitized = sanitizeModelOutput(content);
-          if (!sanitized.includes("\\begin{document}") || !sanitized.includes("\\end{document}")) {
-            throw new Error(`write_report called for ${path} but LaTeX is invalid (missing document markers).`);
+        if (toolName === "replace_section") {
+          const oldText = typeof toolArgs.old_content === "string" ? toolArgs.old_content : "";
+          const newText = typeof toolArgs.new_content === "string" ? toolArgs.new_content : "";
+          const patch = applyPatch(workingContent, oldText, newText);
+          if (patch.success) {
+            workingContent = patch.result;
+            firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: "Section replaced successfully." });
+          } else {
+            firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: patch.error });
           }
-          firstFinalContent = sanitized;
-          firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: "Report written successfully." });
+        } else if (toolName === "finish") {
+          const summary = toolArgs.summary || "(no summary)";
+          console.log(`  [agent] finish called: ${summary}`);
+          firstFinished = true;
+          firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: "Done." });
         } else {
           const result = await executeTool(toolName, toolArgs, readCache);
           firstToolResults.push({ role: "tool", tool_call_id: toolCall.id, content: result });
         }
       }
       messages.push(...firstToolResults);
-      if (firstFinalContent !== null) return firstFinalContent;
+      if (firstFinished) return workingContent;
 
       break; // Initial call succeeded; exit scale loop and enter agentic loop.
     } catch (err) {
@@ -600,7 +655,7 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
 
   if (!messages) throw new Error(`Unable to build initial agent messages for ${path}.`);
 
-  let finalContent = null;
+  let finished = false;
 
   // Continue the agentic loop (step 0 was handled above, start from step 1).
   for (let step = 1; step < MAX_AGENT_STEPS; step += 1) {
@@ -639,23 +694,12 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
     const toolCalls = message?.tool_calls;
     const finishReason = choice.finish_reason;
 
-    // No tool calls — check for a plain-text write_report fallback or error.
+    // No tool calls — treat as implicit finish (no more changes).
     if (!toolCalls || toolCalls.length === 0) {
       if (finishReason === "stop") {
-        // The model may have returned LaTeX directly instead of using the tool.
-        const rawText = extractGithubText(data);
-        const sanitized = sanitizeModelOutput(rawText);
-        if (sanitized.includes("\\begin{document}") && sanitized.includes("\\end{document}")) {
-          console.warn(
-            `  [agent] Model returned LaTeX as plain text instead of calling write_report — accepting it.`
-          );
-          finalContent = sanitized;
-          break;
-        }
-        throw new Error(
-          `Agent stopped without calling write_report and without producing valid LaTeX. ` +
-          `Response shape: ${summarizeResponseShape(data)}`
-        );
+        console.warn(`  [agent] Model stopped without tool calls at step ${step + 1} — treating as finish.`);
+        finished = true;
+        break;
       }
       throw new Error(
         `Unexpected finish_reason '${finishReason}' with no tool calls. Shape: ${summarizeResponseShape(data)}`
@@ -675,20 +719,32 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
 
       console.log(`  [agent tool] ${toolName}(${JSON.stringify(toolArgs)})`);
 
-      if (toolName === "write_report") {
-        const content = typeof toolArgs.content === "string" ? toolArgs.content : "";
-        const sanitized = sanitizeModelOutput(content);
-        if (!sanitized.includes("\\begin{document}") || !sanitized.includes("\\end{document}")) {
-          throw new Error(
-            `write_report called for ${path} but LaTeX is invalid (missing document markers).`
-          );
+      if (toolName === "replace_section") {
+        const oldText = typeof toolArgs.old_content === "string" ? toolArgs.old_content : "";
+        const newText = typeof toolArgs.new_content === "string" ? toolArgs.new_content : "";
+        const patch = applyPatch(workingContent, oldText, newText);
+        if (patch.success) {
+          workingContent = patch.result;
+          toolResults.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: "Section replaced successfully."
+          });
+        } else {
+          toolResults.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: patch.error
+          });
         }
-        finalContent = sanitized;
-        // Push a synthetic tool result so the message list stays valid.
+      } else if (toolName === "finish") {
+        const summary = toolArgs.summary || "(no summary)";
+        console.log(`  [agent] finish called: ${summary}`);
+        finished = true;
         toolResults.push({
           role: "tool",
           tool_call_id: toolCall.id,
-          content: "Report written successfully."
+          content: "Done."
         });
       } else {
         const result = await executeTool(toolName, toolArgs, readCache);
@@ -703,16 +759,16 @@ async function generateUpdatedLatex({ path, currentContent, siblingContent, repo
     // Extend the conversation with tool results.
     messages.push(...toolResults);
 
-    if (finalContent !== null) break;
+    if (finished) break;
   }
 
-  if (finalContent === null) {
-    throw new Error(
-      `Agent exhausted ${MAX_AGENT_STEPS} steps without calling write_report for ${path}.`
+  if (!finished) {
+    console.warn(
+      `  [agent] Exhausted ${MAX_AGENT_STEPS} steps without calling finish for ${path}. Returning accumulated patches.`
     );
   }
 
-  return finalContent;
+  return workingContent;
 }
 
 async function main() {
