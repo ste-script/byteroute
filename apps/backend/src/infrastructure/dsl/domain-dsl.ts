@@ -181,6 +181,7 @@ async function findDslPath(): Promise<string | undefined> {
   const explicit = process.env.DOMAIN_DSL_PATH;
   const candidates = [
     explicit,
+    "/etc/byteroute/domain.dsl.yaml",
     resolve(process.cwd(), "config/domain.dsl.yaml"),
     resolve(process.cwd(), "apps/backend/config/domain.dsl.yaml"),
   ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0);
