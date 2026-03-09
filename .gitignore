@@ -145,5 +145,6 @@ vite.config.ts.timestamp-*
 build/
 byteroute-client
 coverage.out
+browser-screenshots
 # MaxMind database files
 *.mmdb 

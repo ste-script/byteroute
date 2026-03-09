@@ -335,6 +335,7 @@ onUnmounted(() => {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
   background: var(--p-surface-ground);
 }
 
@@ -443,12 +444,31 @@ onUnmounted(() => {
 @include m.max-width(t.$bp-md) {
   .dashboard-grid {
     height: auto;
-    min-height: 0;
+    min-height: calc(100dvh - var(--header-height));
     grid-template-rows: t.$dashboard-map-row-height-md t.$dashboard-charts-row-height-md minmax(t.$dashboard-sidebar-min-height-md, auto);
     padding: 0.5rem;
     gap: 0.5rem;
-    overflow-x: hidden;
-    overflow-y: visible;
+    align-content: start;
+    overflow: visible;
+  }
+
+  .dashboard-grid--empty {
+    height: auto;
+    min-height: calc(100dvh - var(--header-height));
+  }
+
+  .sidebar-panel {
+    max-height: none;
+  }
+
+  .sidebar-sections {
+    height: auto;
+    min-height: 0;
+  }
+
+  .connections-section,
+  .connections-section .panel-content {
+    min-height: t.$dashboard-sidebar-min-height-md;
   }
 
   .connections-header-right {
