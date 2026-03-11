@@ -173,6 +173,19 @@ export const sampleStatistics: Statistics = {
   timeSeries: [],
 }
 
+function normalizeBrowserTestDocument() {
+  document.documentElement.className = ''
+  document.documentElement.style.setProperty('--header-height', '60px')
+  document.documentElement.style.height = '100%'
+
+  document.body.innerHTML = ''
+  document.body.style.margin = '0'
+  document.body.style.width = '100%'
+  document.body.style.minHeight = '100dvh'
+  document.body.style.height = '100dvh'
+  document.body.style.overflow = 'hidden'
+}
+
 function flushPromises() {
   return new Promise<void>((resolve) => window.setTimeout(resolve, 0))
 }
@@ -180,14 +193,16 @@ function flushPromises() {
 export async function waitForLayout() {
   await flushPromises()
   await nextTick()
+  if ('fonts' in document) {
+    await document.fonts.ready
+  }
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
 }
 
 export function resetDashboardBrowserHarness() {
   vi.clearAllMocks()
-  document.body.innerHTML = ''
-  document.documentElement.className = ''
-  document.documentElement.style.setProperty('--header-height', '60px')
+  normalizeBrowserTestDocument()
   window.localStorage.clear()
 }
 
@@ -200,6 +215,8 @@ export async function mountDashboardViewForBrowser() {
   store.setStatistics(sampleStatistics)
 
   const container = document.createElement('div')
+  container.style.width = '100%'
+  container.style.minHeight = '100dvh'
   document.body.appendChild(container)
 
   const { default: DashboardView } = await import('../../views/DashboardView.vue')

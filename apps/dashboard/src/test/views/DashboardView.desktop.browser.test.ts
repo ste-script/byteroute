@@ -16,13 +16,16 @@ describe('DashboardView desktop browsers', () => {
 
     const { layoutScroller, connectionsSection, scroller } = await mountDashboardViewForBrowser()
 
+    const heading = page.getByRole('heading', { name: 'Live Connections' })
+    const firstConnection = page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })
+
+    await expect.element(heading).toBeVisible()
+    await expect.element(firstConnection).toBeVisible()
+
     const sectionRect = connectionsSection.getBoundingClientRect()
 
     expect(layoutScroller.scrollTop).toBe(0)
     expect(scroller.clientHeight).toBeGreaterThan(0)
     expect(sectionRect.top).toBeGreaterThanOrEqual(0)
-
-    await expect.element(page.getByRole('heading', { name: 'Live Connections' })).toBeVisible()
-    await expect.element(page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })).toBeVisible()
   })
 })

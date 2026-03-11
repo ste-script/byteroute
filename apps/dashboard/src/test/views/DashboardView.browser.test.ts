@@ -17,6 +17,12 @@ describe('DashboardView mobile layout', () => {
 
     const { layoutScroller, connectionsSection, scroller } = await mountDashboardViewForBrowser()
 
+    const heading = page.getByRole('heading', { name: 'Live Connections' })
+    const firstConnection = page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })
+
+    await expect.element(heading).toBeVisible()
+    await expect.element(firstConnection).toBeVisible()
+
     const initialScrollTop = layoutScroller.scrollTop
     const sectionRectBeforeScroll = connectionsSection.getBoundingClientRect()
     expect(scroller.clientHeight).toBeGreaterThan(0)
@@ -29,8 +35,5 @@ describe('DashboardView mobile layout', () => {
     expect(sectionRect.top).toBeGreaterThanOrEqual(0)
     expect(sectionRect.top).toBeLessThan(window.innerHeight)
     expect(sectionRect.top).toBeLessThanOrEqual(sectionRectBeforeScroll.top)
-
-    await expect.element(page.getByRole('heading', { name: 'Live Connections' })).toBeVisible()
-    await expect.element(page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })).toBeVisible()
   })
 })
