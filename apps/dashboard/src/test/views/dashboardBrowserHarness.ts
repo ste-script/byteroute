@@ -1,6 +1,7 @@
 import '@/assets/main.scss'
 import '@/assets/view-layout.scss'
 
+import type { Component } from 'vue'
 import { computed, defineComponent, h, nextTick, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -87,7 +88,89 @@ vi.mock('@/components/StatisticsPanel.vue', () => ({
     name: 'StatisticsPanelStub',
     props: ['statistics'],
     render() {
-      return h('div', { class: 'statistics-panel-stub' }, String(this.statistics?.totalConnections ?? 0))
+      const mobile = window.innerWidth <= 768
+
+      return h(
+        'div',
+        {
+          class: 'statistics-panel-stub',
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            minHeight: mobile ? '520px' : '320px',
+            height: '100%',
+          },
+        },
+        [
+          h(
+            'div',
+            {
+              class: 'statistics-summary-stub',
+              style: {
+                display: 'grid',
+                gridTemplateColumns: mobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                gap: '12px',
+              },
+            },
+            [0, 1, 2].map((index) =>
+              h(
+                'div',
+                {
+                  class: 'statistics-card-stub',
+                  style: {
+                    minHeight: '88px',
+                    border: '1px solid var(--p-surface-border)',
+                    borderRadius: '12px',
+                    background: 'var(--p-surface-ground)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                },
+                index === 0 ? String(this.statistics?.totalConnections ?? 0) : 'stub'
+              )
+            )
+          ),
+          h(
+            'div',
+            {
+              class: 'statistics-tabs-stub',
+              style: {
+                display: 'flex',
+                gap: '8px',
+                minHeight: '44px',
+              },
+            },
+            ['Countries', 'ASNs', 'Protocols'].map((label) =>
+              h(
+                'div',
+                {
+                  style: {
+                    flex: '1 1 0',
+                    border: '1px solid var(--p-surface-border)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                },
+                label
+              )
+            )
+          ),
+          h('div', {
+            class: 'statistics-chart-stub',
+            style: {
+              flex: '1 1 auto',
+              minHeight: mobile ? '220px' : '140px',
+              borderRadius: '12px',
+              background: 'var(--p-surface-ground)',
+              border: '1px solid var(--p-surface-border)',
+            },
+          }),
+        ]
+      )
     },
   }),
 }))
@@ -176,14 +259,14 @@ export const sampleStatistics: Statistics = {
 function normalizeBrowserTestDocument() {
   document.documentElement.className = ''
   document.documentElement.style.setProperty('--header-height', '60px')
-  document.documentElement.style.height = '100%'
+  document.documentElement.style.height = 'auto'
 
   document.body.innerHTML = ''
   document.body.style.margin = '0'
   document.body.style.width = '100%'
   document.body.style.minHeight = '100dvh'
-  document.body.style.height = '100dvh'
-  document.body.style.overflow = 'hidden'
+  document.body.style.height = 'auto'
+  document.body.style.overflow = 'auto'
 }
 
 function flushPromises() {
@@ -206,7 +289,7 @@ export function resetDashboardBrowserHarness() {
   window.localStorage.clear()
 }
 
-export async function mountDashboardViewForBrowser() {
+export async function mountDashboardViewForBrowser(loadDashboardView: () => Promise<Component>) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
@@ -219,9 +302,9 @@ export async function mountDashboardViewForBrowser() {
   container.style.minHeight = '100dvh'
   document.body.appendChild(container)
 
-  const { default: DashboardView } = await import('../../views/DashboardView.vue')
+  const dashboardView = await loadDashboardView()
 
-  mount(DashboardView, {
+  mount(dashboardView, {
     attachTo: container,
     global: {
       plugins: [pinia],
@@ -231,16 +314,18 @@ export async function mountDashboardViewForBrowser() {
   await waitForLayout()
 
   const layoutScroller = document.querySelector('.dashboard-layout') as HTMLElement | null
+  const chartsSection = document.querySelector('[aria-labelledby="timeline-title"]') as HTMLElement | null
   const connectionsSection = document.querySelector('[aria-labelledby="connections-title"]') as HTMLElement | null
   const scroller = document.querySelector('.connection-list .scroller') as HTMLElement | null
 
-  if (!layoutScroller || !connectionsSection || !scroller) {
+  if (!layoutScroller || !chartsSection || !connectionsSection || !scroller) {
     throw new Error('Dashboard browser harness failed to locate live-connections elements')
   }
 
   return {
     container,
     layoutScroller,
+    chartsSection,
     connectionsSection,
     scroller,
   }
