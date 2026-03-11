@@ -85,4 +85,57 @@ describe("api authentication", () => {
       status: "processing",
     });
   });
+
+  it("allows /auth/me requests with a valid auth cookie", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
+
+    const response = await request(app)
+      .get("/auth/me")
+      .set("cookie", `byteroute_auth=${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: ["default"],
+      },
+    });
+  });
+
+  it("rejects cookie-authenticated unsafe requests without a matching csrf header", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
+
+    const response = await request(app)
+      .post("/auth/client-token")
+      .set("Cookie", `byteroute_auth=${token}; byteroute_csrf=csrf-token`)
+      .expect(403);
+
+    expect(response.body).toEqual({ error: "CSRF token validation failed" });
+  });
+
+  it("allows cookie-authenticated unsafe requests with a matching csrf header", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    const token = signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
+
+    const response = await request(app)
+      .post("/auth/client-token")
+      .set("Cookie", `byteroute_auth=${token}; byteroute_csrf=csrf-token`)
+      .set("x-csrf-token", "csrf-token")
+      .expect(200);
+
+    expect(response.body).toEqual(expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(String) }));
+  });
 });

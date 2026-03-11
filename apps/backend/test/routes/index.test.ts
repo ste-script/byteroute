@@ -65,6 +65,8 @@ describe("routes", () => {
   const token = () => signAuthToken({ sub: "user-1", email: "user@example.com", name: "User", tenantIds: ["default"] });
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     const lean = vi.fn().mockResolvedValue({
       _id: "user-1",
       email: "user@example.com",
@@ -211,5 +213,17 @@ describe("routes", () => {
       .post("/auth/logout")
       .expect(204);
     expect(mocks.signOut).toHaveBeenCalled();
+  });
+
+  it("blocks cookie-authenticated unsafe requests without csrf before controller execution", async () => {
+    const app = express();
+    app.use(router);
+
+    await request(app)
+      .post("/auth/logout")
+      .set("cookie", "byteroute_auth=token; byteroute_csrf=csrf")
+      .expect(403);
+
+    expect(mocks.signOut).not.toHaveBeenCalled();
   });
 });

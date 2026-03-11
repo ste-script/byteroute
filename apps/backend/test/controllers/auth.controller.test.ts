@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   signAuthTokenWithTtl: vi.fn(() => "client-token"),
   hashPassword: vi.fn(() => "salt:hash"),
   verifyPassword: vi.fn(() => true),
+  setAuthCookie: vi.fn(),
+  setCsrfCookie: vi.fn(),
+  clearAuthCookie: vi.fn(),
+  clearCsrfCookie: vi.fn(),
 }));
 
 vi.mock("@byteroute/shared", () => ({
@@ -25,6 +29,13 @@ vi.mock("../../src/auth/passport.js", () => ({
 vi.mock("../../src/services/password.js", () => ({
   hashPassword: mocks.hashPassword,
   verifyPassword: mocks.verifyPassword,
+}));
+
+vi.mock("../../src/utils/cookie.js", () => ({
+  setAuthCookie: mocks.setAuthCookie,
+  setCsrfCookie: mocks.setCsrfCookie,
+  clearAuthCookie: mocks.clearAuthCookie,
+  clearCsrfCookie: mocks.clearCsrfCookie,
 }));
 
 import {
@@ -69,6 +80,8 @@ describe("auth.controller", () => {
 
     expect(mocks.hashPassword).toHaveBeenCalledWith("password123");
     expect(mocks.create).toHaveBeenCalled();
+    expect(mocks.setAuthCookie).toHaveBeenCalledWith(res, "jwt-token");
+    expect(mocks.setCsrfCookie).toHaveBeenCalledWith(res, expect.any(String));
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ token: "jwt-token", user: expect.any(Object) })
@@ -120,6 +133,8 @@ describe("auth.controller", () => {
     await signIn(req, res);
 
     expect(mocks.verifyPassword).toHaveBeenCalledWith("password123", "salt:hash");
+    expect(mocks.setAuthCookie).toHaveBeenCalledWith(res, "jwt-token");
+    expect(mocks.setCsrfCookie).toHaveBeenCalledWith(res, expect.any(String));
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ token: "jwt-token", user: expect.any(Object) })
@@ -218,13 +233,14 @@ describe("auth.controller", () => {
     );
   });
 
-  it("signOut returns 204 without clearing cookies", () => {
+  it("signOut clears auth cookies and returns 204", () => {
     const req = {} as Request;
     const res = createRes();
 
     signOut(req, res);
 
-    expect(res.clearCookie).not.toHaveBeenCalled();
+    expect(mocks.clearAuthCookie).toHaveBeenCalledWith(res);
+    expect(mocks.clearCsrfCookie).toHaveBeenCalledWith(res);
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.send).toHaveBeenCalled();
   });

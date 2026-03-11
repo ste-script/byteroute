@@ -4,6 +4,24 @@ import type { AppContext } from "../config/composition-root.js";
 import { ensurePassportAuthInitialized } from "../auth/passport.js";
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
 import { AuthService } from "../services/auth.service.js";
+import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
+import { firstHeaderValue } from "../utils/request.js";
+
+function attachAuthorizationFromCookie(req: Request): void {
+  const authorization = firstHeaderValue(req.headers.authorization);
+  if (authorization) {
+    return;
+  }
+
+  const cookieHeader = firstHeaderValue(req.headers.cookie);
+  const authCookie = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
+
+  if (!authCookie) {
+    return;
+  }
+
+  req.headers.authorization = `Bearer ${authCookie}`;
+}
 
 export function createAuthMiddleware(ctx: AppContext) {
   const authService = new AuthService(
@@ -16,6 +34,7 @@ export function createAuthMiddleware(ctx: AppContext) {
   return function requireApiAuth(req: Request, res: Response, next: NextFunction): void {
     try {
       ensurePassportAuthInitialized();
+      attachAuthorizationFromCookie(req);
     } catch (error) {
       console.error("Failed to initialize auth:", error);
       res.status(500).json({ error: "Authentication misconfigured" });
@@ -54,6 +73,7 @@ export function createAuthMiddleware(ctx: AppContext) {
 export function requireApiAuth(req: Request, res: Response, next: NextFunction): void {
   try {
     ensurePassportAuthInitialized();
+    attachAuthorizationFromCookie(req);
   } catch (error) {
     console.error("Failed to initialize auth:", error);
     res.status(500).json({ error: "Authentication misconfigured" });

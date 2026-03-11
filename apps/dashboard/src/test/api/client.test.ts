@@ -1,9 +1,14 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import client, { setAuthToken, apiErrorMessage } from '@/api/client'
-import type { AxiosError } from 'axios'
+import client, { setAuthToken, apiErrorMessage } from '../../api/client'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
 describe('API Client', () => {
+  it('sends credentials with requests so cookie auth survives reloads', () => {
+    expect(client.defaults.withCredentials).toBe(true)
+  })
+
   afterEach(() => {
+    document.cookie = 'byteroute_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
     // Reset auth token after each test
     setAuthToken(null)
   })
@@ -13,7 +18,7 @@ describe('API Client', () => {
       setAuthToken('my-jwt-token')
 
       // Grab the request config via interceptors
-      const interceptorId = client.interceptors.request.use((config) => {
+      const interceptorId = client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
         return config
       })
 
@@ -71,6 +76,48 @@ describe('API Client', () => {
       }
 
       expect(processedConfig.headers['Authorization']).toBeUndefined()
+    })
+
+    it('adds X-CSRF-Token header for unsafe requests when csrf cookie is present', () => {
+      document.cookie = 'byteroute_csrf=csrf-cookie-value'
+
+      const config = {
+        method: 'post',
+        headers: {} as Record<string, string>
+      }
+      const interceptors = (client.interceptors.request as unknown as {
+        handlers: Array<{ fulfilled: (c: typeof config) => typeof config }>
+      }).handlers
+
+      let processedConfig = config
+      for (const handler of interceptors) {
+        if (handler?.fulfilled) {
+          processedConfig = handler.fulfilled(processedConfig) as typeof config
+        }
+      }
+
+      expect(processedConfig.headers['X-CSRF-Token']).toBe('csrf-cookie-value')
+    })
+
+    it('does not add X-CSRF-Token header for safe requests', () => {
+      document.cookie = 'byteroute_csrf=csrf-cookie-value'
+
+      const config = {
+        method: 'get',
+        headers: {} as Record<string, string>
+      }
+      const interceptors = (client.interceptors.request as unknown as {
+        handlers: Array<{ fulfilled: (c: typeof config) => typeof config }>
+      }).handlers
+
+      let processedConfig = config
+      for (const handler of interceptors) {
+        if (handler?.fulfilled) {
+          processedConfig = handler.fulfilled(processedConfig) as typeof config
+        }
+      }
+
+      expect(processedConfig.headers['X-CSRF-Token']).toBeUndefined()
     })
   })
 
