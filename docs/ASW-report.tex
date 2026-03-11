@@ -390,10 +390,10 @@ requiring code changes:
 The backend resolves the DSL file using the following priority order:
 
 \begin{enumerate}
-    \item \texttt{DOMAIN\_DSL\_PATH} environment variable — an explicit path inside the container.
-    \item \texttt{/etc/byteroute/domain.dsl.yaml} — a well-known volume mount point.
-    \item \texttt{config/domain.dsl.yaml} — relative to the working directory.
-    \item \texttt{apps/backend/config/domain.dsl.yaml} — the bundled default.
+      \item \texttt{DOMAIN\_DSL\_PATH} environment variable, specifying an explicit path inside the container.
+      \item \texttt{/etc/byteroute/domain.dsl.yaml}, a well-known volume mount point.
+      \item \texttt{config/domain.dsl.yaml}, resolved relative to the working directory.
+      \item \texttt{apps/backend/config/domain.dsl.yaml}, the bundled default.
 \end{enumerate}
 
 The recommended way to inject a custom DSL into the container is to mount a file at the
@@ -520,9 +520,12 @@ a Docker entrypoint script.
 
 The CI pipeline (\texttt{.github/workflows/build-and-test.yml}) runs on each push and pull
 request: it installs dependencies, builds all packages, runs backend unit and end-to-end
-tests, and runs Go tests with coverage. Coverage is merged and published as a Markdown
-summary using the \texttt{irongut/CodeCoverageSummary} action. Releases are fully automated
-with \texttt{semantic-release} + \texttt{@semantic-release/git}: conventional commits drive
+tests, executes dashboard browser tests through Playwright backed Vitest projects, and runs
+Go tests with coverage. Coverage is merged and published as a Markdown summary using the
+\texttt{irongut/CodeCoverageSummary} action. The browser test job runs a small matrix over
+Chromium, Firefox, WebKit, and a mobile Chromium viewport so that layout regressions can be
+detected across representative rendering engines. Releases are fully automated with
+\texttt{semantic-release} + \texttt{@semantic-release/git}: conventional commits drive
 version bumps, changelog updates, and GitHub Release creation.
 
 % =========================================================
@@ -716,6 +719,25 @@ Go unit tests accompany each internal package. The coverage output is produced w
 \texttt{go test -coverprofile=coverage.out ./...} and converted to Cobertura XML for
 consumption by the \texttt{irongut/CodeCoverageSummary} action.
 
+\section{Dashboard Browser Testing}
+
+The dashboard complements its unit tests with browser level checks executed through Vitest's
+multi project runner and the Playwright provider. This arrangement keeps the assertion style
+consistent with the rest of the TypeScript codebase while still running the interface inside
+real browser engines.
+
+The suite currently targets four execution profiles: desktop Chromium, desktop Firefox,
+desktop WebKit, and a mobile sized Chromium viewport. These tests focus on behaviours that
+are difficult to validate in a DOM simulator alone, in particular responsive layout,
+viewport dependent scrolling, and the visibility of critical interface elements such as the
+live connections panel. On failure, screenshots are written to
+\texttt{apps/dashboard/reports/browser-screenshots/} to support regression analysis.
+
+Execution is exposed through the workspace command
+\texttt{pnpm -F @byteroute/dashboard test:browser}. In a fresh environment, the required
+browser runtime must first be installed with Playwright, for example via
+\texttt{pnpm --filter @byteroute/dashboard exec playwright install --with-deps chromium}.
+
 \section{CI Coverage Reporting}
 
 The GitHub Actions workflow merges backend (Vitest V8) and Go coverage reports and publishes
@@ -799,6 +821,16 @@ From the repository root (requires Node.js $\geq$~the version pinned in
 pnpm install  # install all workspaces
 pnpm dev      # start backend and dashboard with hot reload
 \end{lstlisting}
+
+For dashboard browser tests, a fresh environment also needs the relevant Playwright browser
+runtime. A typical setup step is:
+
+\begin{lstlisting}[language=bash, caption={Installing a Playwright browser for dashboard tests.}, label=lst:playwright-install]
+pnpm --filter @byteroute/dashboard exec playwright install --with-deps chromium
+\end{lstlisting}
+
+After this installation, the cross browser dashboard checks can be executed with
+\texttt{pnpm -F @byteroute/dashboard test:browser}.
 
 For the Go client (requires Go $\geq$~1.26 and \texttt{libpcap-dev}):
 
@@ -888,8 +920,9 @@ such as protocol filtering and statistics shaping; and the short-lived client to
 decouples the capture agent's credential lifetime from the user session.
 
 The testing strategy combines Vitest unit and end-to-end tests for the backend with Go
-coverage, all integrated in a single GitHub Actions workflow that publishes reproducible
-coverage summaries and enforces a quality gate on every pull request.
+coverage and Playwright backed browser checks for the dashboard, all integrated in a single
+GitHub Actions workflow that publishes reproducible coverage summaries and enforces a
+quality gate on every pull request.
 
 Possible directions for future work include:
 

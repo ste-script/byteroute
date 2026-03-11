@@ -523,7 +523,7 @@ Table~\ref{tab:tech} lists the primary technologies used in each component.
     \addlinespace
     Dashboard &
       TypeScript / Vue.js 3 &
-      Vite, Pinia, Vue Router, \texttt{socket.io}, Vitest, Nginx
+      Vite, Pinia, Vue Router, \texttt{socket.io}, Vitest, Playwright, Nginx
       (production serving) \\
     \addlinespace
     Shared Package &
@@ -659,10 +659,10 @@ When the backend starts inside Docker, it locates the DSL file through the
 following priority chain:
 
 \begin{enumerate}
-  \item \texttt{DOMAIN\_DSL\_PATH} environment variable — explicit container path;
-  \item \texttt{/etc/byteroute/domain.dsl.yaml} — the well-known volume mount point;
-  \item \texttt{config/domain.dsl.yaml} — relative to the working directory;
-  \item \texttt{apps/backend/config/domain.dsl.yaml} — the bundled default.
+  \item \texttt{DOMAIN\_DSL\_PATH} environment variable, used as the explicit container path;
+  \item \texttt{/etc/byteroute/domain.dsl.yaml}, used as the well-known volume mount point;
+  \item \texttt{config/domain.dsl.yaml}, resolved relative to the working directory;
+  \item \texttt{apps/backend/config/domain.dsl.yaml}, used as the bundled default.
 \end{enumerate}
 
 The idiomatic deployment pattern is to bind-mount a host file into the container
@@ -906,12 +906,18 @@ and push to \texttt{main}. It:
     the dashboard;
   \item Executes backend unit tests and end-to-end tests with Vitest, generating
     Cobertura XML coverage reports;
+  \item Executes dashboard browser tests through Vitest projects backed by
+    Playwright, with dedicated CI matrix entries for Chromium, Firefox,
+    WebKit, and a mobile Chromium profile;
   \item Builds and runs Go client tests, generating a \texttt{coverage.out} file
     and converting it to Cobertura XML;
   \item Merges backend unit and e2e coverage reports using a custom merge script;
   \item Publishes coverage artifacts (\texttt{coverage-reports},
     \texttt{coverage-go}) and displays a Markdown summary in the GitHub Actions
     job summary via the \texttt{irongut/CodeCoverageSummary} action;
+  \item Uploads browser screenshots as CI artifacts when a Playwright-backed
+    dashboard test fails, improving the diagnosis of rendering and responsive
+    layout regressions;
   \item Uploads coverage data to Codecov for badge generation.
 \end{enumerate}
 
@@ -960,6 +966,26 @@ aggregation and deduplication logic (\texttt{flow/flow\_test.go}).
 
 The dashboard uses Vitest with \texttt{@vue/test-utils} for component and
 composable tests, located under \texttt{apps/dashboard/src/test/}.
+
+In addition, the monorepo includes browser-oriented dashboard tests executed
+through the \texttt{@vitest/browser-playwright} integration. Rather than
+maintaining a completely separate end-to-end toolchain, ByteRoute reuses the
+Vitest project model and delegates browser execution to Playwright. This
+approach makes it possible to run the same testing framework against real
+rendering engines while preserving a uniform developer workflow.
+
+The configured browser projects cover Chromium, Firefox, and WebKit for the
+desktop dashboard view, together with a mobile Chromium configuration using a
+\texttt{390x844} viewport. These tests target the most layout-sensitive
+dashboard screens, especially the main monitoring view, where responsiveness,
+scroll behavior, and cross-browser rendering need to be validated under
+realistic conditions. Screenshot capture is enabled for failures, which
+provides a concrete visual artifact during local debugging and CI analysis.
+
+This browser layer complements, rather than replaces, the lighter unit tests
+executed in \texttt{happy-dom}. The resulting strategy combines rapid feedback
+for isolated logic with higher-fidelity verification of integrated user
+interface behavior.
 
 \newpage
 \section{Coverage}
