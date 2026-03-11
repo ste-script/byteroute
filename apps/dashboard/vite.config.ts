@@ -12,10 +12,24 @@ export default defineConfig({
   define: {
     '__APP_VERSION__': JSON.stringify(packageJson.version)
   },
+  optimizeDeps: {
+    include: ['vue', 'pinia', 'vue-router', '@vue/test-utils']
+  },
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+    alias: [
+      {
+        find: '@byteroute/shared/common',
+        replacement: fileURLToPath(new URL('../../packages/shared/src/common/index.ts', import.meta.url))
+      },
+      {
+        find: '@byteroute/shared',
+        replacement: fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url))
+      },
+      {
+        find: '@',
+        replacement: fileURLToPath(new URL('./src', import.meta.url))
+      }
+    ]
   },
   server: {
     port: 3000,
