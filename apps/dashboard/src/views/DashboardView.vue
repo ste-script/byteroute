@@ -335,6 +335,7 @@ onUnmounted(() => {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
   background: var(--p-surface-ground);
 }
 
@@ -441,19 +442,103 @@ onUnmounted(() => {
 }
 
 @include m.max-width(t.$bp-md) {
+  .dashboard-layout {
+    overflow-y: visible;
+  }
+
   .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--header-height));
     height: auto;
-    min-height: 0;
-    grid-template-rows: t.$dashboard-map-row-height-md t.$dashboard-charts-row-height-md minmax(t.$dashboard-sidebar-min-height-md, auto);
     padding: 0.5rem;
     gap: 0.5rem;
-    overflow-x: hidden;
-    overflow-y: visible;
+    overflow: visible;
+  }
+
+  .map-panel {
+    order: 1;
+    min-height: t.$dashboard-map-row-height-md;
+  }
+
+  .charts-panel {
+    order: 2;
+    min-height: calc(t.$dashboard-charts-row-height-md + 2.5rem);
+
+    .panel-content {
+      overflow: hidden;
+    }
+  }
+
+  .dashboard-grid--empty {
+    display: grid;
+    height: auto;
+    min-height: calc(100dvh - var(--header-height));
+  }
+
+  .sidebar-panel {
+    order: 3;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sidebar-sections {
+    display: block;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar-section {
+    overflow: visible;
+  }
+
+  .sidebar-section + .sidebar-section {
+    border-top: 1px solid var(--p-surface-border);
+  }
+
+  .sidebar-section .panel-content {
+    flex: none;
+    overflow: visible;
+  }
+
+  .statistics-section,
+  .connections-section {
+    flex: none;
+  }
+
+  .connections-section,
+  .connections-section .panel-content {
+    min-height: t.$dashboard-sidebar-min-height-md;
   }
 
   .connections-header-right {
     width: 100%;
     justify-content: flex-end;
+  }
+}
+
+@include m.max-width(t.$bp-sm) {
+  .connections-section .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .connections-header-left {
+    justify-content: space-between;
+  }
+
+  .connections-header-right {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .connections-limit {
+    flex: 1 1 8rem;
+    min-width: 0;
+    max-width: 10rem;
   }
 }
 

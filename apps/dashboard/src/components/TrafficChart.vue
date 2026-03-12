@@ -46,6 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
 
 const chartOption = computed(() => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
   const timestamps = props.data.map(d => 
     new Date(d.timestamp).toLocaleTimeString('en-US', { 
       hour: '2-digit', 
@@ -139,42 +140,52 @@ const chartOption = computed(() => {
       }
     },
     legend: {
-      bottom: 0,
-      textStyle: { color: textColor, fontSize: 11 }
+      type: isMobile ? 'scroll' : 'plain',
+      bottom: isMobile ? 4 : 0,
+      left: isMobile ? 8 : 'center',
+      right: isMobile ? 8 : 'auto',
+      itemWidth: isMobile ? 14 : 18,
+      itemHeight: isMobile ? 8 : 12,
+      itemGap: isMobile ? 10 : 18,
+      textStyle: { color: textColor, fontSize: isMobile ? 10 : 11 }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '15%',
-      top: '15%',
+      left: isMobile ? '8%' : '3%',
+      right: isMobile ? '8%' : '4%',
+      bottom: isMobile ? 72 : '15%',
+      top: isMobile ? 24 : '15%',
       containLabel: true
     },
     xAxis: {
       type: 'category',
       data: timestamps,
       axisLine: { lineStyle: { color: gridLineColor } },
-      axisLabel: { color: textColor, fontSize: 10 },
+      axisLabel: {
+        color: textColor,
+        fontSize: isMobile ? 9 : 10,
+        hideOverlap: true,
+      },
       splitLine: { show: false }
     },
     yAxis: [
       {
         type: 'value',
-        name: 'Bandwidth',
+        name: isMobile ? '' : 'Bandwidth',
         nameTextStyle: { color: textColor, fontSize: 10 },
         axisLine: { show: false },
         axisLabel: { 
           color: textColor, 
-          fontSize: 10,
+          fontSize: isMobile ? 9 : 10,
           formatter: (value: number) => formatBandwidth(value)
         },
         splitLine: { lineStyle: { color: gridLineColor, type: 'dashed' } }
       },
       {
         type: 'value',
-        name: 'Count',
+        name: isMobile ? '' : 'Count',
         nameTextStyle: { color: textColor, fontSize: 10 },
         axisLine: { show: false },
-        axisLabel: { color: textColor, fontSize: 10 },
+        axisLabel: { color: textColor, fontSize: isMobile ? 9 : 10 },
         splitLine: { show: false }
       }
     ],
@@ -214,6 +225,6 @@ defineExpose({
 .traffic-chart {
   width: 100%;
   height: 100%;
-  min-height: 200px;
+  min-height: 0;
 }
 </style>

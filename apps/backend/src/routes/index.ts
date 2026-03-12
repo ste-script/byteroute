@@ -7,6 +7,7 @@ import * as metricsControllerModule from "../controllers/metrics.controller.js";
 import * as tenantsControllerModule from "../controllers/tenants.controller.js";
 import * as authControllerModule from "../controllers/auth.controller.js";
 import * as authMiddlewareModule from "../middleware/auth.middleware.js";
+import * as csrfMiddlewareModule from "../middleware/csrf.middleware.js";
 
 function getOptional<T>(resolver: () => T): T | undefined {
 	try {
@@ -24,6 +25,7 @@ export function createRoutes(ctx: AppContext): Router {
 	const createTenantsController = getOptional(() => tenantsControllerModule.createTenantsController);
 	const createAuthMiddleware = getOptional(() => authMiddlewareModule.createAuthMiddleware);
 	const requireApiAuthLegacy = getOptional(() => authMiddlewareModule.requireApiAuth);
+	const requireCsrfForCookieAuth = getOptional(() => csrfMiddlewareModule.requireCsrfForCookieAuth);
 
 	const authController = typeof createAuthController === "function"
 		? createAuthController(ctx)
@@ -54,7 +56,12 @@ export function createRoutes(ctx: AppContext): Router {
 		throw new Error("Authentication middleware is not available");
 	}
 
+	if (!requireCsrfForCookieAuth) {
+		throw new Error("CSRF middleware is not available");
+	}
+
 	router.get("/health", healthCheck);
+	router.use(requireCsrfForCookieAuth);
 
 	router.post("/auth/signup", authController.signUp);
 	router.post("/auth/signin", authController.signIn);

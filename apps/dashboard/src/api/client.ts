@@ -1,12 +1,34 @@
 import axios from 'axios'
 import type { AxiosError } from 'axios'
 
+const SAFE_METHODS = new Set(['get', 'head', 'options'])
+const CSRF_COOKIE_NAME = 'byteroute_csrf'
+
+function readCookie(name: string): string | undefined {
+  if (typeof document === 'undefined' || !document.cookie) {
+    return undefined
+  }
+
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [rawKey, ...rawValue] = cookie.split('=')
+    if (rawKey?.trim() !== name) {
+      continue
+    }
+
+    return decodeURIComponent(rawValue.join('=').trim())
+  }
+
+  return undefined
+}
+
 /**
  * Central axios instance. All dashboard requests go through this client so
  * that baseURL and credentials are configured in one place.
  */
 const client = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || '').replace(/\/$/, ''),
+  withCredentials: true,
   timeout: 10_000,
   headers: {
     // Scope Content-Type to methods that actually send a body.
@@ -33,6 +55,15 @@ client.interceptors.request.use((config) => {
   if (_authToken) {
     config.headers['Authorization'] = `Bearer ${_authToken}`
   }
+
+  const method = (config.method ?? 'get').toLowerCase()
+  if (!SAFE_METHODS.has(method)) {
+    const csrfToken = readCookie(CSRF_COOKIE_NAME)
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken
+    }
+  }
+
   return config
 })
 

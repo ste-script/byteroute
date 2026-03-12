@@ -8,6 +8,8 @@ import { hashPassword, verifyPassword } from "../services/password.js";
 import { AuthService } from "../services/auth.service.js";
 import { signInRequestSchema, signUpRequestSchema } from "../domain/identity/types.js";
 import { normalizeTenantIds } from "../utils/tenant.js";
+import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from "../utils/cookie.js";
+import { generateCsrfToken } from "../utils/csrf.js";
 
 const UserModel = (shared as { UserModel?: typeof InfraUserModel }).UserModel ?? InfraUserModel;
 
@@ -33,6 +35,8 @@ export function createAuthController(ctx: AppContext) {
         return;
       }
 
+      setAuthCookie(res, result.token);
+      setCsrfCookie(res, generateCsrfToken());
       res.status(201).json(result);
     },
 
@@ -49,10 +53,14 @@ export function createAuthController(ctx: AppContext) {
         return;
       }
 
+      setAuthCookie(res, result.token);
+      setCsrfCookie(res, generateCsrfToken());
       res.status(200).json(result);
     },
 
     signOut: (_req: Request, res: Response): void => {
+      clearAuthCookie(res);
+      clearCsrfCookie(res);
       res.status(204).send();
     },
 
@@ -133,6 +141,8 @@ export async function signUp(req: Request, res: Response): Promise<void> {
     tenantIds: [],
   });
 
+  setAuthCookie(res, token);
+  setCsrfCookie(res, generateCsrfToken());
   res.status(201).json({
     token,
     user: {
@@ -168,6 +178,8 @@ export async function signIn(req: Request, res: Response): Promise<void> {
     tenantIds,
   });
 
+  setAuthCookie(res, token);
+  setCsrfCookie(res, generateCsrfToken());
   res.status(200).json({
     token,
     user: {
@@ -180,6 +192,8 @@ export async function signIn(req: Request, res: Response): Promise<void> {
 }
 
 export function signOut(_req: Request, res: Response): void {
+  clearAuthCookie(res);
+  clearCsrfCookie(res);
   res.status(204).send();
 }
 

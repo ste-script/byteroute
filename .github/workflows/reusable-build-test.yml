@@ -162,3 +162,54 @@ jobs:
             apps/client-go/coverage.cobertura.xml
             code-coverage-results.md
           retention-days: 30
+
+  dashboard-browser-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: chromium
+            project: browser-chromium
+            browser: chromium
+          - name: firefox
+            project: browser-firefox
+            browser: firefox
+          - name: safari-webkit
+            project: browser-webkit
+            browser: webkit
+          - name: mobile-chromium
+            project: browser-mobile
+            browser: chromium
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm --filter @byteroute/dashboard exec playwright install --with-deps ${{ matrix.target.browser }}
+
+      - name: Run dashboard browser tests
+        run: pnpm --filter @byteroute/dashboard exec vitest run --project ${{ matrix.target.project }} --browser.headless
+
+      - name: Upload dashboard browser screenshots
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: dashboard-browser-screenshots-${{ matrix.target.name }}
+          path: apps/dashboard/reports/browser-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14

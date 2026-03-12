@@ -25,7 +25,9 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@byteroute/shared": ["../../packages/shared/src/index.ts"],
+      "@byteroute/shared/common": ["../../packages/shared/src/common/index.ts"]
     }
   },
   "include": [
