@@ -7,8 +7,6 @@ import {
   resetDashboardBrowserHarness,
 } from './dashboardBrowserHarness'
 
-const dashboardViewModulePath = '../../views/DashboardView.vue'
-
 describe('DashboardView desktop browsers', () => {
   beforeEach(() => {
     resetDashboardBrowserHarness()
@@ -18,7 +16,7 @@ describe('DashboardView desktop browsers', () => {
     await page.viewport(1280, 900)
 
     const { layoutScroller, connectionsSection, scroller } = await mountDashboardViewForBrowser(
-      async () => ((await import(/* @vite-ignore */ dashboardViewModulePath)) as { default: Component }).default,
+      async () => ((await import('../../views/DashboardView.vue')) as { default: Component }).default,
     )
 
     const heading = page.getByRole('heading', { name: 'Live Connections' })

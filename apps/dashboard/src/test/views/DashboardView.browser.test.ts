@@ -8,8 +8,6 @@ import {
   waitForLayout,
 } from './dashboardBrowserHarness'
 
-const dashboardViewModulePath = '../../views/DashboardView.vue'
-
 describe('DashboardView mobile layout', () => {
   beforeEach(() => {
     resetDashboardBrowserHarness()
@@ -19,7 +17,7 @@ describe('DashboardView mobile layout', () => {
     await page.viewport(390, 844)
 
     const { layoutScroller, chartsSection, connectionsSection, scroller } = await mountDashboardViewForBrowser(
-      async () => ((await import(/* @vite-ignore */ dashboardViewModulePath)) as { default: Component }).default,
+      async () => ((await import('../../views/DashboardView.vue')) as { default: Component }).default,
     )
     const documentScroller = document.scrollingElement as HTMLElement
     const scrollElement = layoutScroller.scrollHeight > documentScroller.scrollHeight ? layoutScroller : documentScroller

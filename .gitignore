@@ -148,3 +148,4 @@ coverage.out
 browser-screenshots
 # MaxMind database files
 *.mmdb 
+.vitest-attachments
