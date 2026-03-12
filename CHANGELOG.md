@@ -1,3 +1,9 @@
+## [5.5.1](https://github.com/ste-script/byteroute/compare/v5.5.0...v5.5.1) (2026-03-12)
+
+### Bug Fixes
+
+* trust proxy ([52ce3c1](https://github.com/ste-script/byteroute/commit/52ce3c1560fa1120dfdb1ee8e417613c4375f8b4))
+
 ## [5.5.0](https://github.com/ste-script/byteroute/compare/v5.4.0...v5.5.0) (2026-03-12)
 
 ### Features
