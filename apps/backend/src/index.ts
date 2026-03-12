@@ -53,7 +53,7 @@ const ctx = createAppContext(io);
 const socketController = createSocketController(ctx);
 io.use(createSocketAuthMiddleware(ctx));
 app.set("io", io);
-
+app.set("trust proxy", true);
 // Register routes
 app.use(createRoutes(ctx));
 app.use(errorHandler);
