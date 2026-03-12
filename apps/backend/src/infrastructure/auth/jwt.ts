@@ -6,7 +6,23 @@ export type AuthTokenClaims = {
   email: string;
   name?: string;
   tenantIds: string[];
+  tenantId?: string;
 };
+
+function normalizeTenantClaims(tenantId: unknown, tenantIds: unknown): { tenantId?: string; tenantIds: string[] } {
+  const primaryTenantId = typeof tenantId === "string" ? tenantId.trim() : "";
+  const extraTenantIds = Array.isArray(tenantIds)
+    ? tenantIds.filter((value): value is string => typeof value === "string").map((value) => value.trim())
+    : [];
+
+  const mergedTenantIds = [primaryTenantId, ...extraTenantIds].filter((value) => value.length > 0);
+  const uniqueTenantIds = Array.from(new Set(mergedTenantIds));
+
+  return {
+    tenantId: uniqueTenantIds[0],
+    tenantIds: uniqueTenantIds,
+  };
+}
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -37,15 +53,13 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
   const sub = typeof payload.sub === "string" ? payload.sub : undefined;
   const email = typeof payload.email === "string" ? payload.email : undefined;
   const name = typeof payload.name === "string" ? payload.name : undefined;
-  const tenantIds = Array.isArray(payload.tenantIds)
-    ? payload.tenantIds.filter((value): value is string => typeof value === "string")
-    : [];
+  const tenantClaims = normalizeTenantClaims(payload.tenantId, payload.tenantIds);
 
   if (!sub || !email) {
     return undefined;
   }
 
-  return { sub, email, name, tenantIds };
+  return { sub, email, name, tenantId: tenantClaims.tenantId, tenantIds: tenantClaims.tenantIds };
 }
 
 export function signToken(claims: AuthTokenClaims, ttl = process.env.AUTH_TOKEN_TTL ?? "1d"): string {
@@ -53,7 +67,17 @@ export function signToken(claims: AuthTokenClaims, ttl = process.env.AUTH_TOKEN_
     expiresIn: ttl as SignOptions["expiresIn"],
   };
 
-  return jwt.sign(claims, getJwtSecret(), options);
+  const tenantClaims = normalizeTenantClaims(claims.tenantId, claims.tenantIds);
+
+  return jwt.sign(
+    {
+      ...claims,
+      tenantId: tenantClaims.tenantId,
+      tenantIds: tenantClaims.tenantIds,
+    },
+    getJwtSecret(),
+    options
+  );
 }
 
 export function verifyToken(token: string | undefined): Principal | undefined {

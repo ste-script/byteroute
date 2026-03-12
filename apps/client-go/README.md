@@ -61,6 +61,8 @@ List interfaces:
 - `--flow`: legacy alias for `--flush`
 - `--auth-token`: bearer token used for authenticated backend requests
 
+When `--auth-token` is set, the client also derives the tenant identifier from the JWT payload and sends it as `X-Tenant-Id`. It prefers the primary `tenantId` claim and falls back to the first value in `tenantIds` for older tokens. Tokens created from the dashboard copy action now use the currently selected tenant as that primary claim.
+
 ### Env vars
 
 - `BYTEROUTE_BACKEND_URL`

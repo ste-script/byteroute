@@ -85,11 +85,23 @@ export class AuthService {
     };
   }
 
-  async createClientToken(principal: Principal): Promise<{ token: string; expiresIn: string } | null> {
+  async createClientToken(
+    principal: Principal,
+    requestedTenantId?: string
+  ): Promise<{ token: string; expiresIn: string } | null> {
     const tenantIds = normalizeTenantIds(principal.tenantIds);
     if (tenantIds.length === 0) {
       return null;
     }
+
+    const selectedTenantId = typeof requestedTenantId === "string" ? requestedTenantId.trim() : "";
+    if (selectedTenantId && !tenantIds.includes(selectedTenantId)) {
+      return null;
+    }
+
+    const orderedTenantIds = selectedTenantId
+      ? [selectedTenantId, ...tenantIds.filter((tenantId) => tenantId !== selectedTenantId)]
+      : tenantIds;
 
     const ttl = process.env.AUTH_CLIENT_TOKEN_TTL ?? "12h";
     const token = this.jwt.signToken(
@@ -97,7 +109,8 @@ export class AuthService {
         sub: principal.id,
         email: principal.email,
         name: principal.name,
-        tenantIds,
+        tenantId: orderedTenantIds[0],
+        tenantIds: orderedTenantIds,
       },
       ttl
     );

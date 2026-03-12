@@ -57,6 +57,20 @@ describe("auth/passport", () => {
     );
   });
 
+  it("includes a primary tenantId claim in signed tokens", () => {
+    const token = signAuthToken({
+      sub: "user-1",
+      email: "user@example.com",
+      name: "User",
+      tenantIds: ["tenant-a", "tenant-b"],
+    });
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
+
+    expect(payload.tenantIds).toEqual(["tenant-a", "tenant-b"]);
+    expect(payload.tenantId).toBe("tenant-a");
+  });
+
   it("returns undefined for invalid token payload", () => {
     expect(verifyAuthToken("not-a-token")).toBeUndefined();
     expect(verifyAuthToken(undefined)).toBeUndefined();
@@ -93,6 +107,19 @@ describe("auth/passport", () => {
     const principal = verifyAuthToken(token);
     expect(principal).toEqual(
       expect.objectContaining({ id: "user-1", tenantIds: [] })
+    );
+  });
+
+  it("derives tenantIds from tenantId when the array claim is missing", () => {
+    const token = jwt.sign(
+      { sub: "user-1", email: "user@example.com", name: "User", tenantId: "tenant-a" },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1d" }
+    );
+
+    const principal = verifyAuthToken(token);
+    expect(principal).toEqual(
+      expect.objectContaining({ id: "user-1", tenantIds: ["tenant-a"] })
     );
   });
 

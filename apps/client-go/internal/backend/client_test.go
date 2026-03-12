@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+const testJWTWithTenantID = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ0ZW5hbnRJZCI6InRlbmFudC1hIiwidGVuYW50SWRzIjpbInRlbmFudC1hIiwidGVuYW50LWIiXX0."
+
+const testJWTWithTenantIDsOnly = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ0ZW5hbnRJZHMiOlsidGVuYW50LWEiLCJ0ZW5hbnQtYiJdfQ."
+
 func TestClient_PostConnections(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -19,8 +23,12 @@ func TestClient_PostConnections(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+		if got := r.Header.Get("Authorization"); got != "Bearer "+testJWTWithTenantID {
 			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if got := r.Header.Get("X-Tenant-Id"); got != "tenant-a" {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -40,7 +48,7 @@ func TestClient_PostConnections(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c, err := NewClient(ts.URL, 2*time.Second, "test-token")
+	c, err := NewClient(ts.URL, 2*time.Second, testJWTWithTenantID)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
@@ -113,6 +121,10 @@ func TestClient_PostConnections_NoAuth(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		if r.Header.Get("X-Tenant-Id") != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(AcceptedResponse{Received: 0, Status: "processing"})
@@ -136,8 +148,12 @@ func TestClient_PostMetrics(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if got := r.Header.Get("Authorization"); got != "Bearer metrics-token" {
+		if got := r.Header.Get("Authorization"); got != "Bearer "+testJWTWithTenantID {
 			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if got := r.Header.Get("X-Tenant-Id"); got != "tenant-a" {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -157,7 +173,7 @@ func TestClient_PostMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c, _ := NewClient(ts.URL, 2*time.Second, "metrics-token")
+	c, _ := NewClient(ts.URL, 2*time.Second, testJWTWithTenantID)
 	resp, err := c.PostMetrics(context.Background(), []MetricsSnapshot{
 		{Timestamp: "2024-01-01T00:00:00Z", Connections: 5, BandwidthIn: 1000, BandwidthOut: 2000, Inactive: 1},
 	})
@@ -200,5 +216,24 @@ func TestClient_PostMetrics_InvalidJSON(t *testing.T) {
 	}
 	if resp.Status != "processing" {
 		t.Fatalf("expected fallback status=processing, got %q", resp.Status)
+	}
+}
+
+func TestClient_UsesFirstTenantIDWhenPrimaryClaimMissing(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("X-Tenant-Id"); got != "tenant-a" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		_ = json.NewEncoder(w).Encode(AcceptedResponse{Received: 0, Status: "processing"})
+	}))
+	defer ts.Close()
+
+	c, _ := NewClient(ts.URL, 2*time.Second, testJWTWithTenantIDsOnly)
+	_, err := c.PostConnections(context.Background(), []Connection{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
