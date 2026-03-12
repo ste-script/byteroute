@@ -1,7 +1,7 @@
 {
   "name": "@byteroute/backend",
   "private": true,
-  "version": "5.3.0",
+  "version": "5.4.0",
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",

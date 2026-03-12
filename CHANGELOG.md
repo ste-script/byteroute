@@ -1,3 +1,13 @@
+## [5.4.0](https://github.com/ste-script/byteroute/compare/v5.3.0...v5.4.0) (2026-03-12)
+
+### Features
+
+* restore cookie and csrf for reloading persistance ([1fdfa8f](https://github.com/ste-script/byteroute/commit/1fdfa8f81606a3be610bdb30661e4abf4ecdde2d))
+
+### Bug Fixes
+
+* **dashboard:** traffic list overlap in mobile ([27de0f2](https://github.com/ste-script/byteroute/commit/27de0f2afd38ad114c984eb1ece35c09ce053187))
+
 ## [5.3.0](https://github.com/ste-script/byteroute/compare/v5.2.0...v5.3.0) (2026-03-08)
 
 ### Features
