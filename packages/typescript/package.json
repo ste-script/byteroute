@@ -1,6 +1,6 @@
 {
   "name": "@byteroute/typescript",
-  "version": "5.4.0",
+  "version": "5.5.0",
   "private": true,
   "license": "MIT",
   "publishConfig": {

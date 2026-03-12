@@ -1,3 +1,9 @@
+## [5.5.0](https://github.com/ste-script/byteroute/compare/v5.4.0...v5.5.0) (2026-03-12)
+
+### Features
+
+* tenant scoped auth token ([e900aac](https://github.com/ste-script/byteroute/commit/e900aacc51182f7f48870eb47d882d3d7eb36f0d))
+
 ## [5.4.0](https://github.com/ste-script/byteroute/compare/v5.3.0...v5.4.0) (2026-03-12)
 
 ### Features
