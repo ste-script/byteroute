@@ -7,7 +7,7 @@ import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { AuthService } from "../services/auth.service.js";
 import { signInRequestSchema, signUpRequestSchema } from "../domain/identity/types.js";
-import { normalizeTenantIds } from "../utils/tenant.js";
+import { normalizeTenantIds, sanitizeTenantId } from "../utils/tenant.js";
 import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from "../utils/cookie.js";
 import { generateCsrfToken } from "../utils/csrf.js";
 
@@ -101,9 +101,10 @@ export function createAuthController(ctx: AppContext) {
         return;
       }
 
-      const result = await authService.createClientToken(principal);
+      const requestedTenantId = sanitizeTenantId((req.body as { tenantId?: unknown } | undefined)?.tenantId);
+      const result = await authService.createClientToken(principal, requestedTenantId);
       if (!result) {
-        res.status(403).json({ error: "Forbidden: no authorized tenants" });
+        res.status(403).json({ error: requestedTenantId ? "Forbidden: no access to tenant" : "Forbidden: no authorized tenants" });
         return;
       }
 
@@ -229,13 +230,24 @@ export function createClientToken(req: Request, res: Response): void {
     return;
   }
 
+  const requestedTenantId = sanitizeTenantId((req.body as { tenantId?: unknown } | undefined)?.tenantId);
+  if (requestedTenantId && !tenantIds.includes(requestedTenantId)) {
+    res.status(403).json({ error: "Forbidden: no access to tenant" });
+    return;
+  }
+
+  const orderedTenantIds = requestedTenantId
+    ? [requestedTenantId, ...tenantIds.filter((tenantId) => tenantId !== requestedTenantId)]
+    : tenantIds;
+
   const ttl = process.env.AUTH_CLIENT_TOKEN_TTL ?? "12h";
   const token = signAuthTokenWithTtl(
     {
       sub: principal.id,
       email: principal.email,
       name: principal.name,
-      tenantIds,
+      tenantId: orderedTenantIds[0],
+      tenantIds: orderedTenantIds,
     },
     ttl
   );

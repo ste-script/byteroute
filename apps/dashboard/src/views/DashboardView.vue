@@ -72,6 +72,10 @@ const {
   handleCopy: handleCopyToken,
 } = useClientToken()
 
+async function handleCopySelectedTenantToken(): Promise<void> {
+  await handleCopyToken(selectedTenant.value)
+}
+
 // ── Connection list controls ──────────────────────────────────────────────────
 const connectionLimit = ref<5 | 10 | 20>(10)
 const connectionLimitOptions: Array<{ label: string; value: 5 | 10 | 20 }> = [
@@ -198,7 +202,7 @@ onUnmounted(() => {
       @update:selected-tenant="selectedTenant = $event"
       @tenant-change="handleTenantChange(connectionLimit)"
       @toggle-dark-mode="store.toggleDarkMode"
-      @copy-token="handleCopyToken"
+      @copy-token="handleCopySelectedTenantToken"
       @logout="handleLogout"
       @new-tenant="showNewTenantDialog = true"
     />

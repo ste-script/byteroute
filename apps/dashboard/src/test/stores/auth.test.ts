@@ -223,8 +223,9 @@ describe('Auth Store', () => {
       vi.mocked(authApi.createClientToken).mockResolvedValueOnce('client-token-abc')
 
       const store = useAuthStore()
-      const result = await store.createClientToken()
+      const result = await store.createClientToken('tenant-b')
 
+      expect(authApi.createClientToken).toHaveBeenCalledWith('tenant-b')
       expect(result).toBe('client-token-abc')
     })
   })

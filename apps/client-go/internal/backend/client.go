@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,12 @@ type Client struct {
 	baseURL   *url.URL
 	hc        *http.Client
 	authToken string
+	tenantID  string
+}
+
+type authTokenClaims struct {
+	TenantID  string   `json:"tenantId"`
+	TenantIDs []string `json:"tenantIds"`
 }
 
 func NewClient(baseURL string, timeout time.Duration, authToken string) (*Client, error) {
@@ -30,6 +37,7 @@ func NewClient(baseURL string, timeout time.Duration, authToken string) (*Client
 			Timeout: timeout,
 		},
 		authToken: strings.TrimSpace(authToken),
+		tenantID:  extractTenantIDFromToken(authToken),
 	}, nil
 }
 
@@ -37,6 +45,43 @@ func (c *Client) applyAuth(req *http.Request) {
 	if c.authToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.authToken)
 	}
+	if c.tenantID != "" {
+		req.Header.Set("X-Tenant-Id", c.tenantID)
+	}
+}
+
+func extractTenantIDFromToken(token string) string {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return ""
+	}
+
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return ""
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+	}
+
+	var claims authTokenClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return ""
+	}
+
+	if tenantID := strings.TrimSpace(claims.TenantID); tenantID != "" {
+		return tenantID
+	}
+
+	for _, tenantID := range claims.TenantIDs {
+		if trimmedTenantID := strings.TrimSpace(tenantID); trimmedTenantID != "" {
+			return trimmedTenantID
+		}
+	}
+
+	return ""
 }
 
 func (c *Client) PostConnections(ctx context.Context, connections []Connection) (*AcceptedResponse, error) {

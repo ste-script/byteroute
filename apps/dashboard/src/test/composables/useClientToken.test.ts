@@ -48,11 +48,12 @@ describe('useClientToken', () => {
 
       const { pending, message, handleCopy } = useClientToken()
 
-      const promise = handleCopy()
+      const promise = handleCopy('tenant-b')
       expect(pending.value).toBe(true)
 
       await promise
 
+      expect(mockAuthStore.createClientToken).toHaveBeenCalledWith('tenant-b')
       expect(writeText).toHaveBeenCalledWith('my-secret-token')
       expect(message.value).toBe('Token copied')
       expect(pending.value).toBe(false)
@@ -66,7 +67,7 @@ describe('useClientToken', () => {
       })
 
       const { message, handleCopy } = useClientToken()
-      await handleCopy()
+      await handleCopy('tenant-b')
 
       expect(message.value).toBe('Token copied')
       vi.advanceTimersByTime(3000)
@@ -92,7 +93,7 @@ describe('useClientToken', () => {
       const execCommandSpy = vi.spyOn(document, 'execCommand').mockReturnValueOnce(true)
 
       const { message, handleCopy } = useClientToken()
-      await handleCopy()
+      await handleCopy('tenant-b')
 
       expect(execCommandSpy).toHaveBeenCalledWith('copy')
       expect(message.value).toBe('Token copied')
@@ -115,7 +116,7 @@ describe('useClientToken', () => {
       vi.spyOn(document, 'execCommand').mockReturnValueOnce(false)
 
       const { message, handleCopy } = useClientToken()
-      await handleCopy()
+      await handleCopy('tenant-b')
 
       expect(message.value).toBe('Failed to copy token')
     })
@@ -132,11 +133,11 @@ describe('useClientToken', () => {
       const { message, handleCopy } = useClientToken()
 
       // First call
-      await handleCopy()
+      await handleCopy('tenant-b')
       expect(message.value).toBe('Token copied')
 
       // Second call before the 3s timeout fires – should reset timer without error
-      await handleCopy()
+      await handleCopy('tenant-b')
       expect(message.value).toBe('Token copied')
 
       // Advance past the timeout
@@ -148,7 +149,7 @@ describe('useClientToken', () => {
       mockAuthStore.createClientToken.mockRejectedValueOnce(new Error('Unauthorized'))
 
       const { pending, message, handleCopy } = useClientToken()
-      await handleCopy()
+      await handleCopy('tenant-b')
 
       expect(message.value).toBe('Unauthorized')
       expect(pending.value).toBe(false)
@@ -158,7 +159,7 @@ describe('useClientToken', () => {
       mockAuthStore.createClientToken.mockRejectedValueOnce('something bad')
 
       const { message, handleCopy } = useClientToken()
-      await handleCopy()
+      await handleCopy('tenant-b')
 
       expect(message.value).toBe('Copy failed')
     })

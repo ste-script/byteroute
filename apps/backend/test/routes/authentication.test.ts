@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
+import jwt from "jsonwebtoken";
 import request from "supertest";
 import router from "../../src/routes/index.js";
 import { signAuthToken } from "../../src/auth/passport.js";
@@ -137,5 +138,32 @@ describe("api authentication", () => {
       .expect(200);
 
     expect(response.body).toEqual(expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(String) }));
+  });
+
+  it("creates a client token scoped to the requested tenant", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    const tenantLean = vi.fn().mockResolvedValue([{ tenantId: "default" }, { tenantId: "tenant-b" }]);
+    const tenantSelect = vi.fn().mockReturnValue({ lean: tenantLean });
+    sharedMocks.findTenants.mockReturnValue({ select: tenantSelect });
+
+    const token = signAuthToken({
+      sub: "user-1",
+      email: "user@example.com",
+      name: "User",
+      tenantIds: ["default", "tenant-b"],
+    });
+
+    const response = await request(app)
+      .post("/auth/client-token")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ tenantId: "tenant-b" })
+      .expect(200);
+
+    const payload = jwt.verify(response.body.token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
+    expect(payload.tenantId).toBe("tenant-b");
+    expect(payload.tenantIds).toEqual(["tenant-b", "default"]);
   });
 });

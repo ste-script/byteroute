@@ -69,8 +69,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
-  async function createClientToken(): Promise<string> {
-    return authApi.createClientToken()
+  async function createClientToken(tenantId: string): Promise<string> {
+    return authApi.createClientToken(tenantId)
   }
 
   return {

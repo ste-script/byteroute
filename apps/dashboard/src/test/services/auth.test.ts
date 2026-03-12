@@ -119,16 +119,16 @@ describe('Auth Service', () => {
     it('returns the token string', async () => {
       mockClient.post.mockResolvedValueOnce({ data: { token: 'client-token-xyz' } })
 
-      const result = await createClientToken()
+      const result = await createClientToken('tenant-b')
 
-      expect(mockClient.post).toHaveBeenCalledWith('/auth/client-token')
+      expect(mockClient.post).toHaveBeenCalledWith('/auth/client-token', { tenantId: 'tenant-b' })
       expect(result).toBe('client-token-xyz')
     })
 
     it('throws when token is missing from response', async () => {
       mockClient.post.mockResolvedValueOnce({ data: {} })
 
-      await expect(createClientToken()).rejects.toThrow('Token response is missing token')
+      await expect(createClientToken('tenant-b')).rejects.toThrow('Token response is missing token')
     })
   })
 })

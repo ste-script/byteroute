@@ -53,6 +53,8 @@ The backend uses bearer authentication for all `/api/*` endpoints.
 - `POST /auth/client-token` (auth) → token for the Go client
 
 Pass the token in `Authorization: Bearer <token>`.
+Client tokens also include a primary `tenantId` claim alongside `tenantIds` so the Go client can send `X-Tenant-Id` automatically during ingestion.
+`POST /auth/client-token` accepts an optional JSON body like `{ "tenantId": "my-tenant" }` and will scope the primary `tenantId` claim to that tenant if the authenticated user has access to it.
 
 ## Tenants
 

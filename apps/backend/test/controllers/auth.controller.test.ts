@@ -291,4 +291,51 @@ describe("auth.controller", () => {
       expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(String) })
     );
   });
+
+  it("createClientToken signs the requested tenant as the primary tenant", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: ["tenant-a", "tenant-b"],
+      },
+      body: {
+        tenantId: "tenant-b",
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    createClientToken(req, res);
+
+    expect(mocks.signAuthTokenWithTtl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-b",
+        tenantIds: ["tenant-b", "tenant-a"],
+      }),
+      expect.any(String)
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("createClientToken rejects a requested tenant outside the principal scope", () => {
+    const req = {
+      user: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        tenantIds: ["tenant-a"],
+      },
+      body: {
+        tenantId: "tenant-b",
+      },
+    } as unknown as Request;
+    const res = createRes();
+
+    createClientToken(req, res);
+
+    expect(mocks.signAuthTokenWithTtl).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Forbidden: no access to tenant" });
+  });
 });

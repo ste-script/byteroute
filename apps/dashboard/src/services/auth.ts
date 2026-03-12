@@ -39,8 +39,8 @@ export async function signOut(): Promise<void> {
   await client.post('/auth/logout')
 }
 
-export async function createClientToken(): Promise<string> {
-  const { data } = await client.post<{ token?: string }>('/auth/client-token')
+export async function createClientToken(tenantId: string): Promise<string> {
+  const { data } = await client.post<{ token?: string }>('/auth/client-token', { tenantId })
   if (!data.token) throw new Error('Token response is missing token')
   return data.token
 }

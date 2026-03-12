@@ -34,11 +34,11 @@ export function useClientToken() {
   const message = ref<string | null>(null)
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  async function handleCopy(): Promise<void> {
+  async function handleCopy(tenantId: string): Promise<void> {
     pending.value = true
     message.value = null
     try {
-      const token = await authStore.createClientToken()
+      const token = await authStore.createClientToken(tenantId)
       await copyTextToClipboard(token)
       message.value = 'Token copied'
     } catch (error) {
