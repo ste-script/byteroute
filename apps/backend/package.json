@@ -38,6 +38,7 @@
     "eslint": "^9.39.4",
     "globals": "^17.4.0",
     "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-instrument": "^6.0.3",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
     "monocart-coverage-reports": "^2.12.9",
