@@ -36,9 +36,22 @@ const cities: Record<string, string[]> = {
 const protocols: Connection["protocol"][] = ["TCP", "UDP", "ICMP", "OTHER"];
 const statuses: Connection["status"][] = ["active", "inactive"];
 
+/**
+ * Randoms int.
+ * @param min - The min input.
+ * @param max - The max input.
+ * @returns The int result.
+ */
+
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+/**
+ * Randoms choice.
+ * @param arr - The arr input.
+ * @returns The choice result.
+ */
 
 function randomChoice<T>(arr: readonly T[]): T {
   if (arr.length === 0) {
@@ -47,9 +60,19 @@ function randomChoice<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
+/**
+ * Generates IP.
+ * @returns The IP result.
+ */
+
 function generateIp(): string {
   return `${randomInt(1, 255)}.${randomInt(0, 255)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
 }
+
+/**
+ * Generates port.
+ * @returns The port result.
+ */
 
 function generatePort(): number {
   return randomInt(1024, 65535);
@@ -57,7 +80,15 @@ function generatePort(): number {
 
 let connectionIdCounter = 0;
 
-export function generateConnection(overrides?: Partial<Connection>): Connection {
+/**
+ * Generates connection.
+ * @param overrides - The overrides input.
+ * @returns The connection result.
+ */
+
+export function generateConnection(
+  overrides?: Partial<Connection>,
+): Connection {
   const countryData = randomChoice(countries);
   const city = randomChoice(cities[countryData.countryCode] ?? ["Unknown"]);
   const status = randomChoice(statuses);
@@ -92,11 +123,23 @@ export function generateConnection(overrides?: Partial<Connection>): Connection 
   };
 }
 
+/**
+ * Generates connections.
+ * @param count - The count input.
+ * @returns The connections result.
+ */
+
 export function generateConnections(count: number): Connection[] {
   return Array.from({ length: count }, () => generateConnection());
 }
 
 let flowIdCounter = 0;
+
+/**
+ * Generates traffic flow.
+ * @param connection - The connection input.
+ * @returns The traffic flow result.
+ */
 
 export function generateTrafficFlow(connection?: Connection): TrafficFlow {
   const sourceCountry = randomChoice(countries);
@@ -107,8 +150,10 @@ export function generateTrafficFlow(connection?: Connection): TrafficFlow {
   return {
     id: `flow-${flowIdCounter}-${Date.now()}`,
     source: {
-      lat: connection?.latitude ?? sourceCountry.lat + (Math.random() - 0.5) * 5,
-      lng: connection?.longitude ?? sourceCountry.lng + (Math.random() - 0.5) * 5,
+      lat:
+        connection?.latitude ?? sourceCountry.lat + (Math.random() - 0.5) * 5,
+      lng:
+        connection?.longitude ?? sourceCountry.lng + (Math.random() - 0.5) * 5,
       country: connection?.country ?? sourceCountry.country,
       city: connection?.city,
     },
@@ -124,9 +169,15 @@ export function generateTrafficFlow(connection?: Connection): TrafficFlow {
   };
 }
 
+/**
+ * Generates traffic flows.
+ * @param connections - The connections input.
+ * @returns The traffic flows result.
+ */
+
 export function generateTrafficFlows(connections: Connection[]): TrafficFlow[] {
   return connections
-    .filter(c => c.status === "active")
+    .filter((c) => c.status === "active")
     .slice(0, 20) // Limit flows for performance
-    .map(c => generateTrafficFlow(c));
+    .map((c) => generateTrafficFlow(c));
 }

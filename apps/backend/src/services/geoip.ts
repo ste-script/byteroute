@@ -16,20 +16,55 @@ export type GeoIpContext = {
   reporterIp?: string;
 };
 
+/**
+ * Checks whether any enrichment is satisfied.
+ * @param enrichment - The enrichment input.
+ * @returns True when any enrichment is satisfied.
+ */
+
 function hasAnyEnrichment(enrichment: GeoIpEnrichment): boolean {
   return Boolean(
-    enrichment.countryCode || enrichment.city || enrichment.latitude || enrichment.longitude || enrichment.asn
+    enrichment.countryCode ||
+    enrichment.city ||
+    enrichment.latitude ||
+    enrichment.longitude ||
+    enrichment.asn,
   );
 }
 
+/**
+ * Represents a geo IP service.
+ */
+
 export class GeoIpService {
+  /**
+   * Creates a geo IP service.
+   * @param geoIpLookup - The geo IP lookup input.
+   */
+
   constructor(private readonly geoIpLookup: IGeoIpLookup) {}
+
+  /**
+   * Lookups IP.
+   * @param ip - The IP input.
+   * @returns The IP result.
+   */
 
   lookupIp(ip: string): Promise<GeoIpEnrichment> {
     return this.geoIpLookup.lookup(ip);
   }
 
-  async enrichConnection(connection: Connection, context: GeoIpContext = {}): Promise<Connection> {
+  /**
+   * Enriches connection.
+   * @param connection - The connection input.
+   * @param context - The context input.
+   * @returns The connection result.
+   */
+
+  async enrichConnection(
+    connection: Connection,
+    context: GeoIpContext = {},
+  ): Promise<Connection> {
     const sourceIp = normalizeIp(connection.sourceIp) ?? connection.sourceIp;
     const destIp = normalizeIp(connection.destIp) ?? connection.destIp;
     const reporterIp = normalizeIp(context.reporterIp);
@@ -46,7 +81,11 @@ export class GeoIpService {
       enrichment = await this.lookupIp(sourceIp);
     }
 
-    if (!hasAnyEnrichment(enrichment) && reporterIp && !isPrivateIp(reporterIp)) {
+    if (
+      !hasAnyEnrichment(enrichment) &&
+      reporterIp &&
+      !isPrivateIp(reporterIp)
+    ) {
       enrichment = await this.lookupIp(reporterIp);
     }
 
@@ -81,21 +120,61 @@ export class GeoIpService {
     return enriched;
   }
 
-  enrichBatch(connections: Connection[], context: GeoIpContext = {}): Promise<Connection[]> {
-    return Promise.all(connections.map((connection) => this.enrichConnection(connection, context)));
+  /**
+   * Enriches batch.
+   * @param connections - The connections input.
+   * @param context - The context input.
+   * @returns The batch result.
+   */
+
+  enrichBatch(
+    connections: Connection[],
+    context: GeoIpContext = {},
+  ): Promise<Connection[]> {
+    return Promise.all(
+      connections.map((connection) =>
+        this.enrichConnection(connection, context),
+      ),
+    );
   }
 }
 
 const defaultGeoIpService = new GeoIpService(new MaxmindGeoIpLookup());
 
+/**
+ * Lookups IP.
+ * @param ip - The IP input.
+ * @returns The IP result.
+ */
+
 export async function lookupIp(ip: string): Promise<GeoIpEnrichment> {
   return defaultGeoIpService.lookupIp(ip);
 }
 
-export async function enrichConnection(connection: Connection, context: GeoIpContext = {}): Promise<Connection> {
+/**
+ * Enriches connection.
+ * @param connection - The connection input.
+ * @param context - The context input.
+ * @returns The connection result.
+ */
+
+export async function enrichConnection(
+  connection: Connection,
+  context: GeoIpContext = {},
+): Promise<Connection> {
   return defaultGeoIpService.enrichConnection(connection, context);
 }
 
-export async function enrichBatch(connections: Connection[], context: GeoIpContext = {}): Promise<Connection[]> {
+/**
+ * Enriches batch.
+ * @param connections - The connections input.
+ * @param context - The context input.
+ * @returns The batch result.
+ */
+
+export async function enrichBatch(
+  connections: Connection[],
+  context: GeoIpContext = {},
+): Promise<Connection[]> {
   return defaultGeoIpService.enrichBatch(connections, context);
 }

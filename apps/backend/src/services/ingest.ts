@@ -6,7 +6,11 @@ import type { Connection } from "@byteroute/shared";
 import * as shared from "@byteroute/shared";
 import { ConnectionModel as InfraConnectionModel } from "../infrastructure/persistence/models/connection.model.js";
 import type { TypedSocketServer } from "./connections.js";
-import { upsertConnectionsLocal, emitStatisticsUpdate, emitTrafficFlows } from "./connections.js";
+import {
+  upsertConnectionsLocal,
+  emitStatisticsUpdate,
+  emitTrafficFlows,
+} from "./connections.js";
 import { enrichBatch } from "./geoip.js";
 import { normalizeConnection } from "../domain/connection/normalizer.js";
 import { ensureTenantId } from "../utils/tenant.js";
@@ -15,7 +19,9 @@ import { getCompiledDomainDsl } from "../infrastructure/dsl/domain-dsl.js";
 let sharedConnectionModel: typeof InfraConnectionModel | undefined;
 
 try {
-  sharedConnectionModel = (shared as { ConnectionModel?: typeof InfraConnectionModel }).ConnectionModel;
+  sharedConnectionModel = (
+    shared as { ConnectionModel?: typeof InfraConnectionModel }
+  ).ConnectionModel;
 } catch {
   sharedConnectionModel = undefined;
 }
@@ -32,6 +38,12 @@ export type IngestConnectionsOptions = {
   reporterIp?: string;
   tenantId?: string;
 };
+
+/**
+ * Applies ingestion DSL.
+ * @param connections - The connections input.
+ * @returns The ingestion DSL result.
+ */
 
 function applyIngestionDsl(connections: Connection[]): Connection[] {
   const rules = getCompiledDomainDsl().ingestion.connection;
@@ -53,6 +65,13 @@ function applyIngestionDsl(connections: Connection[]): Connection[] {
     });
 }
 
+/**
+ * Coerces date.
+ * @param value - The value input.
+ * @param fallback - The fallback input.
+ * @returns The date result.
+ */
+
 function coerceDate(value: unknown, fallback: Date): Date {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? fallback : value;
@@ -64,7 +83,15 @@ function coerceDate(value: unknown, fallback: Date): Date {
   return fallback;
 }
 
-async function upsertConnectionsInDb(connections: Connection[]): Promise<number> {
+/**
+ * Upserts connections in DB.
+ * @param connections - The connections input.
+ * @returns The connections in DB result.
+ */
+
+async function upsertConnectionsInDb(
+  connections: Connection[],
+): Promise<number> {
   if (connections.length === 0) {
     return 0;
   }
@@ -99,16 +126,28 @@ async function upsertConnectionsInDb(connections: Connection[]): Promise<number>
   );
 }
 
+/**
+ * Enriches and stores connections.
+ * @param io - The IO input.
+ * @param rawConnections - The raw connections input.
+ * @param options - The options input.
+ * @returns The and store connections result.
+ */
+
 export async function enrichAndStoreConnections(
   io: TypedSocketServer | undefined,
   rawConnections: Partial<Connection>[],
-  options: IngestConnectionsOptions = {}
+  options: IngestConnectionsOptions = {},
 ): Promise<IngestResult> {
   const tenantId = ensureTenantId(options.tenantId);
-  const normalized = rawConnections.map((connection) => normalizeConnection(connection, tenantId));
+  const normalized = rawConnections.map((connection) =>
+    normalizeConnection(connection, tenantId),
+  );
   const shapedByDsl = applyIngestionDsl(normalized);
 
-  const enriched = await enrichBatch(shapedByDsl, { reporterIp: options.reporterIp });
+  const enriched = await enrichBatch(shapedByDsl, {
+    reporterIp: options.reporterIp,
+  });
 
   const stored = await upsertConnectionsInDb(enriched);
 
@@ -127,9 +166,16 @@ export async function enrichAndStoreConnections(
   };
 }
 
+/**
+ * Stores raw connections.
+ * @param rawConnections - The raw connections input.
+ * @param options - The options input.
+ * @returns The raw connections result.
+ */
+
 export async function storeRawConnections(
   rawConnections: Partial<Connection>[],
-  options: IngestConnectionsOptions = {}
+  options: IngestConnectionsOptions = {},
 ): Promise<number> {
   const tenantId = ensureTenantId(options.tenantId);
   const normalized = rawConnections

@@ -4,15 +4,42 @@
 
 import type { ITenantRepository } from "../domain/identity/tenant-repository.interface.js";
 
+/**
+ * Represents a tenant service.
+ */
+
 export class TenantService {
+  /**
+   * Creates a tenant service.
+   * @param tenantRepository - The tenant repository input.
+   */
+
   constructor(private readonly tenantRepository: ITenantRepository) {}
+
+  /**
+   * Lists the requested result.
+   * @param ownerId - The owner ID input.
+   * @returns The operation result.
+   */
 
   async list(ownerId: string): Promise<string[]> {
     const docs = await this.tenantRepository.findByOwner(ownerId);
     return docs.map((doc) => doc.tenantId).sort();
   }
 
-  async create(ownerId: string, name: string, tenantId?: string): Promise<{
+  /**
+   * Creates the requested result.
+   * @param ownerId - The owner ID input.
+   * @param name - The name input.
+   * @param tenantId - The tenant ID input.
+   * @returns The operation result.
+   */
+
+  async create(
+    ownerId: string,
+    name: string,
+    tenantId?: string,
+  ): Promise<{
     ok: boolean;
     status: 201 | 400 | 409;
     error?: string;
@@ -20,19 +47,27 @@ export class TenantService {
   }> {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      return { ok: false, status: 400, error: "Invalid request: name is required" };
+      return {
+        ok: false,
+        status: 400,
+        error: "Invalid request: name is required",
+      };
     }
 
     const rawTenantId =
       typeof tenantId === "string" && tenantId.trim().length > 0
         ? tenantId.trim()
-        : trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        : trimmedName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
 
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(rawTenantId)) {
       return {
         ok: false,
         status: 400,
-        error: "Invalid tenantId: use lowercase letters, numbers, hyphens and underscores",
+        error:
+          "Invalid tenantId: use lowercase letters, numbers, hyphens and underscores",
       };
     }
 
@@ -56,6 +91,13 @@ export class TenantService {
       },
     };
   }
+
+  /**
+   * Removes the requested result.
+   * @param ownerId - The owner ID input.
+   * @param tenantId - The tenant ID input.
+   * @returns The operation result.
+   */
 
   async remove(ownerId: string, tenantId: string): Promise<boolean> {
     return this.tenantRepository.deleteByTenantId(tenantId, ownerId);

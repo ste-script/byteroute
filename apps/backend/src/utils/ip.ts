@@ -5,7 +5,15 @@
 import { isIP } from "node:net";
 import ipLib from "ip";
 
-export function normalizeIp(input: string | undefined | null): string | undefined {
+/**
+ * Normalizes IP.
+ * @param input - The input input.
+ * @returns The IP result.
+ */
+
+export function normalizeIp(
+  input: string | undefined | null,
+): string | undefined {
   if (!input) {
     return undefined;
   }
@@ -36,6 +44,12 @@ export function normalizeIp(input: string | undefined | null): string | undefine
   return isIP(ip) ? ip : undefined;
 }
 
+/**
+ * Firsts forwarded for.
+ * @param header - The header input.
+ * @returns The forwarded for result.
+ */
+
 export function firstForwardedFor(header: unknown): string | undefined {
   if (typeof header !== "string") {
     return undefined;
@@ -44,9 +58,21 @@ export function firstForwardedFor(header: unknown): string | undefined {
   return normalizeIp(first);
 }
 
+/**
+ * Checks whether private ipv4 is satisfied.
+ * @param ip - The IP input.
+ * @returns True when private ipv4 is satisfied.
+ */
+
 export function isPrivateIpv4(ip: string): boolean {
   return ipLib.isPrivate(ip);
 }
+
+/**
+ * Checks whether private IP is satisfied.
+ * @param ip - The IP input.
+ * @returns True when private IP is satisfied.
+ */
 
 export function isPrivateIp(ip: string): boolean {
   // For now focus on IPv4; IPv6 private ranges can be added if needed.

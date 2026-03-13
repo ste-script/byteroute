@@ -10,17 +10,32 @@ import {
   type AggregationQuerySpec,
 } from "../infrastructure/dsl/domain-dsl.js";
 
+/**
+ * Randoms int.
+ * @param min - The min input.
+ * @param max - The max input.
+ * @returns The int result.
+ */
+
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function applyAggregationQuery<T extends { connections: number; bandwidth?: number }>(
-  entries: T[],
-  query: AggregationQuerySpec
-): T[] {
+/**
+ * Applies aggregation query.
+ * @param entries - The entries input.
+ * @param query - The query input.
+ * @returns The aggregation query result.
+ */
+
+function applyAggregationQuery<
+  T extends { connections: number; bandwidth?: number },
+>(entries: T[], query: AggregationQuerySpec): T[] {
   const sorted = [...entries].sort((left, right) => {
-    const leftValue = query.sortBy === "bandwidth" ? (left.bandwidth ?? 0) : left.connections;
-    const rightValue = query.sortBy === "bandwidth" ? (right.bandwidth ?? 0) : right.connections;
+    const leftValue =
+      query.sortBy === "bandwidth" ? (left.bandwidth ?? 0) : left.connections;
+    const rightValue =
+      query.sortBy === "bandwidth" ? (right.bandwidth ?? 0) : right.connections;
 
     if (query.order === "asc") {
       return leftValue - rightValue;
@@ -36,39 +51,70 @@ function applyAggregationQuery<T extends { connections: number; bandwidth?: numb
   return sorted;
 }
 
+/**
+ * Generates statistics.
+ * @param connections - The connections input.
+ * @param tenantId - The tenant ID input.
+ * @param store - The store input.
+ * @returns The statistics result.
+ */
+
 export function generateStatistics(
   connections: Connection[],
   tenantId: string,
-  store: IMetricsStore = metricsStore
+  store: IMetricsStore = metricsStore,
 ): Statistics {
   const queryDsl = getCompiledDomainDsl().analytics.queries;
-  const activeConnections = connections.filter(c => c.status === "active").length;
-  const totalBandwidth = connections.reduce((sum, c) => sum + (c.bandwidth ?? 0), 0);
+  const activeConnections = connections.filter(
+    (c) => c.status === "active",
+  ).length;
+  const totalBandwidth = connections.reduce(
+    (sum, c) => sum + (c.bandwidth ?? 0),
+    0,
+  );
   const bandwidthIn = connections.reduce((sum, c) => sum + (c.bytesIn ?? 0), 0);
-  const bandwidthOut = connections.reduce((sum, c) => sum + (c.bytesOut ?? 0), 0);
+  const bandwidthOut = connections.reduce(
+    (sum, c) => sum + (c.bytesOut ?? 0),
+    0,
+  );
 
-  // Group by country 
-  const countryMap = new Map<string, { connections: number; bandwidth: number; countryCode: string }>();
+  // Group by country
+  const countryMap = new Map<
+    string,
+    { connections: number; bandwidth: number; countryCode: string }
+  >();
   for (const conn of connections) {
     if (conn.country && conn.countryCode) {
-      const existing = countryMap.get(conn.country) ?? { connections: 0, bandwidth: 0, countryCode: conn.countryCode };
+      const existing = countryMap.get(conn.country) ?? {
+        connections: 0,
+        bandwidth: 0,
+        countryCode: conn.countryCode,
+      };
       existing.connections++;
       existing.bandwidth += conn.bandwidth ?? 0;
       countryMap.set(conn.country, existing);
     }
   }
 
-  const byCountryRaw = Array.from(countryMap.entries()).map(([country, data]) => ({
-    country,
-    countryCode: data.countryCode,
-    connections: data.connections,
-    bandwidth: data.bandwidth,
-    percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
-  }));
+  const byCountryRaw = Array.from(countryMap.entries()).map(
+    ([country, data]) => ({
+      country,
+      countryCode: data.countryCode,
+      connections: data.connections,
+      bandwidth: data.bandwidth,
+      percentage:
+        connections.length > 0
+          ? (data.connections / connections.length) * 100
+          : 0,
+    }),
+  );
   const byCountry = applyAggregationQuery(byCountryRaw, queryDsl.byCountry);
 
   // Group by ASN
-  const asnMap = new Map<number, { connections: number; bandwidth: number; asOrganization?: string }>();
+  const asnMap = new Map<
+    number,
+    { connections: number; bandwidth: number; asOrganization?: string }
+  >();
   for (const conn of connections) {
     if (typeof conn.asn !== "number" || !Number.isFinite(conn.asn)) {
       continue;
@@ -77,7 +123,11 @@ export function generateStatistics(
     const existing = asnMap.get(conn.asn) ?? { connections: 0, bandwidth: 0 };
     existing.connections++;
     existing.bandwidth += conn.bandwidth ?? 0;
-    if (!existing.asOrganization && typeof conn.asOrganization === "string" && conn.asOrganization.trim().length > 0) {
+    if (
+      !existing.asOrganization &&
+      typeof conn.asOrganization === "string" &&
+      conn.asOrganization.trim().length > 0
+    ) {
       existing.asOrganization = conn.asOrganization;
     }
     asnMap.set(conn.asn, existing);
@@ -88,7 +138,10 @@ export function generateStatistics(
     asOrganization: data.asOrganization,
     connections: data.connections,
     bandwidth: data.bandwidth,
-    percentage: connections.length > 0 ? (data.connections / connections.length) * 100 : 0,
+    percentage:
+      connections.length > 0
+        ? (data.connections / connections.length) * 100
+        : 0,
   }));
   const byAsn = applyAggregationQuery(byAsnRaw, queryDsl.byAsn);
 
@@ -98,11 +151,14 @@ export function generateStatistics(
     protocolMap.set(conn.protocol, (protocolMap.get(conn.protocol) ?? 0) + 1);
   }
 
-  const byProtocolRaw = Array.from(protocolMap.entries()).map(([protocol, count]) => ({
-    protocol,
-    connections: count,
-    percentage: connections.length > 0 ? (count / connections.length) * 100 : 0,
-  }));
+  const byProtocolRaw = Array.from(protocolMap.entries()).map(
+    ([protocol, count]) => ({
+      protocol,
+      connections: count,
+      percentage:
+        connections.length > 0 ? (count / connections.length) * 100 : 0,
+    }),
+  );
   const byProtocol = applyAggregationQuery(byProtocolRaw, queryDsl.byProtocol);
 
   // Get real time series data from metrics store, fallback to mock if empty

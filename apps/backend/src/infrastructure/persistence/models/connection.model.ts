@@ -37,14 +37,20 @@ const connectionSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 connectionSchema.index({ tenantId: 1, id: 1 }, { unique: true });
 connectionSchema.index({ lastActivity: -1 });
-connectionSchema.index({ tenantId: 1, sourceIp: 1, destIp: 1, lastActivity: -1 });
+connectionSchema.index({
+  tenantId: 1,
+  sourceIp: 1,
+  destIp: 1,
+  lastActivity: -1,
+});
 
 export type ConnectionDoc = InferSchemaType<typeof connectionSchema>;
 
 export const ConnectionModel =
-  mongoose.models.Connection ?? mongoose.model<ConnectionDoc>("Connection", connectionSchema);
+  mongoose.models.Connection ??
+  mongoose.model<ConnectionDoc>("Connection", connectionSchema);

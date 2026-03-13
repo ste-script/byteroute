@@ -1,17 +1,21 @@
 /**
- * Maps bandwidth value to a color gradient from green (low) to red (high)
- * @param bandwidth - The bandwidth value in bytes/second
- * @param minBandwidth - Minimum bandwidth for scaling (default: 0)
- * @param maxBandwidth - Maximum bandwidth for scaling (default: 100000)
- * @returns RGBA color tuple [R, G, B, A]
+ * Gets bandwidth color.
+ * @param bandwidth - The bandwidth input.
+ * @param minBandwidth - The min bandwidth input.
+ * @param maxBandwidth - The max bandwidth input.
+ * @returns The bandwidth color.
  */
+
 export function getBandwidthColor(
   bandwidth: number,
   minBandwidth = 0,
-  maxBandwidth = 100000
+  maxBandwidth = 100000,
 ): [number, number, number, number] {
   // Normalize bandwidth to 0-1 range
-  const normalized = Math.max(0, Math.min(1, (bandwidth - minBandwidth) / (maxBandwidth - minBandwidth)));
+  const normalized = Math.max(
+    0,
+    Math.min(1, (bandwidth - minBandwidth) / (maxBandwidth - minBandwidth)),
+  );
 
   // Color gradient thresholds:
   // 0.0 - 0.25: Green to Yellow (low traffic)

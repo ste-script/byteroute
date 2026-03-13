@@ -9,7 +9,14 @@ import { TenantModel as InfraTenantModel } from "../infrastructure/persistence/m
 import { getPrincipal } from "../auth/principal.js";
 import { TenantService } from "../services/tenant.service.js";
 
-const TenantModel = (shared as { TenantModel?: typeof InfraTenantModel }).TenantModel ?? InfraTenantModel;
+const TenantModel =
+  (shared as { TenantModel?: typeof InfraTenantModel }).TenantModel ??
+  InfraTenantModel;
+
+/**
+ * Creates tenants controller.
+ * @param ctx - The ctx input.
+ */
 
 export function createTenantsController(ctx: AppContext) {
   const tenantService = new TenantService(ctx.tenantRepository);
@@ -42,7 +49,7 @@ export function createTenantsController(ctx: AppContext) {
       const result = await tenantService.create(
         principal.id,
         body.name,
-        typeof body.tenantId === "string" ? body.tenantId : undefined
+        typeof body.tenantId === "string" ? body.tenantId : undefined,
       );
 
       if (!result.ok) {
@@ -60,7 +67,10 @@ export function createTenantsController(ctx: AppContext) {
         return;
       }
 
-      const tenantId = typeof req.params.tenantId === "string" ? req.params.tenantId : undefined;
+      const tenantId =
+        typeof req.params.tenantId === "string"
+          ? req.params.tenantId
+          : undefined;
       if (!tenantId) {
         res.status(400).json({ error: "tenantId is required" });
         return;
@@ -77,6 +87,12 @@ export function createTenantsController(ctx: AppContext) {
   };
 }
 
+/**
+ * Gets tenants.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
+
 export async function getTenants(req: Request, res: Response): Promise<void> {
   const principal = getPrincipal(req);
   if (!principal?.id) {
@@ -91,6 +107,12 @@ export async function getTenants(req: Request, res: Response): Promise<void> {
   const tenants = docs.map((doc) => doc.tenantId).sort();
   res.json({ tenants });
 }
+
+/**
+ * Creates tenant.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
 
 export async function createTenant(req: Request, res: Response): Promise<void> {
   const principal = getPrincipal(req);
@@ -110,10 +132,16 @@ export async function createTenant(req: Request, res: Response): Promise<void> {
   const rawTenantId =
     typeof body.tenantId === "string" && body.tenantId.trim().length > 0
       ? body.tenantId.trim()
-      : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      : name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
 
   if (!/^[a-z0-9][a-z0-9_-]*$/.test(rawTenantId)) {
-    res.status(400).json({ error: "Invalid tenantId: use lowercase letters, numbers, hyphens and underscores" });
+    res.status(400).json({
+      error:
+        "Invalid tenantId: use lowercase letters, numbers, hyphens and underscores",
+    });
     return;
   }
 
@@ -129,8 +157,16 @@ export async function createTenant(req: Request, res: Response): Promise<void> {
     name,
   });
 
-  res.status(201).json({ tenant: { tenantId: created.tenantId, name: created.name } });
+  res
+    .status(201)
+    .json({ tenant: { tenantId: created.tenantId, name: created.name } });
 }
+
+/**
+ * Deletes tenant.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
 
 export async function deleteTenant(req: Request, res: Response): Promise<void> {
   const principal = getPrincipal(req);
@@ -139,14 +175,18 @@ export async function deleteTenant(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const tenantId = typeof req.params.tenantId === "string" ? req.params.tenantId : undefined;
+  const tenantId =
+    typeof req.params.tenantId === "string" ? req.params.tenantId : undefined;
 
   if (!tenantId) {
     res.status(400).json({ error: "tenantId is required" });
     return;
   }
 
-  const result = await TenantModel.deleteOne({ tenantId, ownerId: principal.id });
+  const result = await TenantModel.deleteOne({
+    tenantId,
+    ownerId: principal.id,
+  });
 
   if (result.deletedCount === 0) {
     res.status(404).json({ error: "Tenant not found" });

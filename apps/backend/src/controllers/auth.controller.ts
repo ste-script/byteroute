@@ -10,26 +10,43 @@ import { signAuthToken, signAuthTokenWithTtl } from "../auth/passport.js";
 import { getPrincipal } from "../auth/principal.js";
 import { hashPassword, verifyPassword } from "../services/password.js";
 import { AuthService } from "../services/auth.service.js";
-import { signInRequestSchema, signUpRequestSchema } from "../domain/identity/types.js";
+import {
+  signInRequestSchema,
+  signUpRequestSchema,
+} from "../domain/identity/types.js";
 import { normalizeTenantIds, sanitizeTenantId } from "../utils/tenant.js";
-import { clearAuthCookie, clearCsrfCookie, setAuthCookie, setCsrfCookie } from "../utils/cookie.js";
+import {
+  clearAuthCookie,
+  clearCsrfCookie,
+  setAuthCookie,
+  setCsrfCookie,
+} from "../utils/cookie.js";
 import { generateCsrfToken } from "../utils/csrf.js";
 
-const UserModel = (shared as { UserModel?: typeof InfraUserModel }).UserModel ?? InfraUserModel;
+const UserModel =
+  (shared as { UserModel?: typeof InfraUserModel }).UserModel ?? InfraUserModel;
+
+/**
+ * Creates auth controller.
+ * @param ctx - The ctx input.
+ */
 
 export function createAuthController(ctx: AppContext) {
   const authService = new AuthService(
     ctx.userRepository,
     ctx.tenantRepository,
     ctx.passwordService,
-    ctx.jwt
+    ctx.jwt,
   );
 
   return {
     signUp: async (req: Request, res: Response): Promise<void> => {
       const parsed = signUpRequestSchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: "Invalid request: name, email and password (min 8 chars) are required" });
+        res.status(400).json({
+          error:
+            "Invalid request: name, email and password (min 8 chars) are required",
+        });
         return;
       }
 
@@ -47,7 +64,9 @@ export function createAuthController(ctx: AppContext) {
     signIn: async (req: Request, res: Response): Promise<void> => {
       const parsed = signInRequestSchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: "Invalid request: email and password are required" });
+        res
+          .status(400)
+          .json({ error: "Invalid request: email and password are required" });
         return;
       }
 
@@ -69,12 +88,14 @@ export function createAuthController(ctx: AppContext) {
     },
 
     currentUser: (req: Request, res: Response): void => {
-      const principal = req.user as {
-        id: string;
-        email: string;
-        name?: string;
-        tenantIds: string[];
-      } | undefined;
+      const principal = req.user as
+        | {
+            id: string;
+            email: string;
+            name?: string;
+            tenantIds: string[];
+          }
+        | undefined;
 
       if (!principal) {
         res.status(401).json({ error: "Unauthorized" });
@@ -92,23 +113,34 @@ export function createAuthController(ctx: AppContext) {
     },
 
     clientToken: async (req: Request, res: Response): Promise<void> => {
-      const principal = req.user as {
-        id: string;
-        email: string;
-        name?: string;
-        tenantIds: string[];
-        scopes: string[];
-      } | undefined;
+      const principal = req.user as
+        | {
+            id: string;
+            email: string;
+            name?: string;
+            tenantIds: string[];
+            scopes: string[];
+          }
+        | undefined;
 
       if (!principal) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      const requestedTenantId = sanitizeTenantId((req.body as { tenantId?: unknown } | undefined)?.tenantId);
-      const result = await authService.createClientToken(principal, requestedTenantId);
+      const requestedTenantId = sanitizeTenantId(
+        (req.body as { tenantId?: unknown } | undefined)?.tenantId,
+      );
+      const result = await authService.createClientToken(
+        principal,
+        requestedTenantId,
+      );
       if (!result) {
-        res.status(403).json({ error: requestedTenantId ? "Forbidden: no access to tenant" : "Forbidden: no authorized tenants" });
+        res.status(403).json({
+          error: requestedTenantId
+            ? "Forbidden: no access to tenant"
+            : "Forbidden: no authorized tenants",
+        });
         return;
       }
 
@@ -117,10 +149,19 @@ export function createAuthController(ctx: AppContext) {
   };
 }
 
+/**
+ * Signs up.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
+
 export async function signUp(req: Request, res: Response): Promise<void> {
   const parsed = signUpRequestSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request: name, email and password (min 8 chars) are required" });
+    res.status(400).json({
+      error:
+        "Invalid request: name, email and password (min 8 chars) are required",
+    });
     return;
   }
 
@@ -159,17 +200,29 @@ export async function signUp(req: Request, res: Response): Promise<void> {
   });
 }
 
+/**
+ * Signs in.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
+
 export async function signIn(req: Request, res: Response): Promise<void> {
   const parsed = signInRequestSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request: email and password are required" });
+    res
+      .status(400)
+      .json({ error: "Invalid request: email and password are required" });
     return;
   }
 
   const { email, password } = parsed.data;
 
   const user = await UserModel.findOne({ email }).select("+passwordHash");
-  if (!user || typeof user.passwordHash !== "string" || ! await verifyPassword(password, user.passwordHash)) {
+  if (
+    !user ||
+    typeof user.passwordHash !== "string" ||
+    !(await verifyPassword(password, user.passwordHash))
+  ) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }
@@ -196,11 +249,23 @@ export async function signIn(req: Request, res: Response): Promise<void> {
   });
 }
 
+/**
+ * Signs out.
+ * @param _req - The req input.
+ * @param res - The res input.
+ */
+
 export function signOut(_req: Request, res: Response): void {
   clearAuthCookie(res);
   clearCsrfCookie(res);
   res.status(204).send();
 }
+
+/**
+ * Gets current user.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
 
 export function getCurrentUser(req: Request, res: Response): void {
   const principal = getPrincipal(req);
@@ -220,6 +285,12 @@ export function getCurrentUser(req: Request, res: Response): void {
   });
 }
 
+/**
+ * Creates client token.
+ * @param req - The req input.
+ * @param res - The res input.
+ */
+
 export function createClientToken(req: Request, res: Response): void {
   const principal = getPrincipal(req);
 
@@ -234,14 +305,19 @@ export function createClientToken(req: Request, res: Response): void {
     return;
   }
 
-  const requestedTenantId = sanitizeTenantId((req.body as { tenantId?: unknown } | undefined)?.tenantId);
+  const requestedTenantId = sanitizeTenantId(
+    (req.body as { tenantId?: unknown } | undefined)?.tenantId,
+  );
   if (requestedTenantId && !tenantIds.includes(requestedTenantId)) {
     res.status(403).json({ error: "Forbidden: no access to tenant" });
     return;
   }
 
   const orderedTenantIds = requestedTenantId
-    ? [requestedTenantId, ...tenantIds.filter((tenantId) => tenantId !== requestedTenantId)]
+    ? [
+        requestedTenantId,
+        ...tenantIds.filter((tenantId) => tenantId !== requestedTenantId),
+      ]
     : tenantIds;
 
   const ttl = process.env.AUTH_CLIENT_TOKEN_TTL ?? "12h";
@@ -253,7 +329,7 @@ export function createClientToken(req: Request, res: Response): void {
       tenantId: orderedTenantIds[0],
       tenantIds: orderedTenantIds,
     },
-    ttl
+    ttl,
   );
 
   res.status(200).json({ token, expiresIn: ttl });

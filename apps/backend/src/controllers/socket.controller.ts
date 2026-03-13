@@ -32,11 +32,18 @@ export type TypedSocket = Socket<
   SocketData
 >;
 
+/**
+ * Creates socket controller.
+ * @param ctx - The ctx input.
+ */
+
 export function createSocketController(ctx: AppContext) {
   void ctx;
   return {
     handleConnection: (io: TypedSocketServer, socket: TypedSocket): void => {
-      const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(socket.handshake);
+      const { tenantId, tenantRoom } = resolveTenantContextFromSocketHandshake(
+        socket.handshake,
+      );
       const principal = socket.data.principal as HydratedPrincipal | undefined;
 
       console.log(`Client connected: ${socket.id}`);
@@ -57,6 +64,13 @@ export function createSocketController(ctx: AppContext) {
 const defaultController = createSocketController(createAppContext());
 export const handleConnection = defaultController.handleConnection;
 
+/**
+ * Clamps connections limit.
+ * @param value - The value input.
+ * @param fallback - The fallback input.
+ * @returns The connections limit result.
+ */
+
 function clampConnectionsLimit(value: unknown, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return fallback;
@@ -71,10 +85,17 @@ function clampConnectionsLimit(value: unknown, fallback: number): number {
   return Math.min(asInt, 500);
 }
 
+/**
+ * Subscribes a socket to tenant-scoped feature rooms.
+ * @param io - The IO input.
+ * @param socket - The socket input.
+ * @param { rooms, connectionsLimit } - The { rooms, connections limit } input.
+ */
+
 function handleSubscribe(
   io: TypedSocketServer,
   socket: TypedSocket,
-  { rooms, connectionsLimit }: { rooms: string[]; connectionsLimit?: number }
+  { rooms, connectionsLimit }: { rooms: string[]; connectionsLimit?: number },
 ): void {
   const tenantId = ensureTenantId(socket.data.tenantId);
   const subscribed: string[] = [];
@@ -96,7 +117,10 @@ function handleSubscribe(
     // Send room-specific initial snapshots only when requested.
     if (roomName === "connections") {
       const limit = clampConnectionsLimit(connectionsLimit, 10);
-      socket.emit("connections:batch", getConnectionsForTenant(tenantId, limit));
+      socket.emit(
+        "connections:batch",
+        getConnectionsForTenant(tenantId, limit),
+      );
     } else if (roomName === "statistics") {
       emitStatisticsUpdate(io, tenantId);
     } else if (roomName === "flows") {
@@ -109,7 +133,16 @@ function handleSubscribe(
   }
 }
 
-function handleUnsubscribe(socket: TypedSocket, { rooms }: { rooms: string[] }): void {
+/**
+ * Unsubscribes a socket from tenant-scoped feature rooms.
+ * @param socket - The socket input.
+ * @param { rooms } - The { rooms } input.
+ */
+
+function handleUnsubscribe(
+  socket: TypedSocket,
+  { rooms }: { rooms: string[] },
+): void {
   const tenantId = ensureTenantId(socket.data.tenantId);
   const unsubscribed: string[] = [];
 
@@ -123,14 +156,24 @@ function handleUnsubscribe(socket: TypedSocket, { rooms }: { rooms: string[] }):
     unsubscribed.push(roomName);
 
     if (socket.data.subscribedRooms) {
-      socket.data.subscribedRooms = socket.data.subscribedRooms.filter((r) => r !== roomName);
+      socket.data.subscribedRooms = socket.data.subscribedRooms.filter(
+        (r) => r !== roomName,
+      );
     }
   }
 
   if (unsubscribed.length > 0) {
-    console.log(`Client ${socket.id} unsubscribed from: ${unsubscribed.join(", ")}`);
+    console.log(
+      `Client ${socket.id} unsubscribed from: ${unsubscribed.join(", ")}`,
+    );
   }
 }
+
+/**
+ * Logs a socket disconnect event.
+ * @param socket - The socket input.
+ * @param reason - The reason input.
+ */
 
 function handleDisconnect(socket: TypedSocket, reason: string): void {
   console.log(`Client disconnected: ${socket.id} (${reason})`);

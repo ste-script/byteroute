@@ -8,7 +8,18 @@ import { CSRF_COOKIE_NAME } from "../utils/csrf.js";
 import { firstHeaderValue } from "../utils/request.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-export function requireCsrfForCookieAuth(req: Request, res: Response, next: NextFunction): void {
+/**
+ * Requires CSRF for cookie auth.
+ * @param req - The req input.
+ * @param res - The res input.
+ * @param next - The next input.
+ */
+
+export function requireCsrfForCookieAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
   if (SAFE_METHODS.has(req.method.toUpperCase())) {
     next();
     return;

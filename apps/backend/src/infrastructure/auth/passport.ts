@@ -6,6 +6,10 @@ import passport from "passport";
 import { Strategy as BearerStrategy } from "passport-http-bearer";
 import { getJwtSecret, verifyToken } from "./jwt.js";
 
+/**
+ * Ensures passport auth initialized.
+ */
+
 export function ensurePassportAuthInitialized(): void {
   getJwtSecret();
 
@@ -20,6 +24,6 @@ export function ensurePassportAuthInitialized(): void {
       }
 
       done(null, principal);
-    })
+    }),
   );
 }

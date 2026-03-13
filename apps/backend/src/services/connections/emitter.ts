@@ -11,7 +11,9 @@ import {
 } from "../../utils/tenant.js";
 import type { TypedSocketServer } from "./types.js";
 
-const EVENT_ROOMS: Partial<Record<keyof ServerToClientEvents, TenantFeatureRoom>> = {
+const EVENT_ROOMS: Partial<
+  Record<keyof ServerToClientEvents, TenantFeatureRoom>
+> = {
   "connection:new": "connections",
   "connection:update": "connections",
   "connection:remove": "connections",
@@ -20,21 +22,40 @@ const EVENT_ROOMS: Partial<Record<keyof ServerToClientEvents, TenantFeatureRoom>
   "traffic:flows": "flows",
 };
 
+/**
+ * Emits to tenant.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ * @param event - The event input.
+ * @param payload - The payload input.
+ */
+
 export function emitToTenant(
   io: TypedSocketServer,
   tenantId: string,
   event: keyof ServerToClientEvents,
-  payload: unknown
+  payload: unknown,
 ): void {
   const resolvedTenantId = ensureTenantId(tenantId);
   const featureRoom = EVENT_ROOMS[event];
-  const room = featureRoom ? getTenantScopedRoom(resolvedTenantId, featureRoom) : getTenantRoom(resolvedTenantId);
-  const target = (io as unknown as { to?: (roomName: string) => { emit: (eventName: string, data: unknown) => void } }).to;
+  const room = featureRoom
+    ? getTenantScopedRoom(resolvedTenantId, featureRoom)
+    : getTenantRoom(resolvedTenantId);
+  const target = (
+    io as unknown as {
+      to?: (roomName: string) => {
+        emit: (eventName: string, data: unknown) => void;
+      };
+    }
+  ).to;
 
   if (typeof target === "function") {
     target.call(io, room).emit(event, payload);
     return;
   }
 
-  (io as unknown as { emit: (eventName: string, data: unknown) => void }).emit(event, payload);
+  (io as unknown as { emit: (eventName: string, data: unknown) => void }).emit(
+    event,
+    payload,
+  );
 }

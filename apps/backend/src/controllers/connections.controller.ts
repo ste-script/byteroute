@@ -7,14 +7,25 @@ import type { Connection } from "@byteroute/shared";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";
 import type { TypedSocketServer } from "../services/connections.js";
-import { enrichAndStoreConnections, storeRawConnections } from "../services/ingest.js";
+import {
+  enrichAndStoreConnections,
+  storeRawConnections,
+} from "../services/ingest.js";
 import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
-import { tryResolveTenantIdFromRequest, userHasTenantAccess } from "../utils/tenant.js";
+import {
+  tryResolveTenantIdFromRequest,
+  userHasTenantAccess,
+} from "../utils/tenant.js";
 import { getPrincipal } from "../auth/principal.js";
 
 type ConnectionsBody = {
   connections?: Partial<Connection>[];
 };
+
+/**
+ * Creates connections controller.
+ * @param ctx - The ctx input.
+ */
 
 export function createConnectionsController(ctx: AppContext) {
   void ctx;
@@ -24,7 +35,9 @@ export function createConnectionsController(ctx: AppContext) {
       const connections = body?.connections;
 
       if (!Array.isArray(connections)) {
-        res.status(400).json({ error: "Invalid payload: expected { connections: Connection[] }" });
+        res.status(400).json({
+          error: "Invalid payload: expected { connections: Connection[] }",
+        });
         return;
       }
 
@@ -42,14 +55,19 @@ export function createConnectionsController(ctx: AppContext) {
         return;
       }
 
-      res.status(202).json({ received: connections.length, status: "processing" });
+      res
+        .status(202)
+        .json({ received: connections.length, status: "processing" });
 
       const reporterIp =
         firstForwardedFor(req.headers["x-forwarded-for"]) ??
         normalizeIp(req.ip) ??
         normalizeIp(req.socket.remoteAddress);
 
-      void enrichAndStoreConnections(io, connections, { reporterIp, tenantId }).catch((err) => {
+      void enrichAndStoreConnections(io, connections, {
+        reporterIp,
+        tenantId,
+      }).catch((err) => {
         console.error("Enrichment failed:", err);
 
         const fallbackWrite = storeRawConnections(connections, { tenantId });

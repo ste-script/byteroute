@@ -7,15 +7,20 @@ import {
   connectMongo as infraConnectMongo,
   disconnectMongo as infraDisconnectMongo,
   mongoReadyState as infraMongoReadyState,
-  mongoose as infraMongoose
+  mongoose as infraMongoose,
 } from "../infrastructure/persistence/mongoose.js";
 
-const connectMongo = (shared as { connectMongo?: typeof infraConnectMongo }).connectMongo ?? infraConnectMongo;
+const connectMongo =
+  (shared as { connectMongo?: typeof infraConnectMongo }).connectMongo ??
+  infraConnectMongo;
 const disconnectMongo =
-  (shared as { disconnectMongo?: typeof infraDisconnectMongo }).disconnectMongo ?? infraDisconnectMongo;
+  (shared as { disconnectMongo?: typeof infraDisconnectMongo })
+    .disconnectMongo ?? infraDisconnectMongo;
 const mongoReadyState =
-  (shared as { mongoReadyState?: typeof infraMongoReadyState }).mongoReadyState ?? infraMongoReadyState;
-const mongoose = (shared as { mongoose?: typeof infraMongoose }).mongoose ?? infraMongoose;
+  (shared as { mongoReadyState?: typeof infraMongoReadyState })
+    .mongoReadyState ?? infraMongoReadyState;
+const mongoose =
+  (shared as { mongoose?: typeof infraMongoose }).mongoose ?? infraMongoose;
 
 export type MongoBindings = {
   connectMongo: typeof connectMongo;
@@ -24,19 +29,22 @@ export type MongoBindings = {
   mongoose: typeof mongoose;
 };
 
-export function createMongoBindings(overrides: Partial<MongoBindings> = {}): MongoBindings {
+/**
+ * Creates mongo bindings.
+ * @param overrides - The overrides input.
+ * @returns The mongo bindings result.
+ */
+
+export function createMongoBindings(
+  overrides: Partial<MongoBindings> = {},
+): MongoBindings {
   return {
     connectMongo,
     disconnectMongo,
     mongoReadyState,
     mongoose,
-    ...overrides
+    ...overrides,
   };
 }
 
-export {
-  connectMongo,
-  disconnectMongo,
-  mongoReadyState,
-  mongoose
-};
+export { connectMongo, disconnectMongo, mongoReadyState, mongoose };

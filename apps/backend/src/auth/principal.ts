@@ -18,7 +18,8 @@ try {
 }
 
 try {
-  sharedTenantModel = (shared as { TenantModel?: typeof InfraTenantModel }).TenantModel;
+  sharedTenantModel = (shared as { TenantModel?: typeof InfraTenantModel })
+    .TenantModel;
 } catch {
   sharedTenantModel = undefined;
 }
@@ -41,17 +42,31 @@ export type HydratedPrincipal = {
   scopes: string[];
 };
 
+/**
+ * Normalizes scopes.
+ * @param value - The value input.
+ * @returns The scopes result.
+ */
+
 function normalizeScopes(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return ["api"];
   }
 
-  const scopes = value.filter((scope): scope is string => typeof scope === "string");
+  const scopes = value.filter(
+    (scope): scope is string => typeof scope === "string",
+  );
   return scopes.length > 0 ? scopes : ["api"];
 }
 
+/**
+ * Hydrates principal from database.
+ * @param principalLike - The principal like input.
+ * @returns The principal from database result.
+ */
+
 export async function hydratePrincipalFromDatabase(
-  principalLike: unknown
+  principalLike: unknown,
 ): Promise<HydratedPrincipal | undefined> {
   const principal = principalLike as PrincipalLike | undefined;
   if (!principal || typeof principal.id !== "string") {
@@ -82,8 +97,11 @@ export async function hydratePrincipalFromDatabase(
 }
 
 /**
- * Typed accessor for the authenticated principal attached by requireApiAuth.
+ * Gets principal.
+ * @param req - The req input.
+ * @returns The principal.
  */
+
 export function getPrincipal(req: Request): HydratedPrincipal | undefined {
   return req.user as HydratedPrincipal | undefined;
 }
