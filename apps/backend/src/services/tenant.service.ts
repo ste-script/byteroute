@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/tenant.service
+ */
+
 import type { ITenantRepository } from "../domain/identity/tenant-repository.interface.js";
 
 export class TenantService {

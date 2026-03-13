@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/identity/types
+ */
+
 import { z } from "zod";
 
 const normalizedEmailSchema = z.string().trim().toLowerCase().pipe(z.email());

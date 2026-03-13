@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/auth/scrypt-password.service
+ */
+
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import type { IPasswordService } from "../../domain/identity/password-service.interface.js";

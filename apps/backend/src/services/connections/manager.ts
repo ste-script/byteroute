@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/manager
+ */
+
 import type { Connection } from "@byteroute/shared";
 import { generateStatistics } from "../../utils/statistics.js";
 import { deriveTrafficFlows } from "./trafficFlows.js";

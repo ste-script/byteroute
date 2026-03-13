@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/user.repository
+ */
+
 import { normalizeTenantIds } from "../../utils/tenant.js";
 import type { IUserRepository } from "../../domain/identity/user-repository.interface.js";
 import type { User } from "../../domain/identity/types.js";

@@ -1,3 +1,7 @@
+/**
+ * @module backend/auth/passport
+ */
+
 export { ensurePassportAuthInitialized } from "../infrastructure/auth/passport.js";
 
 export {

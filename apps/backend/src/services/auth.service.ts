@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/auth.service
+ */
+
 import { normalizeTenantIds } from "../utils/tenant.js";
 import type { IUserRepository } from "../domain/identity/user-repository.interface.js";
 import type { ITenantRepository } from "../domain/identity/tenant-repository.interface.js";

@@ -1,3 +1,7 @@
+/**
+ * @module backend/config/composition-root
+ */
+
 import type { TypedSocketServer } from "../services/connections/types.js";
 import type { IUserRepository } from "../domain/identity/user-repository.interface.js";
 import type { ITenantRepository } from "../domain/identity/tenant-repository.interface.js";

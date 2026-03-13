@@ -1,3 +1,7 @@
+/**
+ * @module backend/db/mongoose
+ */
+
 import * as shared from "@byteroute/shared";
 import {
   connectMongo as infraConnectMongo,

@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/geoip/maxmind-geoip.service
+ */
+
 import { Reader, type ReaderModel } from "@maxmind/geoip2-node";
 import { fileURLToPath } from "node:url";
 import type { IGeoIpLookup } from "../../domain/connection/geoip-service.interface.js";

@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/realtime/connection-store
+ */
+
 import type { Connection } from "@byteroute/shared";
 
 export type TenantConnection = Connection & { tenantId: string };

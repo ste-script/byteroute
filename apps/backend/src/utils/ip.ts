@@ -1,3 +1,7 @@
+/**
+ * @module backend/utils/ip
+ */
+
 import { isIP } from "node:net";
 import ipLib from "ip";
 

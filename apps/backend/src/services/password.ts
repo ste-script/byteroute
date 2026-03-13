@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/password
+ */
+
 import { ScryptPasswordService } from "../infrastructure/auth/scrypt-password.service.js";
 
 const passwordService = new ScryptPasswordService();

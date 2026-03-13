@@ -1,3 +1,7 @@
+/**
+ * @module backend/middleware/auth.middleware
+ */
+
 import type { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import type { AppContext } from "../config/composition-root.js";

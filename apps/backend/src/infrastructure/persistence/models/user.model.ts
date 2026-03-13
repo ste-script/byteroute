@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/models/user.model
+ */
+
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const userSchema = new Schema(

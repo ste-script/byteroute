@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/types
+ */
+
 /* v8 ignore file */
 import type { Server } from "socket.io";
 import type {

@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/trafficFlows
+ */
+
 import type { Connection, TrafficFlow } from "@byteroute/shared";
 import { getBandwidthColor } from "../../utils/bandwidth.js";
 

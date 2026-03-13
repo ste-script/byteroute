@@ -1,3 +1,7 @@
+/**
+ * @module backend/controllers/health.controller
+ */
+
 import type { Request, Response } from "express";
 import * as shared from "@byteroute/shared";
 import { mongoReadyState as infraMongoReadyState } from "../infrastructure/persistence/mongoose.js";

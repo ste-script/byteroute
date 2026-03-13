@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/store
+ */
+
 import type { Connection } from "@byteroute/shared";
 import { ensureTenantId } from "../../utils/tenant.js";
 

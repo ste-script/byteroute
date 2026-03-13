@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/repository
+ */
+
 import * as shared from "@byteroute/shared";
 import { ConnectionModel as InfraConnectionModel } from "../../infrastructure/persistence/models/connection.model.js";
 import { DEFAULT_TENANT_ID } from "../../utils/tenant.js";

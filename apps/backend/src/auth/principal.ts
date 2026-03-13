@@ -1,3 +1,7 @@
+/**
+ * @module backend/auth/principal
+ */
+
 import type { Request } from "express";
 import * as shared from "@byteroute/shared";
 import { UserModel as InfraUserModel } from "../infrastructure/persistence/models/user.model.js";

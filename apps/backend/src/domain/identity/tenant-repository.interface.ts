@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/identity/tenant-repository.interface
+ */
+
 import type { Tenant } from "./types.js";
 
 export interface ITenantRepository {

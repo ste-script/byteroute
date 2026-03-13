@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/mongoose
+ */
+
 import mongoose from "mongoose";
 
 function getMongoUri(): string {

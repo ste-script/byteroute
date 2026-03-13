@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/metrics/types
+ */
+
 import type {
   Statistics,
   TimeSeriesData,

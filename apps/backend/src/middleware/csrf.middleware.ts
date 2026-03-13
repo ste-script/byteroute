@@ -1,3 +1,7 @@
+/**
+ * @module backend/middleware/csrf.middleware
+ */
+
 import type { NextFunction, Request, Response } from "express";
 import { AUTH_COOKIE_NAME, getCookieValue } from "../utils/cookie.js";
 import { CSRF_COOKIE_NAME } from "../utils/csrf.js";

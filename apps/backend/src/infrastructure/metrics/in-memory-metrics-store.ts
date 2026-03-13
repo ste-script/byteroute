@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/metrics/in-memory-metrics-store
+ */
+
 import type { TimeSeriesData } from "@byteroute/shared";
 import type { IMetricsStore } from "../../domain/metrics/metrics-store.interface.js";
 import { ensureTenantId } from "../../utils/tenant.js";
