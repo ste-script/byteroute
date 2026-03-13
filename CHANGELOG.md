@@ -1,3 +1,13 @@
+## [5.6.0](https://github.com/ste-script/byteroute/compare/v5.5.1...v5.6.0) (2026-03-13)
+
+### Features
+
+* docs website ([b659bc3](https://github.com/ste-script/byteroute/commit/b659bc3951a40a2ffead447888cb9f7ee2ee322c))
+
+### Bug Fixes
+
+* lintign path ([08fc421](https://github.com/ste-script/byteroute/commit/08fc421e367c28af47ae5daf2d0e197cff017564))
+
 ## [5.5.1](https://github.com/ste-script/byteroute/compare/v5.5.0...v5.5.1) (2026-03-12)
 
 ### Bug Fixes
