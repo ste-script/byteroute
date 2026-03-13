@@ -1,3 +1,7 @@
+/**
+ * @module backend/routes/index
+ */
+
 import { Router } from "express";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";

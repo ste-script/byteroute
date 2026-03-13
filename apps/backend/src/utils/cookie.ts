@@ -1,3 +1,7 @@
+/**
+ * @module backend/utils/cookie
+ */
+
 import type { Response } from "express";
 import { CSRF_COOKIE_NAME } from "./csrf.js";
 

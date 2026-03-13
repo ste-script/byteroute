@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/connection.repository
+ */
+
 import type { Connection } from "@byteroute/shared";
 import type { IConnectionRepository } from "../../domain/connection/connection-repository.interface.js";
 import { ConnectionModel } from "./models/connection.model.js";

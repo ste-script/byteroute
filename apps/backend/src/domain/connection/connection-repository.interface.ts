@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/connection/connection-repository.interface
+ */
+
 import type { Connection } from "./types.js";
 
 export interface IConnectionRepository {

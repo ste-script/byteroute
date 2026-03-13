@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/metrics/metrics-store.interface
+ */
+
 import type { TimeSeriesData } from "./types.js";
 
 export interface IMetricsStore {

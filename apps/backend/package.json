@@ -20,7 +20,8 @@
     "coverage": "pnpm coverage:unit && pnpm coverage:e2e && pnpm coverage:merge",
     "migrate:indexes": "tsx scripts/ensure-connection-indexes.mjs",
     "pretest:e2e": "pnpm -C ../../packages/shared build",
-    "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'"
+    "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'",
+    "docs:api": "typedoc --entryPointStrategy expand --entryPoints src --out docs/api"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:^5.3.0",
@@ -47,6 +48,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0",
     "vitest": "^4.1.0",
+    "typedoc": "^0.28.14",
     "vitest-monocart-coverage": "^4.0.1"
   },
   "dependencies": {

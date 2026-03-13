@@ -1,3 +1,7 @@
+/**
+ * @module backend/controllers/auth.controller
+ */
+
 import type { Request, Response } from "express";
 import * as shared from "@byteroute/shared";
 import type { AppContext } from "../config/composition-root.js";

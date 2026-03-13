@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/connection/normalizer
+ */
+
 import type { Connection } from "./types.js";
 
 const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);

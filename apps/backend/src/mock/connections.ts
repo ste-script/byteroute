@@ -1,3 +1,7 @@
+/**
+ * @module backend/mock/connections
+ */
+
 import type { Connection, TrafficFlow } from "@byteroute/shared";
 import { DEFAULT_TENANT_ID } from "../utils/tenant.js";
 import { getBandwidthColor } from "../utils/bandwidth.js";

@@ -1,3 +1,7 @@
+/**
+ * @module backend/domain/connection/types
+ */
+
 import type { Connection, TrafficFlow } from "@byteroute/shared";
 
 export type { Connection, TrafficFlow };

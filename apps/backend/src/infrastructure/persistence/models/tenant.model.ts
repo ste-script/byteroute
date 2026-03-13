@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/models/tenant.model
+ */
+
 import mongoose, { Schema, type InferSchemaType, type Types } from "mongoose";
 
 const tenantSchema = new Schema(

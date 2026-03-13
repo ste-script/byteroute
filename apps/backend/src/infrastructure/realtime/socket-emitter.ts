@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/realtime/socket-emitter
+ */
+
 import type { ServerToClientEvents } from "@byteroute/shared";
 import type { TypedSocketServer } from "../../services/connections/types.js";
 import {

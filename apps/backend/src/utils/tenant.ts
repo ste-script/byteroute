@@ -1,3 +1,7 @@
+/**
+ * @module backend/utils/tenant
+ */
+
 import { ensureTenantId, getTenantRoom } from "@byteroute/shared/common";
 
 export * from "@byteroute/shared/common";

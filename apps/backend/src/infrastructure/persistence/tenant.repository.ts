@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/tenant.repository
+ */
+
 import type { ITenantRepository } from "../../domain/identity/tenant-repository.interface.js";
 import type { Tenant } from "../../domain/identity/types.js";
 import { TenantModel } from "./models/tenant.model.js";

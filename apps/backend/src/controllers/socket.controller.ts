@@ -1,3 +1,7 @@
+/**
+ * @module backend/controllers/socket.controller
+ */
+
 import type { Socket } from "socket.io";
 import type {
   ServerToClientEvents,

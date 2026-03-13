@@ -1,3 +1,7 @@
+/**
+ * @module backend/middleware/socket-auth.middleware
+ */
+
 import type { ExtendedError } from "socket.io";
 import type { Socket } from "socket.io";
 import type { AppContext } from "../config/composition-root.js";

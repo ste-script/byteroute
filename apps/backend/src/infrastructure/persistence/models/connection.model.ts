@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/persistence/models/connection.model
+ */
+
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const connectionSchema = new Schema(

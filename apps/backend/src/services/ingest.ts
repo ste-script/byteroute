@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/ingest
+ */
+
 import type { Connection } from "@byteroute/shared";
 import * as shared from "@byteroute/shared";
 import { ConnectionModel as InfraConnectionModel } from "../infrastructure/persistence/models/connection.model.js";

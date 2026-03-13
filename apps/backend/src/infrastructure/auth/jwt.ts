@@ -1,3 +1,7 @@
+/**
+ * @module backend/infrastructure/auth/jwt
+ */
+
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 import type { Principal } from "../../domain/identity/types.js";
 

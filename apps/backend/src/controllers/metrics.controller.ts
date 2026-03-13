@@ -1,3 +1,7 @@
+/**
+ * @module backend/controllers/metrics.controller
+ */
+
 import type { Request, Response } from "express";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";

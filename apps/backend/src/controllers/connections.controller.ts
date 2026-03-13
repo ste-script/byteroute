@@ -1,3 +1,7 @@
+/**
+ * @module backend/controllers/connections.controller
+ */
+
 import type { Request, Response } from "express";
 import type { Connection } from "@byteroute/shared";
 import type { AppContext } from "../config/composition-root.js";

@@ -1,3 +1,7 @@
+/**
+ * @module backend/utils/statistics
+ */
+
 import type { Connection, Statistics } from "@byteroute/shared";
 import { metricsStore } from "../services/metrics.js";
 import type { IMetricsStore } from "../domain/metrics/metrics-store.interface.js";

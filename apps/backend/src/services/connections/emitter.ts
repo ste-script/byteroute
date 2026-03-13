@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections/emitter
+ */
+
 import type { ServerToClientEvents } from "@byteroute/shared";
 import {
   ensureTenantId,

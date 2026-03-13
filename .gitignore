@@ -149,3 +149,6 @@ browser-screenshots
 # MaxMind database files
 *.mmdb 
 .vitest-attachments
+
+# Generated API documentation
+apps/backend/docs/

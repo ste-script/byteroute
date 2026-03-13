@@ -1,3 +1,7 @@
+/**
+ * @module backend/middleware/error.middleware
+ */
+
 import type { NextFunction, Request, Response } from "express";
 
 /**

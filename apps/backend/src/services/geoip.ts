@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/geoip
+ */
+
 import type { Connection } from "@byteroute/shared";
 import { isPrivateIp, normalizeIp } from "../utils/ip.js";
 import type { IGeoIpLookup } from "../domain/connection/geoip-service.interface.js";

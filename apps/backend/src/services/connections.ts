@@ -1,3 +1,7 @@
+/**
+ * @module backend/services/connections
+ */
+
 /* v8 ignore file */
 export type { TypedSocketServer } from "./connections/types.js";
 
