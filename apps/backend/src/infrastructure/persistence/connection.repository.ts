@@ -6,6 +6,13 @@ import type { Connection } from "@byteroute/shared";
 import type { IConnectionRepository } from "../../domain/connection/connection-repository.interface.js";
 import { ConnectionModel } from "./models/connection.model.js";
 
+/**
+ * Coerces date.
+ * @param value - The value input.
+ * @param fallback - The fallback input.
+ * @returns The date result.
+ */
+
 function coerceDate(value: unknown, fallback: Date): Date {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? fallback : value;
@@ -17,7 +24,17 @@ function coerceDate(value: unknown, fallback: Date): Date {
   return fallback;
 }
 
+/**
+ * Represents a mongo connection repository.
+ */
+
 export class MongoConnectionRepository implements IConnectionRepository {
+  /**
+   * Bulks upsert.
+   * @param tenantId - The tenant ID input.
+   * @param connections - The connections input.
+   */
+
   async bulkUpsert(tenantId: string, connections: Connection[]): Promise<void> {
     if (connections.length === 0) {
       return;
@@ -47,13 +64,28 @@ export class MongoConnectionRepository implements IConnectionRepository {
     await ConnectionModel.bulkWrite(ops, { ordered: false });
   }
 
+  /**
+   * Loads by tenant.
+   * @param tenantId - The tenant ID input.
+   * @returns The by tenant result.
+   */
+
   async loadByTenant(tenantId: string): Promise<Connection[]> {
-    const docs = await ConnectionModel.find({ tenantId }, { _id: 0 }).sort({ lastActivity: -1 }).lean();
+    const docs = await ConnectionModel.find({ tenantId }, { _id: 0 })
+      .sort({ lastActivity: -1 })
+      .lean();
     return docs as Connection[];
   }
 
+  /**
+   * Loads all grouped by tenant.
+   * @returns The all grouped by tenant result.
+   */
+
   async loadAllGroupedByTenant(): Promise<Map<string, Connection[]>> {
-    const docs = await ConnectionModel.find({}, { _id: 0 }).sort({ lastActivity: -1 }).lean();
+    const docs = await ConnectionModel.find({}, { _id: 0 })
+      .sort({ lastActivity: -1 })
+      .lean();
     const grouped = new Map<string, Connection[]>();
 
     for (const doc of docs as Connection[]) {

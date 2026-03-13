@@ -6,20 +6,42 @@ import { normalizeTenantIds } from "../utils/tenant.js";
 import type { IUserRepository } from "../domain/identity/user-repository.interface.js";
 import type { ITenantRepository } from "../domain/identity/tenant-repository.interface.js";
 import type { IPasswordService } from "../domain/identity/password-service.interface.js";
-import type { Principal, SignInRequest, SignUpRequest } from "../domain/identity/types.js";
+import type {
+  Principal,
+  SignInRequest,
+  SignUpRequest,
+} from "../domain/identity/types.js";
 import type { AuthTokenClaims } from "../infrastructure/auth/jwt.js";
 
 type JwtService = {
   signToken(claims: AuthTokenClaims, ttl?: string): string;
 };
 
+/**
+ * Represents an auth service.
+ */
+
 export class AuthService {
+  /**
+   * Creates an auth service.
+   * @param userRepository - The user repository input.
+   * @param tenantRepository - The tenant repository input.
+   * @param passwordService - The password service input.
+   * @param jwt - The JWT input.
+   */
+
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly tenantRepository: ITenantRepository,
     private readonly passwordService: IPasswordService,
-    private readonly jwt: JwtService
+    private readonly jwt: JwtService,
   ) {}
+
+  /**
+   * Signs up.
+   * @param input - The input input.
+   * @returns The up result.
+   */
 
   async signUp(input: SignUpRequest): Promise<{
     token: string;
@@ -55,6 +77,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Signs in.
+   * @param input - The input input.
+   * @returns The in result.
+   */
+
   async signIn(input: SignInRequest): Promise<{
     token: string;
     user: { id: string; email: string; name: string; tenantIds: string[] };
@@ -64,7 +92,10 @@ export class AuthService {
       return null;
     }
 
-    const valid = await this.passwordService.verify(input.password, user.passwordHash);
+    const valid = await this.passwordService.verify(
+      input.password,
+      user.passwordHash,
+    );
     if (!valid) {
       return null;
     }
@@ -89,22 +120,33 @@ export class AuthService {
     };
   }
 
+  /**
+   * Creates client token.
+   * @param principal - The principal input.
+   * @param requestedTenantId - The requested tenant ID input.
+   * @returns The client token result.
+   */
+
   async createClientToken(
     principal: Principal,
-    requestedTenantId?: string
+    requestedTenantId?: string,
   ): Promise<{ token: string; expiresIn: string } | null> {
     const tenantIds = normalizeTenantIds(principal.tenantIds);
     if (tenantIds.length === 0) {
       return null;
     }
 
-    const selectedTenantId = typeof requestedTenantId === "string" ? requestedTenantId.trim() : "";
+    const selectedTenantId =
+      typeof requestedTenantId === "string" ? requestedTenantId.trim() : "";
     if (selectedTenantId && !tenantIds.includes(selectedTenantId)) {
       return null;
     }
 
     const orderedTenantIds = selectedTenantId
-      ? [selectedTenantId, ...tenantIds.filter((tenantId) => tenantId !== selectedTenantId)]
+      ? [
+          selectedTenantId,
+          ...tenantIds.filter((tenantId) => tenantId !== selectedTenantId),
+        ]
       : tenantIds;
 
     const ttl = process.env.AUTH_CLIENT_TOKEN_TTL ?? "12h";
@@ -116,11 +158,17 @@ export class AuthService {
         tenantId: orderedTenantIds[0],
         tenantIds: orderedTenantIds,
       },
-      ttl
+      ttl,
     );
 
     return { token, expiresIn: ttl };
   }
+
+  /**
+   * Refreshes principal.
+   * @param principal - The principal input.
+   * @returns The principal result.
+   */
 
   async refreshPrincipal(principal: Principal): Promise<Principal | null> {
     const user = await this.userRepository.findById(principal.id);
@@ -128,7 +176,9 @@ export class AuthService {
       return null;
     }
 
-    const tenantIds = await this.tenantRepository.findOwnedTenantIds(principal.id);
+    const tenantIds = await this.tenantRepository.findOwnedTenantIds(
+      principal.id,
+    );
 
     return {
       id: user.id,

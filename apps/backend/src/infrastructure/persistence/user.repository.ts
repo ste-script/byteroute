@@ -7,6 +7,12 @@ import type { IUserRepository } from "../../domain/identity/user-repository.inte
 import type { User } from "../../domain/identity/types.js";
 import { UserModel } from "./models/user.model.js";
 
+/**
+ * Toes user.
+ * @param doc - The doc input.
+ * @returns The user result.
+ */
+
 function toUser(doc: {
   _id: unknown;
   email: string;
@@ -23,14 +29,32 @@ function toUser(doc: {
   };
 }
 
+/**
+ * Represents a mongo user repository.
+ */
+
 export class MongoUserRepository implements IUserRepository {
+  /**
+   * Finds by email.
+   * @param email - The email input.
+   * @returns The by email result.
+   */
+
   async findByEmail(email: string): Promise<User | null> {
-    const doc = await UserModel.findOne({ email }).select("+passwordHash").lean();
+    const doc = await UserModel.findOne({ email })
+      .select("+passwordHash")
+      .lean();
     if (!doc) {
       return null;
     }
     return toUser(doc);
   }
+
+  /**
+   * Finds by ID.
+   * @param id - The ID input.
+   * @returns The by ID result.
+   */
 
   async findById(id: string): Promise<User | null> {
     const doc = await UserModel.findById(id).select("+passwordHash").lean();
@@ -39,6 +63,12 @@ export class MongoUserRepository implements IUserRepository {
     }
     return toUser(doc);
   }
+
+  /**
+   * Creates the requested result.
+   * @param data - The data input.
+   * @returns The operation result.
+   */
 
   async create(data: {
     email: string;

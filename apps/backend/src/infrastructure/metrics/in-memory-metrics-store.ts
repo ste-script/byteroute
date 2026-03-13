@@ -6,9 +6,19 @@ import type { TimeSeriesData } from "@byteroute/shared";
 import type { IMetricsStore } from "../../domain/metrics/metrics-store.interface.js";
 import { ensureTenantId } from "../../utils/tenant.js";
 
+/**
+ * Represents an in memory metrics store.
+ */
+
 export class InMemoryMetricsStore implements IMetricsStore {
   private snapshotsByTenant: Map<string, TimeSeriesData[]> = new Map();
   private readonly maxSnapshots = 168;
+
+  /**
+   * Gets tenant snapshots.
+   * @param tenantId - The tenant ID input.
+   * @returns The tenant snapshots.
+   */
 
   private getTenantSnapshots(tenantId: string): TimeSeriesData[] {
     const existing = this.snapshotsByTenant.get(tenantId);
@@ -20,6 +30,12 @@ export class InMemoryMetricsStore implements IMetricsStore {
     this.snapshotsByTenant.set(tenantId, created);
     return created;
   }
+
+  /**
+   * Adds snapshots.
+   * @param tenantId - The tenant ID input.
+   * @param newSnapshots - The new snapshots input.
+   */
 
   addSnapshots(tenantId: string, newSnapshots: TimeSeriesData[]): void {
     const normalizedTenantId = ensureTenantId(tenantId);
@@ -44,9 +60,19 @@ export class InMemoryMetricsStore implements IMetricsStore {
     });
 
     if (snapshots.length > this.maxSnapshots) {
-      this.snapshotsByTenant.set(normalizedTenantId, snapshots.slice(-this.maxSnapshots));
+      this.snapshotsByTenant.set(
+        normalizedTenantId,
+        snapshots.slice(-this.maxSnapshots),
+      );
     }
   }
+
+  /**
+   * Gets time series.
+   * @param tenantId - The tenant ID input.
+   * @param hours - The hours input.
+   * @returns The time series.
+   */
 
   getTimeSeries(tenantId: string, hours: number = 24): TimeSeriesData[] {
     const normalizedTenantId = ensureTenantId(tenantId);
@@ -60,13 +86,28 @@ export class InMemoryMetricsStore implements IMetricsStore {
     return snapshots.slice(-snapshotsToReturn);
   }
 
+  /**
+   * Gets all snapshots.
+   * @param tenantId - The tenant ID input.
+   * @returns The all snapshots.
+   */
+
   getAllSnapshots(tenantId: string): TimeSeriesData[] {
     return [...this.getTenantSnapshots(ensureTenantId(tenantId))];
   }
 
+  /**
+   * Gets tenant ids.
+   * @returns The tenant ids.
+   */
+
   getTenantIds(): string[] {
     return Array.from(this.snapshotsByTenant.keys());
   }
+
+  /**
+   * Clears the requested result.
+   */
 
   clear(): void {
     this.snapshotsByTenant.clear();

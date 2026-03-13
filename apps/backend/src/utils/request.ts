@@ -1,8 +1,12 @@
 /**
- * Normalize a header value that may be a string array (Express multi-value headers).
- * Returns the first value, or undefined if absent.
+ * Firsts header value.
+ * @param value - The value input.
+ * @returns The header value result.
  */
-export function firstHeaderValue(value: string | string[] | undefined): string | undefined {
+
+export function firstHeaderValue(
+  value: string | string[] | undefined,
+): string | undefined {
   if (Array.isArray(value)) {
     return value[0];
   }

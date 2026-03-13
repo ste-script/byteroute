@@ -42,6 +42,12 @@ export interface AppContext {
   };
 }
 
+/**
+ * Creates app context.
+ * @param io - The IO input.
+ * @returns The app context result.
+ */
+
 export function createAppContext(io?: TypedSocketServer): AppContext {
   return {
     io,

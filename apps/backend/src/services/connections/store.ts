@@ -7,9 +7,20 @@ import { ensureTenantId } from "../../utils/tenant.js";
 
 export type TenantConnection = Connection & { tenantId: string };
 
-const connectionsByTenant: Map<string, Map<string, TenantConnection>> = new Map();
+const connectionsByTenant: Map<
+  string,
+  Map<string, TenantConnection>
+> = new Map();
 
-function getTenantConnectionsMap(tenantId: string): Map<string, TenantConnection> {
+/**
+ * Gets tenant connections map.
+ * @param tenantId - The tenant ID input.
+ * @returns The tenant connections map.
+ */
+
+function getTenantConnectionsMap(
+  tenantId: string,
+): Map<string, TenantConnection> {
   const existing = connectionsByTenant.get(tenantId);
   if (existing) {
     return existing;
@@ -20,7 +31,17 @@ function getTenantConnectionsMap(tenantId: string): Map<string, TenantConnection
   return created;
 }
 
-export function normalizeTenantConnection(connection: Connection, fallbackTenantId?: string): TenantConnection {
+/**
+ * Normalizes tenant connection.
+ * @param connection - The connection input.
+ * @param fallbackTenantId - The fallback tenant ID input.
+ * @returns The tenant connection result.
+ */
+
+export function normalizeTenantConnection(
+  connection: Connection,
+  fallbackTenantId?: string,
+): TenantConnection {
   const tenantId = ensureTenantId(connection.tenantId ?? fallbackTenantId);
   return {
     ...connection,
@@ -28,11 +49,25 @@ export function normalizeTenantConnection(connection: Connection, fallbackTenant
   } as TenantConnection;
 }
 
+/**
+ * Resets connection store.
+ */
+
 export function resetConnectionStore(): void {
   connectionsByTenant.clear();
 }
 
-export function setConnection(connection: Connection, fallbackTenantId?: string): TenantConnection {
+/**
+ * Sets connection.
+ * @param connection - The connection input.
+ * @param fallbackTenantId - The fallback tenant ID input.
+ * @returns The connection result.
+ */
+
+export function setConnection(
+  connection: Connection,
+  fallbackTenantId?: string,
+): TenantConnection {
   const normalized = normalizeTenantConnection(connection, fallbackTenantId);
   const map = getTenantConnectionsMap(normalized.tenantId);
   if (map.has(normalized.id)) {
@@ -43,9 +78,16 @@ export function setConnection(connection: Connection, fallbackTenantId?: string)
   return normalized;
 }
 
+/**
+ * Upserts connection.
+ * @param connection - The connection input.
+ * @param fallbackTenantId - The fallback tenant ID input.
+ * @returns The connection result.
+ */
+
 export function upsertConnection(
   connection: Connection,
-  fallbackTenantId?: string
+  fallbackTenantId?: string,
 ): { connection: TenantConnection; existed: boolean } {
   const normalized = normalizeTenantConnection(connection, fallbackTenantId);
   const tenantConnections = getTenantConnectionsMap(normalized.tenantId);
@@ -59,9 +101,20 @@ export function upsertConnection(
   return { connection: normalized, existed };
 }
 
+/**
+ * Gets tenant connections.
+ * @param tenantId - The tenant ID input.
+ * @returns The tenant connections.
+ */
+
 export function getTenantConnections(tenantId: string): Connection[] {
   return Array.from(getTenantConnectionsMap(tenantId).values());
 }
+
+/**
+ * Gets all connections.
+ * @returns The all connections.
+ */
 
 export function getAllConnections(): Connection[] {
   const all: Connection[] = [];
@@ -71,13 +124,35 @@ export function getAllConnections(): Connection[] {
   return all;
 }
 
-export function getTenantConnection(tenantId: string, id: string): Connection | undefined {
+/**
+ * Gets tenant connection.
+ * @param tenantId - The tenant ID input.
+ * @param id - The ID input.
+ * @returns The tenant connection.
+ */
+
+export function getTenantConnection(
+  tenantId: string,
+  id: string,
+): Connection | undefined {
   return getTenantConnectionsMap(tenantId).get(id);
 }
+
+/**
+ * Removes tenant connection.
+ * @param tenantId - The tenant ID input.
+ * @param id - The ID input.
+ * @returns The tenant connection result.
+ */
 
 export function removeTenantConnection(tenantId: string, id: string): boolean {
   return getTenantConnectionsMap(tenantId).delete(id);
 }
+
+/**
+ * Gets known tenant ids.
+ * @returns The known tenant ids.
+ */
 
 export function getKnownTenantIds(): string[] {
   return Array.from(connectionsByTenant.keys());

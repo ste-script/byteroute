@@ -10,4 +10,10 @@ import type {
   ProtocolStats,
 } from "@byteroute/shared";
 
-export type { Statistics, TimeSeriesData, CountryStats, AsnStats, ProtocolStats };
+export type {
+  Statistics,
+  TimeSeriesData,
+  CountryStats,
+  AsnStats,
+  ProtocolStats,
+};

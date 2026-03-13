@@ -10,12 +10,20 @@ import { resetConnectionStore, setConnection } from "./store.js";
 let sharedConnectionModel: typeof InfraConnectionModel | undefined;
 
 try {
-  sharedConnectionModel = (shared as { ConnectionModel?: typeof InfraConnectionModel }).ConnectionModel;
+  sharedConnectionModel = (
+    shared as { ConnectionModel?: typeof InfraConnectionModel }
+  ).ConnectionModel;
 } catch {
   sharedConnectionModel = undefined;
 }
 
 const ConnectionModel = sharedConnectionModel ?? InfraConnectionModel;
+
+/**
+ * Loads connections from DB.
+ * @param limit - The limit input.
+ * @returns The connections from DB result.
+ */
 
 export async function loadConnectionsFromDb(limit = 500): Promise<number> {
   const docs = await ConnectionModel.find(
@@ -46,7 +54,7 @@ export async function loadConnectionsFromDb(limit = 500): Promise<number> {
       startTime: 1,
       lastActivity: 1,
       duration: 1,
-    }
+    },
   )
     .sort({ lastActivity: -1 })
     .limit(limit)

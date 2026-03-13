@@ -11,7 +11,9 @@ import {
   type TenantFeatureRoom,
 } from "../../utils/tenant.js";
 
-const EVENT_ROOMS: Partial<Record<keyof ServerToClientEvents, TenantFeatureRoom>> = {
+const EVENT_ROOMS: Partial<
+  Record<keyof ServerToClientEvents, TenantFeatureRoom>
+> = {
   "connection:new": "connections",
   "connection:update": "connections",
   "connection:remove": "connections",
@@ -20,13 +22,35 @@ const EVENT_ROOMS: Partial<Record<keyof ServerToClientEvents, TenantFeatureRoom>
   "traffic:flows": "flows",
 };
 
+/**
+ * Represents a socket emitter.
+ */
+
 export class SocketEmitter {
+  /**
+   * Creates a socket emitter.
+   * @param io - The IO input.
+   */
+
   constructor(private readonly io: TypedSocketServer) {}
 
-  emitToTenant(event: keyof ServerToClientEvents, tenantId: string, payload: unknown): void {
+  /**
+   * Emits to tenant.
+   * @param event - The event input.
+   * @param tenantId - The tenant ID input.
+   * @param payload - The payload input.
+   */
+
+  emitToTenant(
+    event: keyof ServerToClientEvents,
+    tenantId: string,
+    payload: unknown,
+  ): void {
     const resolvedTenantId = ensureTenantId(tenantId);
     const featureRoom = EVENT_ROOMS[event];
-    const room = featureRoom ? getTenantScopedRoom(resolvedTenantId, featureRoom) : getTenantRoom(resolvedTenantId);
+    const room = featureRoom
+      ? getTenantScopedRoom(resolvedTenantId, featureRoom)
+      : getTenantRoom(resolvedTenantId);
     this.io.to(room).emit(event, payload as never);
   }
 }

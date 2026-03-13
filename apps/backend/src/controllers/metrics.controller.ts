@@ -6,12 +6,20 @@ import type { Request, Response } from "express";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";
 import type { TimeSeriesData } from "@byteroute/shared";
-import { tryResolveTenantIdFromRequest, userHasTenantAccess } from "../utils/tenant.js";
+import {
+  tryResolveTenantIdFromRequest,
+  userHasTenantAccess,
+} from "../utils/tenant.js";
 import { getPrincipal } from "../auth/principal.js";
 
 interface MetricsRequestBody {
   snapshots: TimeSeriesData[];
 }
+
+/**
+ * Creates metrics controller.
+ * @param ctx - The ctx input.
+ */
 
 export function createMetricsController(ctx: AppContext) {
   return {
@@ -20,7 +28,9 @@ export function createMetricsController(ctx: AppContext) {
         const body = req.body as MetricsRequestBody;
 
         if (!body.snapshots || !Array.isArray(body.snapshots)) {
-          res.status(400).json({ error: "Invalid request: snapshots array required" });
+          res
+            .status(400)
+            .json({ error: "Invalid request: snapshots array required" });
           return;
         }
 

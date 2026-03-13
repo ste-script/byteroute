@@ -11,9 +11,7 @@ import {
   connectMongo,
   disconnectMongo,
 } from "./infrastructure/persistence/mongoose.js";
-import {
-  ConnectionModel,
-} from "./infrastructure/persistence/models/connection.model.js";
+import { ConnectionModel } from "./infrastructure/persistence/models/connection.model.js";
 import {
   type ServerToClientEvents,
   type ClientToServerEvents,
@@ -47,7 +45,7 @@ const io: TypedSocketServer = new SocketIOServer<
   InterServerEvents,
   SocketData
 >(server, {
-  cors: { origin: true, credentials: true }
+  cors: { origin: true, credentials: true },
 });
 
 app.use(express.json({ limit: "2mb" }));
@@ -67,6 +65,10 @@ io.on("connection", (socket) => socketController.handleConnection(io, socket));
 
 const port = Number(process.env.PORT ?? 4000);
 let statsEmitTimer: NodeJS.Timeout | undefined;
+
+/**
+ * Starts the requested result.
+ */
 
 async function start(): Promise<void> {
   const compiledDsl = await compileDomainDslAtStartup();
@@ -93,12 +95,19 @@ async function start(): Promise<void> {
   statsEmitTimer = setInterval(() => {
     emitStatisticsUpdateAllTenants(io);
   }, statsEmitIntervalMs);
-  console.log(`Periodic statistics emission enabled (interval: ${statsEmitIntervalMs}ms)`);
+  console.log(
+    `Periodic statistics emission enabled (interval: ${statsEmitIntervalMs}ms)`,
+  );
 
   server.listen(port, () => {
     console.log(`@byteroute/backend listening on :${port}`);
   });
 }
+
+/**
+ * Shutdowns the requested result.
+ * @param signal - The signal input.
+ */
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`Shutting down (${signal})...`);

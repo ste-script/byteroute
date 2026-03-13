@@ -119,6 +119,12 @@ const DEFAULT_DSL: CompiledDomainDsl = {
 
 let compiledDomainDsl: CompiledDomainDsl = DEFAULT_DSL;
 
+/**
+ * Normalizes unique strings.
+ * @param values - The values input.
+ * @returns The unique strings result.
+ */
+
 function normalizeUniqueStrings(values: string[] | undefined): string[] {
   if (!values) {
     return [];
@@ -131,13 +137,22 @@ function normalizeUniqueStrings(values: string[] | undefined): string[] {
   return Array.from(new Set(normalized));
 }
 
+/**
+ * Resolves aggregation query.
+ * @param override - The override input.
+ * @param fallback - The fallback input.
+ * @returns The aggregation query result.
+ */
+
 function resolveAggregationQuery(
-  override: {
-    sortBy?: AggregationSortBy;
-    order?: AggregationSortOrder;
-    limit?: number;
-  } | undefined,
-  fallback: AggregationQuerySpec
+  override:
+    | {
+        sortBy?: AggregationSortBy;
+        order?: AggregationSortOrder;
+        limit?: number;
+      }
+    | undefined,
+  fallback: AggregationQuerySpec,
 ): AggregationQuerySpec {
   return {
     sortBy: override?.sortBy ?? fallback.sortBy,
@@ -146,9 +161,21 @@ function resolveAggregationQuery(
   };
 }
 
-function resolveCompiledDsl(raw: z.infer<typeof rawDslSchema> | undefined, sourcePath?: string): CompiledDomainDsl {
+/**
+ * Resolves compiled DSL.
+ * @param raw - The raw input.
+ * @param sourcePath - The source path input.
+ * @returns The compiled DSL result.
+ */
+
+function resolveCompiledDsl(
+  raw: z.infer<typeof rawDslSchema> | undefined,
+  sourcePath?: string,
+): CompiledDomainDsl {
   const allowedProtocols = raw?.ingestion?.connection?.allowedProtocols;
-  const denySourceIps = normalizeUniqueStrings(raw?.ingestion?.connection?.denySourceIps);
+  const denySourceIps = normalizeUniqueStrings(
+    raw?.ingestion?.connection?.denySourceIps,
+  );
 
   return {
     sourcePath,
@@ -159,9 +186,11 @@ function resolveCompiledDsl(raw: z.infer<typeof rawDslSchema> | undefined, sourc
             ? new Set<Protocol>(allowedProtocols)
             : new Set(DEFAULT_DSL.ingestion.connection.allowedProtocols),
         defaultProtocol:
-          raw?.ingestion?.connection?.defaultProtocol ?? DEFAULT_DSL.ingestion.connection.defaultProtocol,
+          raw?.ingestion?.connection?.defaultProtocol ??
+          DEFAULT_DSL.ingestion.connection.defaultProtocol,
         defaultStatus:
-          raw?.ingestion?.connection?.defaultStatus ?? DEFAULT_DSL.ingestion.connection.defaultStatus,
+          raw?.ingestion?.connection?.defaultStatus ??
+          DEFAULT_DSL.ingestion.connection.defaultStatus,
         denySourceIps: new Set(denySourceIps),
       },
     },
@@ -169,17 +198,25 @@ function resolveCompiledDsl(raw: z.infer<typeof rawDslSchema> | undefined, sourc
       queries: {
         byCountry: resolveAggregationQuery(
           raw?.analytics?.queries?.byCountry,
-          DEFAULT_DSL.analytics.queries.byCountry
+          DEFAULT_DSL.analytics.queries.byCountry,
         ),
-        byAsn: resolveAggregationQuery(raw?.analytics?.queries?.byAsn, DEFAULT_DSL.analytics.queries.byAsn),
+        byAsn: resolveAggregationQuery(
+          raw?.analytics?.queries?.byAsn,
+          DEFAULT_DSL.analytics.queries.byAsn,
+        ),
         byProtocol: resolveAggregationQuery(
           raw?.analytics?.queries?.byProtocol,
-          DEFAULT_DSL.analytics.queries.byProtocol
+          DEFAULT_DSL.analytics.queries.byProtocol,
         ),
       },
     },
   };
 }
+
+/**
+ * Finds DSL path.
+ * @returns The DSL path result.
+ */
 
 async function findDslPath(): Promise<string | undefined> {
   const explicit = process.env.DOMAIN_DSL_PATH;
@@ -188,7 +225,10 @@ async function findDslPath(): Promise<string | undefined> {
     "/etc/byteroute/domain.dsl.yaml",
     resolve(process.cwd(), "config/domain.dsl.yaml"),
     resolve(process.cwd(), "apps/backend/config/domain.dsl.yaml"),
-  ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0);
+  ].filter(
+    (candidate): candidate is string =>
+      typeof candidate === "string" && candidate.trim().length > 0,
+  );
 
   for (const candidate of candidates) {
     try {
@@ -201,6 +241,11 @@ async function findDslPath(): Promise<string | undefined> {
 
   return undefined;
 }
+
+/**
+ * Compiles domain DSL at startup.
+ * @returns The domain DSL at startup result.
+ */
 
 export async function compileDomainDslAtStartup(): Promise<CompiledDomainDsl> {
   const dslPath = await findDslPath();
@@ -216,11 +261,19 @@ export async function compileDomainDslAtStartup(): Promise<CompiledDomainDsl> {
     compiledDomainDsl = resolveCompiledDsl(parsed, dslPath);
     return compiledDomainDsl;
   } catch (error) {
-    console.error("[DSL] Failed to compile domain DSL. Falling back to defaults.", error);
+    console.error(
+      "[DSL] Failed to compile domain DSL. Falling back to defaults.",
+      error,
+    );
     compiledDomainDsl = DEFAULT_DSL;
     return compiledDomainDsl;
   }
 }
+
+/**
+ * Gets compiled domain DSL.
+ * @returns The compiled domain DSL.
+ */
 
 export function getCompiledDomainDsl(): CompiledDomainDsl {
   return compiledDomainDsl;

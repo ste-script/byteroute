@@ -18,8 +18,19 @@ import {
 } from "./store.js";
 import type { TypedSocketServer } from "./types.js";
 
+/**
+ * Checks whether room subscribers is satisfied.
+ * @param io - The IO input.
+ * @param roomName - The room name input.
+ * @returns True when room subscribers is satisfied.
+ */
+
 function hasRoomSubscribers(io: TypedSocketServer, roomName: string): boolean {
-  const rooms = (io as unknown as { sockets?: { adapter?: { rooms?: Map<string, Set<string>> } } }).sockets?.adapter?.rooms;
+  const rooms = (
+    io as unknown as {
+      sockets?: { adapter?: { rooms?: Map<string, Set<string>> } };
+    }
+  ).sockets?.adapter?.rooms;
 
   // If we can't introspect rooms (adapter differs), be conservative and compute.
   if (!rooms || typeof rooms.get !== "function") {
@@ -30,7 +41,17 @@ function hasRoomSubscribers(io: TypedSocketServer, roomName: string): boolean {
   return entry ? entry.size > 0 : false;
 }
 
-export function getConnectionsForTenant(tenantId: string, limit?: number): Connection[] {
+/**
+ * Gets connections for tenant.
+ * @param tenantId - The tenant ID input.
+ * @param limit - The limit input.
+ * @returns The connections for tenant.
+ */
+
+export function getConnectionsForTenant(
+  tenantId: string,
+  limit?: number,
+): Connection[] {
   const resolvedTenantId = ensureTenantId(tenantId);
   const all = getTenantConnections(resolvedTenantId);
 
@@ -47,23 +68,48 @@ export function getConnectionsForTenant(tenantId: string, limit?: number): Conne
   return all.slice(-limit).reverse();
 }
 
+/**
+ * Gets all connections snapshot.
+ * @returns The all connections snapshot.
+ */
+
 export function getAllConnectionsSnapshot(): Connection[] {
   return getAllConnections();
 }
 
-export function getConnectionById(tenantId: string, id: string): Connection | undefined {
+/**
+ * Gets connection by ID.
+ * @param tenantId - The tenant ID input.
+ * @param id - The ID input.
+ * @returns The connection by ID.
+ */
+
+export function getConnectionById(
+  tenantId: string,
+  id: string,
+): Connection | undefined {
   return getTenantConnection(ensureTenantId(tenantId), id);
 }
+
+/**
+ * Upserts connections local.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ * @param batch - The batch input.
+ */
 
 export function upsertConnectionsLocal(
   io: TypedSocketServer,
   tenantId: string,
-  batch: Connection[]
+  batch: Connection[],
 ): void {
   const resolvedTenantId = ensureTenantId(tenantId);
 
   for (const connection of batch) {
-    const { connection: normalized, existed } = upsertConnection(connection, resolvedTenantId);
+    const { connection: normalized, existed } = upsertConnection(
+      connection,
+      resolvedTenantId,
+    );
 
     if (existed) {
       emitToTenant(io, normalized.tenantId, "connection:update", normalized);
@@ -71,14 +117,22 @@ export function upsertConnectionsLocal(
       emitToTenant(io, normalized.tenantId, "connection:new", normalized);
     }
   }
-
 }
+
+/**
+ * Updates connection.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ * @param id - The ID input.
+ * @param updates - The updates input.
+ * @returns The connection result.
+ */
 
 export function updateConnection(
   io: TypedSocketServer,
   tenantId: string,
   id: string,
-  updates: Partial<Connection>
+  updates: Partial<Connection>,
 ): Connection | null {
   const resolvedTenantId = ensureTenantId(tenantId);
   const existing = getTenantConnection(resolvedTenantId, id);
@@ -94,7 +148,7 @@ export function updateConnection(
       id,
       lastActivity: new Date().toISOString(),
     },
-    resolvedTenantId
+    resolvedTenantId,
   );
 
   emitToTenant(io, resolvedTenantId, "connection:update", updated);
@@ -106,7 +160,19 @@ export function updateConnection(
   return updated;
 }
 
-export function removeConnection(io: TypedSocketServer, tenantId: string, id: string): boolean {
+/**
+ * Removes connection.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ * @param id - The ID input.
+ * @returns The connection result.
+ */
+
+export function removeConnection(
+  io: TypedSocketServer,
+  tenantId: string,
+  id: string,
+): boolean {
   const resolvedTenantId = ensureTenantId(tenantId);
   const existed = removeTenantConnection(resolvedTenantId, id);
 
@@ -118,12 +184,35 @@ export function removeConnection(io: TypedSocketServer, tenantId: string, id: st
   return existed;
 }
 
-export function emitConnectionsBatch(io: TypedSocketServer, tenantId: string): void {
+/**
+ * Emits connections batch.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ */
+
+export function emitConnectionsBatch(
+  io: TypedSocketServer,
+  tenantId: string,
+): void {
   const resolvedTenantId = ensureTenantId(tenantId);
-  emitToTenant(io, resolvedTenantId, "connections:batch", getTenantConnections(resolvedTenantId));
+  emitToTenant(
+    io,
+    resolvedTenantId,
+    "connections:batch",
+    getTenantConnections(resolvedTenantId),
+  );
 }
 
-export function emitTrafficFlows(io: TypedSocketServer, tenantId: string): void {
+/**
+ * Emits traffic flows.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ */
+
+export function emitTrafficFlows(
+  io: TypedSocketServer,
+  tenantId: string,
+): void {
   const resolvedTenantId = ensureTenantId(tenantId);
   const room = getTenantScopedRoom(resolvedTenantId, "flows");
   if (!hasRoomSubscribers(io, room)) {
@@ -133,21 +222,43 @@ export function emitTrafficFlows(io: TypedSocketServer, tenantId: string): void 
   emitToTenant(io, resolvedTenantId, "traffic:flows", flows);
 }
 
+/**
+ * Emits traffic flows all tenants.
+ * @param io - The IO input.
+ */
+
 export function emitTrafficFlowsAllTenants(io: TypedSocketServer): void {
   for (const tenantId of getKnownTenantIds()) {
     emitTrafficFlows(io, tenantId);
   }
 }
 
-export function emitStatisticsUpdate(io: TypedSocketServer, tenantId: string): void {
+/**
+ * Emits statistics update.
+ * @param io - The IO input.
+ * @param tenantId - The tenant ID input.
+ */
+
+export function emitStatisticsUpdate(
+  io: TypedSocketServer,
+  tenantId: string,
+): void {
   const resolvedTenantId = ensureTenantId(tenantId);
   const room = getTenantScopedRoom(resolvedTenantId, "statistics");
   if (!hasRoomSubscribers(io, room)) {
     return;
   }
-  const stats = generateStatistics(getTenantConnections(resolvedTenantId), resolvedTenantId);
+  const stats = generateStatistics(
+    getTenantConnections(resolvedTenantId),
+    resolvedTenantId,
+  );
   emitToTenant(io, resolvedTenantId, "statistics:update", stats);
 }
+
+/**
+ * Emits statistics update all tenants.
+ * @param io - The IO input.
+ */
 
 export function emitStatisticsUpdateAllTenants(io: TypedSocketServer): void {
   for (const tenantId of getKnownTenantIds()) {
@@ -155,6 +266,17 @@ export function emitStatisticsUpdateAllTenants(io: TypedSocketServer): void {
   }
 }
 
-export function emitError(io: TypedSocketServer, message: string, code?: string): void {
+/**
+ * Emits error.
+ * @param io - The IO input.
+ * @param message - The message input.
+ * @param code - The code input.
+ */
+
+export function emitError(
+  io: TypedSocketServer,
+  message: string,
+  code?: string,
+): void {
   io.emit("error", { message, code });
 }

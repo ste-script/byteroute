@@ -8,14 +8,17 @@ import { getBandwidthColor } from "../../utils/bandwidth.js";
 let flowIdCounter = 0;
 
 /**
- * Derives traffic flows from real connection data.
- * Only connections that have been geo-enriched (both source and destination)
- * produce flows with real coordinates. Connections missing dest geo data are skipped.
+ * Derives traffic flows.
+ * @param connections - The connections input.
+ * @returns The traffic flows result.
  */
+
 export function deriveTrafficFlows(connections: Connection[]): TrafficFlow[] {
   return connections
     .filter(
-      (c): c is Connection & {
+      (
+        c,
+      ): c is Connection & {
         latitude: number;
         longitude: number;
         destLatitude: number;
@@ -25,7 +28,7 @@ export function deriveTrafficFlows(connections: Connection[]): TrafficFlow[] {
         c.latitude != null &&
         c.longitude != null &&
         c.destLatitude != null &&
-        c.destLongitude != null
+        c.destLongitude != null,
     )
     .slice(0, 20)
     .map((c) => ({

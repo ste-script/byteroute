@@ -4,16 +4,36 @@
 
 import type { Connection } from "./types.js";
 
-const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>(["TCP", "UDP", "ICMP", "OTHER"]);
+const ALLOWED_PROTOCOLS = new Set<Connection["protocol"]>([
+  "TCP",
+  "UDP",
+  "ICMP",
+  "OTHER",
+]);
 const ALLOWED_STATUSES = new Set<Connection["status"]>(["active", "inactive"]);
 
 let generatedIdCounter = 0;
+
+/**
+ * Toes iso now.
+ * @returns The iso now result.
+ */
 
 function toIsoNow(): string {
   return new Date().toISOString();
 }
 
-export function normalizeConnection(input: Partial<Connection>, tenantId: string): Connection {
+/**
+ * Normalizes connection.
+ * @param input - The input input.
+ * @param tenantId - The tenant ID input.
+ * @returns The connection result.
+ */
+
+export function normalizeConnection(
+  input: Partial<Connection>,
+  tenantId: string,
+): Connection {
   const nowIso = toIsoNow();
 
   const id =
@@ -22,10 +42,14 @@ export function normalizeConnection(input: Partial<Connection>, tenantId: string
       : `ingest-${++generatedIdCounter}-${Date.now()}`;
 
   const protocol: Connection["protocol"] =
-    input.protocol && ALLOWED_PROTOCOLS.has(input.protocol) ? input.protocol : "OTHER";
+    input.protocol && ALLOWED_PROTOCOLS.has(input.protocol)
+      ? input.protocol
+      : "OTHER";
 
   const status: Connection["status"] =
-    input.status && ALLOWED_STATUSES.has(input.status) ? input.status : "active";
+    input.status && ALLOWED_STATUSES.has(input.status)
+      ? input.status
+      : "active";
 
   return {
     id,

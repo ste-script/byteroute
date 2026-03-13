@@ -11,7 +11,10 @@ import {
   verifyAuthToken,
 } from "../auth/passport.js";
 import { hydratePrincipalFromDatabase } from "../auth/principal.js";
-import { tryResolveTenantIdFromSocketHandshake, userHasTenantAccess } from "../utils/tenant.js";
+import {
+  tryResolveTenantIdFromSocketHandshake,
+  userHasTenantAccess,
+} from "../utils/tenant.js";
 import { firstHeaderValue } from "../utils/request.js";
 
 type SocketHandshakeLike = {
@@ -23,16 +26,27 @@ type SocketHandshakeLike = {
   headers?: Record<string, string | string[] | undefined>;
 };
 
+/**
+ * Extracts bearer token from socket handshake.
+ * @param handshake - The handshake input.
+ * @returns The bearer token from socket handshake result.
+ */
+
 export function extractBearerTokenFromSocketHandshake(
-  handshake: SocketHandshakeLike | undefined
+  handshake: SocketHandshakeLike | undefined,
 ): string | undefined {
-  const authToken = typeof handshake?.auth?.token === "string" ? handshake.auth.token.trim() : undefined;
+  const authToken =
+    typeof handshake?.auth?.token === "string"
+      ? handshake.auth.token.trim()
+      : undefined;
   if (authToken) {
     return authToken;
   }
 
   const authBearerToken =
-    typeof handshake?.auth?.bearerToken === "string" ? handshake.auth.bearerToken.trim() : undefined;
+    typeof handshake?.auth?.bearerToken === "string"
+      ? handshake.auth.bearerToken.trim()
+      : undefined;
   if (authBearerToken) {
     return authBearerToken;
   }
@@ -46,27 +60,34 @@ export function extractBearerTokenFromSocketHandshake(
   }
 
   const headerAuthorization = extractBearerTokenFromAuthorization(
-    firstHeaderValue(handshake?.headers?.authorization)
+    firstHeaderValue(handshake?.headers?.authorization),
   );
 
   return headerAuthorization;
 }
+
+/**
+ * Creates socket auth middleware.
+ * @param ctx - The ctx input.
+ */
 
 export function createSocketAuthMiddleware(ctx: AppContext) {
   const authService = new AuthService(
     ctx.userRepository,
     ctx.tenantRepository,
     ctx.passwordService,
-    ctx.jwt
+    ctx.jwt,
   );
 
   return function socketAuthMiddleware(
     socket: Socket,
-    next: (err?: ExtendedError | undefined) => void
+    next: (err?: ExtendedError | undefined) => void,
   ): void {
     void (async () => {
       try {
-        const providedToken = extractBearerTokenFromSocketHandshake(socket.handshake);
+        const providedToken = extractBearerTokenFromSocketHandshake(
+          socket.handshake,
+        );
         const principal = verifyAuthToken(providedToken);
 
         if (!principal) {
@@ -80,7 +101,9 @@ export function createSocketAuthMiddleware(ctx: AppContext) {
           return;
         }
 
-        const tenantId = tryResolveTenantIdFromSocketHandshake(socket.handshake);
+        const tenantId = tryResolveTenantIdFromSocketHandshake(
+          socket.handshake,
+        );
         if (!tenantId) {
           next(new Error("Unauthorized"));
           return;
@@ -100,13 +123,21 @@ export function createSocketAuthMiddleware(ctx: AppContext) {
   };
 }
 
+/**
+ * Sockets auth middleware.
+ * @param socket - The socket input.
+ * @param next - The next input.
+ */
+
 export function socketAuthMiddleware(
   socket: Socket,
-  next: (err?: ExtendedError | undefined) => void
+  next: (err?: ExtendedError | undefined) => void,
 ): void {
   void (async () => {
     try {
-      const providedToken = extractBearerTokenFromSocketHandshake(socket.handshake);
+      const providedToken = extractBearerTokenFromSocketHandshake(
+        socket.handshake,
+      );
       const principal = verifyAuthToken(providedToken);
 
       if (!principal) {

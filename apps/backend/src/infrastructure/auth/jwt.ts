@@ -13,13 +13,27 @@ export type AuthTokenClaims = {
   tenantId?: string;
 };
 
-function normalizeTenantClaims(tenantId: unknown, tenantIds: unknown): { tenantId?: string; tenantIds: string[] } {
+/**
+ * Normalizes tenant claims.
+ * @param tenantId - The tenant ID input.
+ * @param tenantIds - The tenant ids input.
+ * @returns The tenant claims result.
+ */
+
+function normalizeTenantClaims(
+  tenantId: unknown,
+  tenantIds: unknown,
+): { tenantId?: string; tenantIds: string[] } {
   const primaryTenantId = typeof tenantId === "string" ? tenantId.trim() : "";
   const extraTenantIds = Array.isArray(tenantIds)
-    ? tenantIds.filter((value): value is string => typeof value === "string").map((value) => value.trim())
+    ? tenantIds
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
     : [];
 
-  const mergedTenantIds = [primaryTenantId, ...extraTenantIds].filter((value) => value.length > 0);
+  const mergedTenantIds = [primaryTenantId, ...extraTenantIds].filter(
+    (value) => value.length > 0,
+  );
   const uniqueTenantIds = Array.from(new Set(mergedTenantIds));
 
   return {
@@ -27,6 +41,11 @@ function normalizeTenantClaims(tenantId: unknown, tenantIds: unknown): { tenantI
     tenantIds: uniqueTenantIds,
   };
 }
+
+/**
+ * Gets JWT secret.
+ * @returns The JWT secret.
+ */
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -36,7 +55,15 @@ export function getJwtSecret(): string {
   return secret;
 }
 
-export function extractBearerTokenFromAuthorization(authorizationHeader: string | undefined): string | undefined {
+/**
+ * Extracts bearer token from authorization.
+ * @param authorizationHeader - The authorization header input.
+ * @returns The bearer token from authorization result.
+ */
+
+export function extractBearerTokenFromAuthorization(
+  authorizationHeader: string | undefined,
+): string | undefined {
   if (!authorizationHeader) {
     return undefined;
   }
@@ -49,7 +76,15 @@ export function extractBearerTokenFromAuthorization(authorizationHeader: string 
   return token;
 }
 
-function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | undefined {
+/**
+ * Claimses from payload.
+ * @param payload - The payload input.
+ * @returns The from payload result.
+ */
+
+function claimsFromPayload(
+  payload: string | JwtPayload,
+): AuthTokenClaims | undefined {
   if (typeof payload === "string") {
     return undefined;
   }
@@ -57,16 +92,35 @@ function claimsFromPayload(payload: string | JwtPayload): AuthTokenClaims | unde
   const sub = typeof payload.sub === "string" ? payload.sub : undefined;
   const email = typeof payload.email === "string" ? payload.email : undefined;
   const name = typeof payload.name === "string" ? payload.name : undefined;
-  const tenantClaims = normalizeTenantClaims(payload.tenantId, payload.tenantIds);
+  const tenantClaims = normalizeTenantClaims(
+    payload.tenantId,
+    payload.tenantIds,
+  );
 
   if (!sub || !email) {
     return undefined;
   }
 
-  return { sub, email, name, tenantId: tenantClaims.tenantId, tenantIds: tenantClaims.tenantIds };
+  return {
+    sub,
+    email,
+    name,
+    tenantId: tenantClaims.tenantId,
+    tenantIds: tenantClaims.tenantIds,
+  };
 }
 
-export function signToken(claims: AuthTokenClaims, ttl = process.env.AUTH_TOKEN_TTL ?? "1d"): string {
+/**
+ * Signs token.
+ * @param claims - The claims input.
+ * @param ttl - The ttl input.
+ * @returns The token result.
+ */
+
+export function signToken(
+  claims: AuthTokenClaims,
+  ttl = process.env.AUTH_TOKEN_TTL ?? "1d",
+): string {
   const options: SignOptions = {
     expiresIn: ttl as SignOptions["expiresIn"],
   };
@@ -80,9 +134,15 @@ export function signToken(claims: AuthTokenClaims, ttl = process.env.AUTH_TOKEN_
       tenantIds: tenantClaims.tenantIds,
     },
     getJwtSecret(),
-    options
+    options,
   );
 }
+
+/**
+ * Verifies token.
+ * @param token - The token input.
+ * @returns The token result.
+ */
 
 export function verifyToken(token: string | undefined): Principal | undefined {
   if (!token) {
