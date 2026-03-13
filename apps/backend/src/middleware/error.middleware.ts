@@ -18,6 +18,9 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // Keep the 4-arg Express error-middleware signature while satisfying lint.
+  void _next;
+
   const status =
     typeof (err as Record<string, unknown>)?.status === "number"
       ? ((err as Record<string, unknown>).status as number)
