@@ -142,6 +142,7 @@ vite.config.ts.timestamp-*
 #custom
 .pnpm-store
 .turbo
+.worktrees/
 build/
 byteroute-client
 coverage.out
