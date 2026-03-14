@@ -5,6 +5,7 @@ import type { Component } from 'vue'
 import {
   mountDashboardViewForBrowser,
   resetDashboardBrowserHarness,
+  setDashboardBrowserHarnessTenants,
   waitForLayout,
 } from './dashboardBrowserHarness'
 
@@ -41,5 +42,28 @@ describe('DashboardView mobile layout', () => {
 
     await expect.element(heading).toBeVisible()
     await expect.element(firstConnection).toBeVisible()
+  })
+
+  it('shows first-run wizard and opens tenant dialog from CTA on mobile', async () => {
+    await page.viewport(390, 844)
+    setDashboardBrowserHarnessTenants([])
+
+    await mountDashboardViewForBrowser(
+      async () => ((await import('../../views/DashboardView.vue')) as { default: Component }).default,
+      { expectLivePanels: false },
+    )
+
+    const wizardHeading = page.getByRole('heading', { name: 'Set up your first tenant' })
+    const createTenantButton = page.getByRole('button', { name: 'Create tenant' })
+
+    await expect.element(wizardHeading).toBeVisible()
+    await expect.element(page.getByText('What each section does')).toBeVisible()
+    await expect.element(createTenantButton).toBeVisible()
+
+    await createTenantButton.click()
+    await waitForLayout()
+
+    const dialogState = document.querySelector('[data-test="new-tenant-dialog"]') as HTMLElement | null
+    expect(dialogState?.dataset.visible).toBe('open')
   })
 })

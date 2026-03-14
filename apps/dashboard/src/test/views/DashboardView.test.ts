@@ -74,7 +74,10 @@ describe('DashboardView (no tenants)', () => {
           TrafficChart: { template: '<div />' },
           StatisticsPanel: { template: '<div />' },
           ConnectionList: { template: '<div />' },
-          NewTenantDialog: { template: '<div />' },
+          NewTenantDialog: {
+            props: ['visible'],
+            template: '<div data-test="new-tenant-dialog">{{ visible ? "open" : "closed" }}</div>'
+          },
         },
       },
     })
@@ -82,10 +85,45 @@ describe('DashboardView (no tenants)', () => {
     await flushPromises()
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('Create your first tenant')
-    expect(wrapper.text()).toContain('No tenants found for this account')
+    expect(wrapper.text()).toContain('Set up your first tenant')
+    expect(wrapper.text()).toContain('Step 1')
+    expect(wrapper.text()).toContain('Step 2')
+    expect(wrapper.text()).toContain('World Traffic')
+    expect(wrapper.text()).toContain('Live Connections')
+    expect(wrapper.text()).toContain('Traffic Timeline')
 
     expect(mockSocket.connect).not.toHaveBeenCalled()
+  })
+
+  it('opens the tenant dialog from the wizard primary action', async () => {
+    const { default: DashboardView } = await import('@/views/DashboardView.vue')
+
+    const wrapper = mount(DashboardView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+          DashboardHeader: { template: '<header />' },
+          WorldMap: { template: '<div />' },
+          TrafficChart: { template: '<div />' },
+          StatisticsPanel: { template: '<div />' },
+          ConnectionList: { template: '<div />' },
+          NewTenantDialog: {
+            props: ['visible'],
+            template: '<div data-test="new-tenant-dialog">{{ visible ? "open" : "closed" }}</div>'
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="new-tenant-dialog"]').text()).toBe('closed')
+
+    await wrapper.get('[data-test="wizard-open-create-tenant"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="new-tenant-dialog"]').text()).toBe('open')
   })
 
   it('copies a client token for the selected tenant', async () => {

@@ -22,6 +22,9 @@ const mockSocket = vi.hoisted(() => ({
 const mockConnectTenant = vi.hoisted(() => vi.fn())
 const mockHandleTenantChange = vi.hoisted(() => vi.fn())
 const mockCopyToken = vi.hoisted(() => vi.fn())
+const selectedTenantRef = ref('tenant-1')
+const discoveredTenantsRef = ref(['tenant-1'])
+const loadDiscoveredTenantsMock = vi.hoisted(() => vi.fn(async () => [...discoveredTenantsRef.value]))
 
 vi.mock('@/services/socket', () => ({
   useSocket: vi.fn(() => mockSocket),
@@ -32,15 +35,14 @@ vi.mock('@/services/tenants', () => ({
 }))
 
 vi.mock('@/composables/useTenantManager', () => {
-  const selectedTenant = ref('tenant-1')
-  const discoveredTenants = ref(['tenant-1'])
-
   return {
     useTenantManager: () => ({
-      selectedTenant,
-      tenantOptions: computed(() => [{ label: 'tenant-1', value: 'tenant-1' }]),
-      discoveredTenants,
-      loadDiscoveredTenants: vi.fn(async () => ['tenant-1']),
+      selectedTenant: selectedTenantRef,
+      tenantOptions: computed(() =>
+        discoveredTenantsRef.value.map((tenant) => ({ label: tenant, value: tenant }))
+      ),
+      discoveredTenants: discoveredTenantsRef,
+      loadDiscoveredTenants: loadDiscoveredTenantsMock,
       connectTenant: mockConnectTenant,
       handleTenantChange: mockHandleTenantChange,
     }),
@@ -57,6 +59,35 @@ vi.mock('@/composables/useClientToken', () => ({
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
+}))
+
+vi.mock('primevue/button', () => ({
+  default: defineComponent({
+    name: 'PrimeButtonStub',
+    props: {
+      label: {
+        type: String,
+        default: '',
+      },
+      type: {
+        type: String,
+        default: 'button',
+      },
+    },
+    emits: ['click'],
+    setup(props, { attrs, slots, emit }) {
+      return () =>
+        h(
+          'button',
+          {
+            ...attrs,
+            type: props.type,
+            onClick: (event: MouseEvent) => emit('click', event),
+          },
+          slots.default ? slots.default() : props.label
+        )
+    },
+  }),
 }))
 
 vi.mock('@/components/WorldMap.vue', () => ({
@@ -190,8 +221,22 @@ vi.mock('@/components/DashboardHeader.vue', () => ({
 vi.mock('@/components/NewTenantDialog.vue', () => ({
   default: defineComponent({
     name: 'NewTenantDialogStub',
+    props: {
+      visible: {
+        type: Boolean,
+        default: false,
+      },
+    },
     render() {
-      return h('div', { class: 'new-tenant-dialog-stub' })
+      return h(
+        'div',
+        {
+          class: 'new-tenant-dialog-stub',
+          'data-test': 'new-tenant-dialog',
+          'data-visible': this.visible ? 'open' : 'closed',
+        },
+        this.visible ? 'open' : 'closed'
+      )
     },
   }),
 }))
@@ -285,11 +330,22 @@ export async function waitForLayout() {
 
 export function resetDashboardBrowserHarness() {
   vi.clearAllMocks()
+  selectedTenantRef.value = 'tenant-1'
+  discoveredTenantsRef.value = ['tenant-1']
   normalizeBrowserTestDocument()
   window.localStorage.clear()
 }
 
-export async function mountDashboardViewForBrowser(loadDashboardView: () => Promise<Component>) {
+export function setDashboardBrowserHarnessTenants(tenants: string[], selectedTenant = '') {
+  discoveredTenantsRef.value = [...tenants]
+  selectedTenantRef.value = selectedTenant || tenants[0] || ''
+  loadDiscoveredTenantsMock.mockImplementation(async () => [...discoveredTenantsRef.value])
+}
+
+export async function mountDashboardViewForBrowser(
+  loadDashboardView: () => Promise<Component>,
+  options: { expectLivePanels?: boolean } = {}
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
@@ -317,16 +373,20 @@ export async function mountDashboardViewForBrowser(loadDashboardView: () => Prom
   const chartsSection = document.querySelector('[aria-labelledby="timeline-title"]') as HTMLElement | null
   const connectionsSection = document.querySelector('[aria-labelledby="connections-title"]') as HTMLElement | null
   const scroller = document.querySelector('.connection-list .scroller') as HTMLElement | null
+  const expectLivePanels = options.expectLivePanels ?? true
 
-  if (!layoutScroller || !chartsSection || !connectionsSection || !scroller) {
+  if (expectLivePanels && (!layoutScroller || !chartsSection || !connectionsSection || !scroller)) {
     throw new Error('Dashboard browser harness failed to locate live-connections elements')
   }
 
+  const fallbackSection = document.createElement('section')
+  const fallbackScroller = document.createElement('div')
+
   return {
     container,
-    layoutScroller,
-    chartsSection,
-    connectionsSection,
-    scroller,
+    layoutScroller: layoutScroller ?? container,
+    chartsSection: chartsSection ?? fallbackSection,
+    connectionsSection: connectionsSection ?? fallbackSection,
+    scroller: scroller ?? fallbackScroller,
   }
 }
