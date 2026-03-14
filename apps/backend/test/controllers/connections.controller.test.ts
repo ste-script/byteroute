@@ -161,9 +161,9 @@ describe('Connections Controller', () => {
       const connections = [createConnection()]
       const req = createMockRequest(
         { connections },
-        { 'x-forwarded-for': '203.0.113.1, 198.51.100.1' }
+        { 'x-forwarded-for': '203.0.113.1, 198.51.100.1' },
+        '203.0.113.1'
       )
-      req.ip = '203.0.113.1'
       const res = createMockResponse()
 
       await postConnections(req as Request, res as Response)
