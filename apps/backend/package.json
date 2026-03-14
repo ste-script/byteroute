@@ -21,7 +21,7 @@
     "migrate:indexes": "tsx scripts/ensure-connection-indexes.mjs",
     "pretest:e2e": "pnpm -C ../../packages/shared build",
     "test:e2e": "NODE_OPTIONS='--import tsx' cucumber-js 'test/features/**/*.feature' --import 'test/features/support/**/*.ts' --import 'test/features/step_definitions/**/*.ts'",
-    "docs:api": "typedoc --entryPointStrategy expand --entryPoints src --out docs/api"
+    "docs:api": "typedoc --entryPointStrategy expand --entryPoints src --out docs/api --tsconfig tsconfig.build.json"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:^5.3.0",
