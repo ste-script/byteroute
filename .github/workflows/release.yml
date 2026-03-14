@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   build-test:
+    # Ignore semantic-release's own version bump commit to avoid release loops.
+    if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore(release):') }}
     uses: ./.github/workflows/reusable-build-test.yml
     with:
       run_commitlint: ${{ github.event_name != 'workflow_dispatch' }}
