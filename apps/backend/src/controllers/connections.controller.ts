@@ -11,7 +11,7 @@ import {
   enrichAndStoreConnections,
   storeRawConnections,
 } from "../services/ingest.js";
-import { normalizeIp, firstForwardedFor } from "../utils/ip.js";
+import { normalizeIp } from "../utils/ip.js";
 import {
   tryResolveTenantIdFromRequest,
   userHasTenantAccess,
@@ -60,7 +60,6 @@ export function createConnectionsController(ctx: AppContext) {
         .json({ received: connections.length, status: "processing" });
 
       const reporterIp =
-        firstForwardedFor(req.headers["x-forwarded-for"]) ??
         normalizeIp(req.ip) ??
         normalizeIp(req.socket.remoteAddress);
 
