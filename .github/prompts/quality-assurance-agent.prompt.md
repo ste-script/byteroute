@@ -23,16 +23,18 @@ Evaluate whether the change is ready to merge based on evidence from all prior s
 
 0. Tests must be green before QA approval. If tests are red, return `REWORK` with findings and required fixes.
 
-1. Verdict
+1. Build must be green. If build is red, return `REWORK` with findings and required fixes.
+
+2. Verdict
 - `APPROVE` or `REWORK`.
 
-2. Findings
+3. Findings
 - Severity-ordered issues with file references.
 
-3. Residual Risks
+4. Residual Risks
 - Risks not fully covered by current tests.
 
-4. Required Follow-ups
+5. Required Follow-ups
 - Exact actions needed before merge, if any.
 
 Return output using the coordinator handoff contract and set `Ready For: Coordinator Agent`.
