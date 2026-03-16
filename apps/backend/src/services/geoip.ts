@@ -69,6 +69,16 @@ export class GeoIpService {
     const destIp = normalizeIp(connection.destIp) ?? connection.destIp;
     const reporterIp = normalizeIp(context.reporterIp);
 
+    let effectiveSourceIp = connection.sourceIp;
+    if (
+      sourceIp &&
+      isPrivateIp(sourceIp) &&
+      reporterIp &&
+      !isPrivateIp(reporterIp)
+    ) {
+      effectiveSourceIp = reporterIp;
+    }
+
     // Goal: establish the location of the *source network*.
     // - If sourceIp is public, geo-locate sourceIp.
     // - If sourceIp is private, use reporterIp (public WAN IP) when available.
@@ -100,6 +110,7 @@ export class GeoIpService {
 
     const enriched: Connection = {
       ...connection,
+      sourceIp: effectiveSourceIp,
       // Fill missing source geo fields (don't override if producer already provided values)
       country: connection.country ?? enrichment.country,
       countryCode: connection.countryCode ?? enrichment.countryCode,
