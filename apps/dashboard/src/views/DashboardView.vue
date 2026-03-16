@@ -10,6 +10,7 @@ import StatisticsPanel from '@/components/StatisticsPanel.vue'
 import ConnectionList from '@/components/ConnectionList.vue'
 import DashboardHeader from '@/components/DashboardHeader.vue'
 import NewTenantDialog from '@/components/NewTenantDialog.vue'
+import FirstTenantWizard from '@/components/FirstTenantWizard.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
@@ -299,22 +300,7 @@ onUnmounted(() => {
       class="dashboard-grid dashboard-grid--empty"
       tabindex="-1"
     >
-      <section class="panel empty-tenants-panel" aria-labelledby="empty-tenants-title">
-        <div class="panel-header">
-          <h2 id="empty-tenants-title" class="panel-title">Create your first tenant</h2>
-        </div>
-        <div class="panel-content">
-          <p>
-            No tenants found for this account. Create a tenant to start receiving live
-            connections and statistics.
-          </p>
-          <Button
-            icon="pi pi-plus"
-            label="Create tenant"
-            @click="showNewTenantDialog = true"
-          />
-        </div>
-      </section>
+      <FirstTenantWizard @create-tenant="showNewTenantDialog = true" />
     </main>
 
     <!-- New Tenant Dialog -->
