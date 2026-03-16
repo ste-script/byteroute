@@ -798,6 +798,12 @@ authentication state (user identity, token persistence), tenant selection,
 connection records, and statistics data. Vue Router provides client-side
 navigation between the map view, the connection list, and the statistics panels.
 
+The dashboard also implements a first run onboarding mode for users who do not yet
+own any tenant. In this state, the main monitoring grid is replaced by a
+\texttt{FirstTenantWizard} panel that explains the onboarding steps (create a tenant,
+then connect a client token), previews the four primary dashboard sections, and
+offers a direct action to open the tenant creation dialog.
+
 In production, Nginx serves the pre-built static bundle and proxies
 \texttt{/api}, \texttt{/auth}, and \texttt{/socket.io} to the backend
 container. The \texttt{VITE\_SOCKET\_URL} environment variable controls the
@@ -981,6 +987,11 @@ dashboard screens, especially the main monitoring view, where responsiveness,
 scroll behavior, and cross-browser rendering need to be validated under
 realistic conditions. Screenshot capture is enabled for failures, which
 provides a concrete visual artifact during local debugging and CI analysis.
+
+The browser suite additionally validates first-run onboarding behavior by checking
+that the tenant wizard is rendered when no tenants are present and that its
+primary call-to-action opens the tenant creation dialog, including in the
+mobile profile.
 
 This browser layer complements, rather than replaces, the lighter unit tests
 executed in \texttt{happy-dom}. The resulting strategy combines rapid feedback

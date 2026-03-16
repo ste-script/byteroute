@@ -461,6 +461,13 @@ The development server (Vite) proxies \texttt{/api}, \texttt{/auth}, and
 \texttt{/socket.io} to the backend on port 4000, eliminating CORS issues during development.
 In production, Traefik provides the same unified origin.
 
+For first run onboarding, the dashboard now includes a dedicated wizard shown when the
+authenticated user has no tenants yet. The wizard summarizes two startup steps (create a
+tenant workspace, then connect a client token) and provides a section guide for the main
+dashboard areas (World Traffic, Statistics, Live Connections, Traffic Timeline). Its primary
+call-to-action opens the tenant creation dialog directly, reducing setup friction and making
+the empty state actionable.
+
 % =========================================================
 \chapter{Technologies}
 \label{ch:technologies}
@@ -732,6 +739,10 @@ are difficult to validate in a DOM simulator alone, in particular responsive lay
 viewport dependent scrolling, and the visibility of critical interface elements such as the
 live connections panel. On failure, screenshots are written to
 \texttt{apps/dashboard/reports/browser-screenshots/} to support regression analysis.
+
+Recent browser scenarios also verify the first-run onboarding flow: when no tenant exists,
+the wizard must be visible and its primary action must open the tenant creation dialog,
+including in the mobile viewport profile.
 
 Execution is exposed through the workspace command
 \texttt{pnpm -F @byteroute/dashboard test:browser}. In a fresh environment, the required
