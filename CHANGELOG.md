@@ -1,3 +1,13 @@
+## [5.7.0](https://github.com/ste-script/byteroute/compare/v5.6.0...v5.7.0) (2026-03-16)
+
+### Features
+
+* **dashboard:** wizard ([5fb111f](https://github.com/ste-script/byteroute/commit/5fb111f7c39237d2996604bbadb7122b0432f6f6))
+
+### Bug Fixes
+
+* ip provenience ([dd05a17](https://github.com/ste-script/byteroute/commit/dd05a171da1058b9677f63a6c02e366576c21cc1))
+
 ## [5.6.0](https://github.com/ste-script/byteroute/compare/v5.5.1...v5.6.0) (2026-03-13)
 
 ### Features
