@@ -20,6 +20,7 @@ export function useStatisticsCharts(
   const countryChartOption = computed(() => {
     const data = statistics.value?.byCountry ?? []
     const topCountries = data.slice(0, 10)
+    const displayedCountries = [...topCountries].reverse()
 
     return {
       backgroundColor: 'transparent',
@@ -33,7 +34,7 @@ export function useStatisticsCharts(
         axisPointer: { type: 'shadow' },
         formatter: (params: { name: string; value: number; dataIndex: number }[]) => {
           const item = params[0]!
-          const country = topCountries[item.dataIndex]
+          const country = displayedCountries[item.dataIndex]
           return `${country?.country || item.name}<br/>
             Connections: ${country?.connections || 0}<br/>
             Bandwidth: ${formatBytes(country?.bandwidth || 0)}<br/>
@@ -48,12 +49,12 @@ export function useStatisticsCharts(
       },
       yAxis: {
         type: 'category',
-        data: topCountries.map((c) => c.countryCode || c.country).reverse(),
+        data: displayedCountries.map((c) => c.countryCode || c.country),
         axisLabel: { color: textColor.value, fontSize: 10 },
       },
       series: [{
         type: 'bar',
-        data: topCountries.map((c) => c.connections).reverse(),
+        data: displayedCountries.map((c) => c.connections),
         itemStyle: {
           color: (params: { dataIndex: number }) =>
             CHART_COLORS[params.dataIndex % CHART_COLORS.length],
@@ -68,6 +69,7 @@ export function useStatisticsCharts(
     const topAsns = [...data]
       .sort((a, b) => b.connections - a.connections)
       .slice(0, 10)
+    const displayedAsns = [...topAsns].reverse()
 
     return {
       backgroundColor: 'transparent',
@@ -81,7 +83,7 @@ export function useStatisticsCharts(
         axisPointer: { type: 'shadow' },
         formatter: (params: { name: string; value: number; dataIndex: number }[]) => {
           const item = params[0]!
-          const asn = topAsns[item.dataIndex]
+          const asn = displayedAsns[item.dataIndex]
           const title = asn?.asOrganization ? `AS${asn.asn} (${asn.asOrganization})` : `AS${asn?.asn ?? item.name}`
           return `${title}<br/>
             Connections: ${asn?.connections || 0}<br/>
@@ -97,12 +99,12 @@ export function useStatisticsCharts(
       },
       yAxis: {
         type: 'category',
-        data: topAsns.map((a) => `${a.asOrganization}`).reverse(),
+        data: displayedAsns.map((a) => `${a.asOrganization}`),
         axisLabel: { color: textColor.value, fontSize: 10 },
       },
       series: [{
         type: 'bar',
-        data: topAsns.map((a) => a.connections).reverse(),
+        data: displayedAsns.map((a) => a.connections),
         itemStyle: {
           color: (params: { dataIndex: number }) =>
             CHART_COLORS[params.dataIndex % CHART_COLORS.length],

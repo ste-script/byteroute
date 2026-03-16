@@ -65,15 +65,16 @@ describe('useStatisticsCharts', () => {
       expect(countryChartOption.value.xAxis.splitLine.lineStyle.color).toBe('#e0e0e0')
     })
 
-    it('invokes the tooltip formatter with country data', () => {
+    it('tooltip formatter maps hovered bar to the displayed country after reversal', () => {
       const stats = ref<Statistics | null>(makeStats())
       const dark = ref(false)
       const { countryChartOption } = useStatisticsCharts(stats, dark)
 
       const formatter = countryChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
-      const result = formatter([{ name: 'US', value: 50, dataIndex: 0 }])
-      expect(result).toContain('United States')
-      expect(result).toContain('50')
+      // Chart data is reversed for display, so index 0 points to Germany.
+      const result = formatter([{ name: 'DE', value: 30, dataIndex: 0 }])
+      expect(result).toContain('Germany')
+      expect(result).toContain('30')
     })
 
     it('invokes the tooltip formatter with missing country data', () => {
@@ -146,14 +147,15 @@ describe('useStatisticsCharts', () => {
       expect(yData[yData.length - 1]).toBe('Large')
     })
 
-    it('tooltip formatter shows ASN org and connections', () => {
+    it('tooltip formatter maps hovered bar to the displayed ASN after reversal', () => {
       const stats = ref<Statistics | null>(makeStats())
       const dark = ref(false)
       const { asnChartOption } = useStatisticsCharts(stats, dark)
 
       const formatter = asnChartOption.value.tooltip.formatter as (...args: unknown[]) => unknown
-      const result = formatter([{ name: 'AS13335', value: 40, dataIndex: 0 }])
-      expect(result).toContain('Cloudflare')
+      // Chart data is reversed for display, so index 0 points to Google LLC.
+      const result = formatter([{ name: 'Google LLC', value: 30, dataIndex: 0 }])
+      expect(result).toContain('Google LLC')
     })
 
     it('tooltip formatter handles ASN without organization', () => {
