@@ -5,6 +5,7 @@ import type { Component } from 'vue'
 import {
   mountDashboardViewForBrowser,
   resetDashboardBrowserHarness,
+  waitForLayout,
 } from './dashboardBrowserHarness'
 
 describe('DashboardView desktop browsers', () => {
@@ -30,5 +31,42 @@ describe('DashboardView desktop browsers', () => {
     expect(layoutScroller.scrollTop).toBe(0)
     expect(scroller.clientHeight).toBeGreaterThan(0)
     expect(sectionRect.top).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps live connections reachable via page scroll on compact desktop heights', async () => {
+    await page.viewport(1000, 800)
+
+    const { layoutScroller, connectionsSection } = await mountDashboardViewForBrowser(
+      async () => ((await import('../../views/DashboardView.vue')) as { default: Component }).default,
+    )
+    const dashboardGrid = document.querySelector('.dashboard-grid') as HTMLElement | null
+    const documentScroller = document.scrollingElement as HTMLElement
+    const scrollCandidates = [dashboardGrid, layoutScroller, documentScroller].filter(
+      (element): element is HTMLElement => Boolean(element),
+    )
+    const scrollElement = scrollCandidates.find(
+      (element) => element.scrollHeight > element.clientHeight,
+    ) ?? layoutScroller
+
+    const heading = page.getByRole('heading', { name: 'Live Connections' })
+
+    expect(scrollElement.scrollHeight).toBeGreaterThan(scrollElement.clientHeight)
+
+    let reachedConnections = false
+
+    for (const candidate of scrollCandidates) {
+      candidate.scrollTo({ top: candidate.scrollHeight, behavior: 'auto' })
+      await waitForLayout()
+
+      const sectionRect = connectionsSection.getBoundingClientRect()
+      if (sectionRect.top < window.innerHeight && sectionRect.bottom > 0) {
+        reachedConnections = true
+        break
+      }
+    }
+
+    expect(reachedConnections).toBe(true)
+
+    await expect.element(heading).toBeVisible()
   })
 })
