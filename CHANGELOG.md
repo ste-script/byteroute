@@ -1,3 +1,13 @@
+## [5.7.1](https://github.com/ste-script/byteroute/compare/v5.7.0...v5.7.1) (2026-03-16)
+
+### Bug Fixes
+
+* **backend:** ip enrichment geolocation ([3b519ce](https://github.com/ste-script/byteroute/commit/3b519cedf24c06bd31dc1ee77462e3e76a2a5004))
+* **dashboard:** tooltip order ([bc9df78](https://github.com/ste-script/byteroute/commit/bc9df7842368f7588999357a9541ff59d457f965))
+* **dashboard:** view resize bug ([972a96c](https://github.com/ste-script/byteroute/commit/972a96ce7dbdd4d7e0a8443b2dde472e30626380))
+* ip provenience ([9022d3c](https://github.com/ste-script/byteroute/commit/9022d3c3639846ac0ae739e5d1d177aa32ce489e))
+* ip provenience ([aedeb47](https://github.com/ste-script/byteroute/commit/aedeb4748f515f099805ea51b80441f1b7bf9699))
+
 ## [5.7.0](https://github.com/ste-script/byteroute/compare/v5.6.0...v5.7.0) (2026-03-16)
 
 ### Features
