@@ -39,7 +39,11 @@ Use this workflow whenever you want high-confidence delivery with a Red -> Green
 - Keep behavior identical.
 - Re-run impacted tests after each refactor slice.
 
-6. Final Quality Gate
+6. Document and Communicate
+- Update code comments, docstrings, or related docs if needed.
+- Update latex documentation with the LaTeX Doc Updater Agent if behavior changes or new commands are introduced.
+
+7. Final Quality Gate
 - Summarize evidence that behavior is correct.
 - Call out residual risk and missing coverage.
 
@@ -63,6 +67,13 @@ Pick only commands relevant to touched areas.
 - Keep backend route/controller/service/domain boundaries intact.
 - Keep dashboard transport concerns in stores/services, not scattered in views.
 - Preserve Go native and `apps/client-go/Dockerfile.static` build parity.
+
+## LaTeX Agents
+
+For LaTeX documentation work, use dedicated prompt agents in `.github/prompts`:
+
+- Update docs agent: `.github/prompts/latex-doc-updater-agent.prompt.md`
+- Repo alignment review agent: `.github/prompts/latex-doc-repo-reviewer-agent.prompt.md`
 
 ## Output Format
 
