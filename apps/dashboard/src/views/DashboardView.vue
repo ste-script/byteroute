@@ -412,6 +412,8 @@ onUnmounted(() => {
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: t.$dashboard-map-row-height-xl t.$dashboard-charts-row-height auto;
+    overflow-x: hidden;
+    overflow-y: auto;
 
     .map-panel {
       grid-column: 1;
@@ -426,7 +428,39 @@ onUnmounted(() => {
     .sidebar-panel {
       grid-column: 1;
       grid-row: 3;
-      max-height: t.$dashboard-sidebar-max-height-xl;
+      max-height: none;
+      height: auto;
+      overflow: visible;
+    }
+
+    .sidebar-sections {
+      display: block;
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+    }
+
+    .sidebar-section {
+      overflow: visible;
+    }
+
+    .sidebar-section + .sidebar-section {
+      border-top: 1px solid var(--p-surface-border);
+    }
+
+    .sidebar-section .panel-content {
+      flex: none;
+      overflow: visible;
+    }
+
+    .statistics-section,
+    .connections-section {
+      flex: none;
+    }
+
+    .connections-section,
+    .connections-section .panel-content {
+      min-height: t.$dashboard-sidebar-min-height-md;
     }
   }
 }
