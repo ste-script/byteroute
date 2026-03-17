@@ -335,6 +335,10 @@ onMounted(async () => {
 .page-size-select {
   min-width: 5rem;
   padding: 0.3rem 0.5rem;
+  border: 1px solid var(--p-surface-border);
+  border-radius: var(--p-border-radius);
+  background: var(--p-surface-card);
+  color: var(--p-text-color);
 }
 
 .page-indicator {
@@ -356,6 +360,8 @@ onMounted(async () => {
 
   th {
     font-size: 0.875rem;
+    background: var(--p-surface-ground);
+    color: var(--p-text-color);
   }
 
   td {

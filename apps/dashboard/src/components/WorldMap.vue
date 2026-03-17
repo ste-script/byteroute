@@ -242,14 +242,35 @@ defineExpose({
   width: 100%;
   height: 100%;
   position: relative;
+  background: var(--p-surface-ground);
 
   :deep(.maplibregl-canvas) {
     outline: none;
   }
 
+  :deep(.maplibregl-ctrl-group) {
+    border: 1px solid var(--p-surface-border);
+    background: var(--p-surface-card);
+  }
+
+  :deep(.maplibregl-ctrl-group button) {
+    color: var(--p-text-color);
+    background: transparent;
+  }
+
+  :deep(.maplibregl-ctrl-group button:hover) {
+    background: var(--p-surface-hover);
+  }
+
   :deep(.maplibregl-ctrl-attrib) {
     font-size: 10px;
     opacity: 0.7;
+    color: var(--p-text-color);
+    background: color-mix(in srgb, var(--p-surface-card), transparent 15%);
+  }
+
+  :deep(.maplibregl-ctrl-attrib a) {
+    color: inherit;
   }
 }
 </style>

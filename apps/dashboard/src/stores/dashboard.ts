@@ -4,6 +4,34 @@ import type { Connection, TrafficFlow, Statistics } from '@/types'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const MAX_CONNECTIONS_IN_MEMORY = 500
+  const DARK_MODE_STORAGE_KEY = 'byteroute:dark-mode'
+
+  function resolveInitialDarkMode(): boolean {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    const saved = window.localStorage.getItem(DARK_MODE_STORAGE_KEY)
+    if (saved === 'true') {
+      return true
+    }
+    if (saved === 'false') {
+      return false
+    }
+
+    if (typeof window.matchMedia === 'function') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+
+    return false
+  }
+
+  function syncDarkModeClass(enabled: boolean) {
+    if (typeof document === 'undefined') {
+      return
+    }
+    document.documentElement.classList.toggle('dark-mode', enabled)
+  }
 
   // State
   const connections = ref<Connection[]>([])
@@ -11,7 +39,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const statistics = ref<Statistics | null>(null)
   const isConnected = ref(false)
   const lastUpdated = ref<Date | null>(null)
-  const darkMode = ref(false)
+  const darkMode = ref(resolveInitialDarkMode())
+
+  syncDarkModeClass(darkMode.value)
 
   // Getters
   const activeConnections = computed(() => 
@@ -85,7 +115,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   function toggleDarkMode() {
     darkMode.value = !darkMode.value
-    document.documentElement.classList.toggle('dark-mode', darkMode.value)
+    syncDarkModeClass(darkMode.value)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(DARK_MODE_STORAGE_KEY, String(darkMode.value))
+    }
   }
 
   function clearAll() {
