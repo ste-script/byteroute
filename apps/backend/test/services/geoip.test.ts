@@ -82,6 +82,30 @@ describe("geoip enrichment", () => {
     expect(enriched.countryCode).toBe("US");
   });
 
+  it("replaces private sourceIp with reporter public IP", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "192.168.1.10",
+        destIp: "1.1.1.1",
+      }),
+      { reporterIp: "8.8.8.8" }
+    );
+
+    expect(enriched.sourceIp).toBe("8.8.8.8");
+  });
+
+  it("does not replace public sourceIp with reporter IP", async () => {
+    const enriched = await geoip.enrichConnection(
+      baseConnection({
+        sourceIp: "1.1.1.1",
+        destIp: "8.8.8.8",
+      }),
+      { reporterIp: "8.8.8.8" }
+    );
+
+    expect(enriched.sourceIp).toBe("1.1.1.1");
+  });
+
   it("does not override producer-provided geo fields", async () => {
     const enriched = await geoip.enrichConnection(
       baseConnection({
