@@ -16,14 +16,19 @@ vi.mock('../../src/utils/ip.js', () => ({
 import { enrichAndStoreConnections, storeRawConnections } from '../../src/services/ingest.js'
 import { resolveReporterIp } from '../../src/utils/ip.js'
 
-const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Request> & {
+const createMockRequest = (
+  body?: any,
+  headers?: any,
+  ip?: string,
+  ips?: string[]
+): Partial<Request> & {
   app: any
   socket: any
 } => ({
   body: body ?? {},
   headers: { 'x-tenant-id': 'default', ...(headers ?? {}) },
   ip: ip ?? '127.0.0.1',
-  ips: [],
+  ips: ips ?? [],
   user: {
     tenantIds: ['default']
   },
@@ -163,9 +168,9 @@ describe('Connections Controller', () => {
       const req = createMockRequest(
         { connections },
         { 'x-forwarded-for': '203.0.113.1, 198.51.100.1' },
-        '203.0.113.1'
+        '203.0.113.1',
+        ['203.0.113.1', '172.18.0.10']
       )
-      req.ips = ['203.0.113.1', '172.18.0.10']
       const res = createMockResponse()
 
       await postConnections(req as Request, res as Response)
