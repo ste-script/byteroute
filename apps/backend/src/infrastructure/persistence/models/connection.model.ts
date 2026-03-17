@@ -22,6 +22,11 @@ const connectionSchema = new Schema(
     city: { type: String },
     latitude: { type: Number },
     longitude: { type: Number },
+    destCountry: { type: String },
+    destCountryCode: { type: String },
+    destCity: { type: String },
+    destLatitude: { type: Number },
+    destLongitude: { type: Number },
 
     asn: { type: Number },
     asOrganization: { type: String },
