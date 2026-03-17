@@ -11,7 +11,7 @@ import {
   enrichAndStoreConnections,
   storeRawConnections,
 } from "../services/ingest.js";
-import { normalizeIp } from "../utils/ip.js";
+import { resolveReporterIp } from "../utils/ip.js";
 import {
   tryResolveTenantIdFromRequest,
   userHasTenantAccess,
@@ -59,9 +59,13 @@ export function createConnectionsController(ctx: AppContext) {
         .status(202)
         .json({ received: connections.length, status: "processing" });
 
-      const reporterIp =
-        normalizeIp(req.ip) ??
-        normalizeIp(req.socket.remoteAddress);
+      const reporterIp = resolveReporterIp({
+        reqIp: req.ip,
+        reqIps: req.ips,
+        xForwardedFor: req.headers["x-forwarded-for"],
+        xRealIp: req.headers["x-real-ip"],
+        remoteAddress: req.socket.remoteAddress,
+      });
 
       void enrichAndStoreConnections(io, connections, {
         reporterIp,
