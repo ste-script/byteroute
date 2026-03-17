@@ -804,6 +804,29 @@ own any tenant. In this state, the main monitoring grid is replaced by a
 then connect a client token), previews the four primary dashboard sections, and
 offers a direct action to open the tenant creation dialog.
 
+\subsection{Historical Search}
+
+The dashboard exposes a dedicated route, \texttt{/history-search}, for querying
+historical connection records stored in MongoDB. The page uses a typed service
+wrapper that calls \texttt{GET /api/connections/history} and sends the currently
+selected tenant through the \texttt{X-Tenant-Id} header.
+
+The backend enforces two levels of scope for this endpoint: the authenticated
+principal must have access to the selected tenant, and the tenant must be owned by
+that principal. This ensures historical records are visible only within the
+currently logged-in user's tenant boundary.
+
+Search controls include free text matching (IP, country, city, ASN organization),
+status and protocol filters, and optional time bounds (\texttt{from}/\texttt{to}).
+The result table includes source, destination, protocol, status, ASN
+(organization and number), location, and last activity timestamp.
+
+Pagination is explicitly tied to backend query parameters:\
+\texttt{limit} controls page size and \texttt{offset} controls the starting index.
+The UI provides next/previous navigation and page size selection; changing page
+size resets the offset to zero. The filter panel is implemented as a submit form,
+so pressing Enter triggers a search without requiring a mouse click.
+
 In production, Nginx serves the pre-built static bundle and proxies
 \texttt{/api}, \texttt{/auth}, and \texttt{/socket.io} to the backend
 container. The \texttt{VITE\_SOCKET\_URL} environment variable controls the

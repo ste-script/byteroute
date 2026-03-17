@@ -468,6 +468,29 @@ dashboard areas (World Traffic, Statistics, Live Connections, Traffic Timeline).
 call-to-action opens the tenant creation dialog directly, reducing setup friction and making
 the empty state actionable.
 
+\subsection{Historical Search Page}
+
+In addition to live monitoring views, the dashboard includes a dedicated
+\texttt{/history-search} page for querying previously stored connections.
+The frontend calls \texttt{GET /api/connections/history} with the selected tenant
+identifier in \texttt{X-Tenant-Id}, then renders a tabular result set with
+source/destination IPs, protocol, status, ASN (organization + number), location,
+and last activity.
+
+The query interface supports text search and structured filters
+(status, protocol, and optional \texttt{from}/\texttt{to} time bounds).
+Pagination is mapped directly to backend parameters:\
+\texttt{limit} (page size) and \texttt{offset} (record index).
+Next/previous controls adjust \texttt{offset} by the active page size,
+while changing page size resets \texttt{offset} to zero.
+
+To improve keyboard usability, the search controls are wrapped in a form;
+pressing Enter triggers a search submission.
+
+On the backend, this endpoint is tenant scoped and ownership checked:
+the authenticated user must both have access to the tenant and own it,
+ensuring cross tenant historical data cannot be queried.
+
 % =========================================================
 \chapter{Technologies}
 \label{ch:technologies}
