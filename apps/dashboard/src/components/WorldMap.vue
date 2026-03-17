@@ -4,6 +4,7 @@ import maplibregl from 'maplibre-gl'
 import { Deck } from '@deck.gl/core'
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers'
 import type { TrafficFlow, MapViewState } from '@/types'
+import { buildRenderableFlows } from './worldMapLayers'
 
 interface Props {
   flows?: TrafficFlow[]
@@ -125,23 +126,24 @@ function updateLayers() {
   if (!deck.value) return
 
   const layers = []
+  const renderableFlows = buildRenderableFlows(props.flows)
 
   // Arc layer for traffic flows
-  if (props.flows.length > 0) {
+  if (renderableFlows.length > 0) {
     layers.push(
       new ArcLayer({
         id: 'traffic-arcs',
-        data: props.flows,
-        getSourcePosition: (d: TrafficFlow) => [d.source.lng, d.source.lat],
-        getTargetPosition: (d: TrafficFlow) => [d.target.lng, d.target.lat],
-        getSourceColor: (d: TrafficFlow) => d.color || [0, 128, 255, 200],
-        getTargetColor: (d: TrafficFlow) => d.color || [255, 100, 100, 200],
-        getWidth: (d: TrafficFlow) => Math.max(1, Math.min(d.value / 10000, 8)),
+        data: renderableFlows,
+        getSourcePosition: (d) => d.sourcePosition,
+        getTargetPosition: (d) => d.targetPosition,
+        getSourceColor: (d) => d.sourceColor,
+        getTargetColor: (d) => d.targetColor,
+        getWidth: (d) => d.arcWidth,
         greatCircle: true,
         pickable: false,
-        onClick: (info: { object?: TrafficFlow }) => {
+        onClick: (info: { object?: { flow: TrafficFlow } }) => {
           if (info.object) {
-            emit('flowClick', info.object)
+            emit('flowClick', info.object.flow)
           }
         }
       })
@@ -151,9 +153,9 @@ function updateLayers() {
     layers.push(
       new ScatterplotLayer({
         id: 'source-points',
-        data: props.flows,
-        getPosition: (d: TrafficFlow) => [d.source.lng, d.source.lat],
-        getRadius: (d: TrafficFlow) => Math.max(4, Math.min(d.value / 50, 20)),
+        data: renderableFlows,
+        getPosition: (d) => d.sourcePosition,
+        getRadius: (d) => d.pointRadius,
         getFillColor: [0, 128, 255, 180],
         getLineColor: [255, 255, 255, 200],
         lineWidthMinPixels: 1,
@@ -167,9 +169,9 @@ function updateLayers() {
     layers.push(
       new ScatterplotLayer({
         id: 'target-points',
-        data: props.flows,
-        getPosition: (d: TrafficFlow) => [d.target.lng, d.target.lat],
-        getRadius: (d: TrafficFlow) => Math.max(4, Math.min(d.value / 50, 20)),
+        data: renderableFlows,
+        getPosition: (d) => d.targetPosition,
+        getRadius: (d) => d.pointRadius,
         getFillColor: [255, 100, 100, 180],
         getLineColor: [255, 255, 255, 200],
         lineWidthMinPixels: 1,

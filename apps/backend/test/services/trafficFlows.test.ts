@@ -99,4 +99,30 @@ describe("deriveTrafficFlows", () => {
     expect(flows[0]?.value).toBe(0);
     expect(getBandwidthColor).toHaveBeenCalledWith(0);
   });
+
+  it("skips connections with non-finite coordinates", () => {
+    const flows = deriveTrafficFlows([
+      baseConnection({ latitude: Number.NaN }),
+      baseConnection({ longitude: Number.POSITIVE_INFINITY }),
+      baseConnection({ destLatitude: Number.NaN }),
+      baseConnection({ destLongitude: Number.NEGATIVE_INFINITY }),
+    ]);
+
+    expect(flows).toHaveLength(0);
+  });
+
+  it("skips connections with out-of-range coordinates", () => {
+    const flows = deriveTrafficFlows([
+      baseConnection({ latitude: 91 }),
+      baseConnection({ latitude: -91 }),
+      baseConnection({ longitude: 181 }),
+      baseConnection({ longitude: -181 }),
+      baseConnection({ destLatitude: 91 }),
+      baseConnection({ destLatitude: -91 }),
+      baseConnection({ destLongitude: 181 }),
+      baseConnection({ destLongitude: -181 }),
+    ]);
+
+    expect(flows).toHaveLength(0);
+  });
 });
