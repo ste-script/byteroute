@@ -7,6 +7,21 @@ import { getBandwidthColor } from "../../utils/bandwidth.js";
 
 let flowIdCounter = 0;
 
+function isFiniteNumber(value: number): boolean {
+  return Number.isFinite(value);
+}
+
+function isValidLatLng(latitude: number, longitude: number): boolean {
+  return (
+    isFiniteNumber(latitude) &&
+    isFiniteNumber(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
 /**
  * Derives traffic flows.
  * @param connections - The connections input.
@@ -28,7 +43,9 @@ export function deriveTrafficFlows(connections: Connection[]): TrafficFlow[] {
         c.latitude != null &&
         c.longitude != null &&
         c.destLatitude != null &&
-        c.destLongitude != null,
+        c.destLongitude != null &&
+        isValidLatLng(c.latitude, c.longitude) &&
+        isValidLatLng(c.destLatitude, c.destLongitude),
     )
     .slice(0, 20)
     .map((c) => ({
