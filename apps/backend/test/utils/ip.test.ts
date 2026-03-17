@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeIp, firstForwardedFor, isPrivateIp, isPrivateIpv4 } from '../../src/utils/ip.js'
+import {
+  normalizeIp,
+  firstForwardedFor,
+  isPrivateIp,
+  isPrivateIpv4,
+  resolveReporterIp,
+} from '../../src/utils/ip.js'
 
 describe('IP Utils', () => {
   describe('normalizeIp', () => {
@@ -122,6 +128,47 @@ describe('IP Utils', () => {
       expect(isPrivateIp('::1')).toBe(false)
       expect(isPrivateIp('fe80::1')).toBe(false)
       expect(isPrivateIp('2001:db8::1')).toBe(false)
+    })
+  })
+
+  describe('resolveReporterIp', () => {
+    it('prefers first public IP in req.ips chain', () => {
+      expect(
+        resolveReporterIp({
+          reqIps: ['10.201.108.203', '198.51.100.22', '172.18.0.4'],
+          reqIp: '10.201.108.203',
+          remoteAddress: '172.18.0.4',
+        })
+      ).toBe('198.51.100.22')
+    })
+
+    it('falls back to first normalized candidate when all are private', () => {
+      expect(
+        resolveReporterIp({
+          reqIps: ['10.201.108.203', '172.18.0.4'],
+          reqIp: '10.201.108.203',
+          remoteAddress: '172.18.0.4',
+        })
+      ).toBe('10.201.108.203')
+    })
+
+    it('uses x-forwarded-for when req.ips is unavailable', () => {
+      expect(
+        resolveReporterIp({
+          xForwardedFor: '10.201.108.203, 203.0.113.9',
+          remoteAddress: '172.18.0.4',
+        })
+      ).toBe('203.0.113.9')
+    })
+
+    it('uses x-real-ip when present and public', () => {
+      expect(
+        resolveReporterIp({
+          reqIp: '10.201.108.203',
+          xRealIp: '203.0.113.44',
+          remoteAddress: '172.18.0.4',
+        })
+      ).toBe('203.0.113.44')
     })
   })
 })

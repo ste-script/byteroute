@@ -59,6 +59,48 @@ export function firstForwardedFor(header: unknown): string | undefined {
 }
 
 /**
+ * Resolves reporter IP from request-derived candidates.
+ * @param input - Candidate IP sources from the HTTP request.
+ * @returns The most reliable reporter IP.
+ */
+
+export function resolveReporterIp(input: {
+  reqIp?: string;
+  reqIps?: string[];
+  xForwardedFor?: unknown;
+  xRealIp?: unknown;
+  remoteAddress?: string | null;
+}): string | undefined {
+  const fromReqIps = Array.isArray(input.reqIps) ? input.reqIps : [];
+
+  const fromXForwardedFor =
+    typeof input.xForwardedFor === "string"
+      ? input.xForwardedFor.split(",").map((entry) => entry.trim())
+      : [];
+
+  const fromXRealIp =
+    typeof input.xRealIp === "string" ? [input.xRealIp.trim()] : [];
+
+  const rawCandidates = [
+    ...fromReqIps,
+    ...fromXForwardedFor,
+    ...fromXRealIp,
+    input.reqIp,
+    input.remoteAddress ?? undefined,
+  ];
+
+  const normalizedCandidates = rawCandidates
+    .map((candidate) => normalizeIp(candidate))
+    .filter((candidate): candidate is string => Boolean(candidate));
+
+  const publicCandidate = normalizedCandidates.find(
+    (candidate) => !isPrivateIp(candidate),
+  );
+
+  return publicCandidate ?? normalizedCandidates[0];
+}
+
+/**
  * Checks whether private ipv4 is satisfied.
  * @param ip - The IP input.
  * @returns True when private ipv4 is satisfied.

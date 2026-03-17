@@ -54,9 +54,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Install LaTeX
-        run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
-
       - name: Lint commits (Conventional Commits)
         if: ${{ inputs.run_commitlint }}
         shell: bash
@@ -97,11 +94,6 @@ jobs:
 
       - name: Build
         run: pnpm -w build
-
-      - name: Validate LaTeX docs compilation
-        run: |
-          cd docs
-          make pdf
 
       - name: Test Go client with coverage
         run: |
@@ -162,6 +154,20 @@ jobs:
             apps/client-go/coverage.cobertura.xml
             code-coverage-results.md
           retention-days: 30
+
+  docs-latex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install LaTeX
+        run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended
+
+      - name: Validate LaTeX docs compilation
+        run: |
+          cd docs
+          make pdf
 
   dashboard-browser-test:
     runs-on: ubuntu-latest

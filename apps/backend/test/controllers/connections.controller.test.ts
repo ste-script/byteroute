@@ -10,19 +10,25 @@ vi.mock('../../src/services/ingest.js', () => ({
 }))
 
 vi.mock('../../src/utils/ip.js', () => ({
-  normalizeIp: vi.fn((ip) => ip?.toString().trim() || undefined)
+  resolveReporterIp: vi.fn(() => '127.0.0.1')
 }))
 
 import { enrichAndStoreConnections, storeRawConnections } from '../../src/services/ingest.js'
-import { normalizeIp } from '../../src/utils/ip.js'
+import { resolveReporterIp } from '../../src/utils/ip.js'
 
-const createMockRequest = (body?: any, headers?: any, ip?: string): Partial<Request> & {
+const createMockRequest = (
+  body?: any,
+  headers?: any,
+  ip?: string,
+  ips?: string[]
+): Partial<Request> & {
   app: any
   socket: any
 } => ({
   body: body ?? {},
   headers: { 'x-tenant-id': 'default', ...(headers ?? {}) },
   ip: ip ?? '127.0.0.1',
+  ips: ips ?? [],
   user: {
     tenantIds: ['default']
   },
@@ -162,16 +168,23 @@ describe('Connections Controller', () => {
       const req = createMockRequest(
         { connections },
         { 'x-forwarded-for': '203.0.113.1, 198.51.100.1' },
-        '203.0.113.1'
+        '203.0.113.1',
+        ['203.0.113.1', '172.18.0.10']
       )
       const res = createMockResponse()
 
       await postConnections(req as Request, res as Response)
 
-      expect(normalizeIp).toHaveBeenCalledWith('203.0.113.1')
+      expect(resolveReporterIp).toHaveBeenCalledWith({
+        reqIp: '203.0.113.1',
+        reqIps: ['203.0.113.1', '172.18.0.10'],
+        xForwardedFor: '203.0.113.1, 198.51.100.1',
+        xRealIp: undefined,
+        remoteAddress: '127.0.0.1'
+      })
     })
 
-    it('should use socket remoteAddress if req.ip is missing', async () => {
+    it('should include socket remoteAddress for resolver fallback', async () => {
       const connections = [createConnection()]
       const req = createMockRequest({ connections }, {}, '')
       req.socket.remoteAddress = '203.0.113.9'
@@ -179,8 +192,12 @@ describe('Connections Controller', () => {
 
       await postConnections(req as Request, res as Response)
 
-      expect(normalizeIp).toHaveBeenCalledWith('')
-      expect(normalizeIp).toHaveBeenCalledWith('203.0.113.9')
+      expect(resolveReporterIp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reqIp: '',
+          remoteAddress: '203.0.113.9'
+        })
+      )
     })
 
     it('should fall back to socket remoteAddress when req.ip is missing', async () => {
@@ -191,8 +208,12 @@ describe('Connections Controller', () => {
 
       await postConnections(req as Request, res as Response)
 
-      expect(normalizeIp).toHaveBeenCalledWith('')
-      expect(normalizeIp).toHaveBeenCalledWith('203.0.113.9')
+      expect(resolveReporterIp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reqIp: '',
+          remoteAddress: '203.0.113.9'
+        })
+      )
     })
 
     it('should respond immediately (fire-and-forget)', async () => {
