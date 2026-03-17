@@ -826,6 +826,12 @@ Pagination is explicitly tied to backend query parameters:\
 The UI provides next/previous navigation and page size selection; changing page
 size resets the offset to zero. The filter panel is implemented as a submit form,
 so pressing Enter triggers a search without requiring a mouse click.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{dashboard.png}
+  \caption{ByteRoute dashboard screenshot captured from the browser while connected to the University of Bologna, Cesena campus LAN.}
+  \label{fig:dashboard-cesena-spe}
+\end{figure}
 
 In production, Nginx serves the pre-built static bundle and proxies
 \texttt{/api}, \texttt{/auth}, and \texttt{/socket.io} to the backend
