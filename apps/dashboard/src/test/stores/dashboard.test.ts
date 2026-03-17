@@ -6,6 +6,8 @@ import type { Connection, TrafficFlow, Statistics } from '@/types'
 describe('Dashboard Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    window.localStorage.clear()
+    document.documentElement.classList.remove('dark-mode')
   })
 
   describe('initial state', () => {
@@ -32,6 +34,15 @@ describe('Dashboard Store', () => {
     it('should have dark mode disabled by default', () => {
       const store = useDashboardStore()
       expect(store.darkMode).toBe(false)
+    })
+
+    it('should initialize dark mode from localStorage', () => {
+      window.localStorage.setItem('byteroute:dark-mode', 'true')
+
+      const store = useDashboardStore()
+
+      expect(store.darkMode).toBe(true)
+      expect(document.documentElement.classList.contains('dark-mode')).toBe(true)
     })
   })
 
@@ -221,9 +232,13 @@ describe('Dashboard Store', () => {
       
       store.toggleDarkMode()
       expect(store.darkMode).toBe(true)
+      expect(document.documentElement.classList.contains('dark-mode')).toBe(true)
+      expect(window.localStorage.getItem('byteroute:dark-mode')).toBe('true')
       
       store.toggleDarkMode()
       expect(store.darkMode).toBe(false)
+      expect(document.documentElement.classList.contains('dark-mode')).toBe(false)
+      expect(window.localStorage.getItem('byteroute:dark-mode')).toBe('false')
     })
 
     it('should clear all data', () => {
