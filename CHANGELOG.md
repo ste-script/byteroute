@@ -1,3 +1,14 @@
+## [5.9.0](https://github.com/ste-script/byteroute/compare/v5.8.0...v5.9.0) (2026-03-17)
+
+### Features
+
+* new way of flow arc creation ([a66d186](https://github.com/ste-script/byteroute/commit/a66d186c1fa586aa5f1cd872a43ff0658dcfaeb2))
+
+### Bug Fixes
+
+* **backend:** missing dest coordinates in model ([c3cc513](https://github.com/ste-script/byteroute/commit/c3cc513250220e3bd0e27dbb707ae2386edb9b33))
+* **dashboard:** arc width ([7ed5082](https://github.com/ste-script/byteroute/commit/7ed5082760a4b3f17e10b3e94dccc2d97cce2834))
+
 ## [5.8.0](https://github.com/ste-script/byteroute/compare/v5.7.1...v5.8.0) (2026-03-17)
 
 ### Features
