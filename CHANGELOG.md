@@ -1,3 +1,22 @@
+## [5.8.0](https://github.com/ste-script/byteroute/compare/v5.7.1...v5.8.0) (2026-03-17)
+
+### Features
+
+* **dashboard:** wizard ([83e00a0](https://github.com/ste-script/byteroute/commit/83e00a07b9f07c51c25d0328941d251517b7e936))
+
+### Bug Fixes
+
+* **backend:** accurate ip selection ([8bd9c73](https://github.com/ste-script/byteroute/commit/8bd9c737c026fc12758597ad98f83755bd823449))
+* **backend:** ip enrichment geolocation ([74c968a](https://github.com/ste-script/byteroute/commit/74c968add58e0161fe79a8167bc3335bf69e34af))
+* **dashboard:** tooltip order ([3672154](https://github.com/ste-script/byteroute/commit/367215436b0909f10f76f84316ab1b3cc612d350))
+* **dashboard:** tooltip order ([26948f7](https://github.com/ste-script/byteroute/commit/26948f7ee3b0d707de55ea49871a943df38b7df1))
+* **dashboard:** view resize bug ([08d1909](https://github.com/ste-script/byteroute/commit/08d19099b06d41afad3f3e24fce6e8bd3050a662))
+* **dashboard:** view resize bug ([a043871](https://github.com/ste-script/byteroute/commit/a043871441d739f0b1f5653b67c75e3a0260b750))
+* ip provenience ([f7dae6f](https://github.com/ste-script/byteroute/commit/f7dae6fc7ad09756b89d8b9cb161f6fa6555ea70))
+* ip provenience ([63e07bd](https://github.com/ste-script/byteroute/commit/63e07bd626e5b7951d95f86ec2fb3ec45530a843))
+* ip provenience ([46a4506](https://github.com/ste-script/byteroute/commit/46a4506f8faac60be756a5f9f9dcd8ab1a0e8bae))
+* ip provenience ([61fe3b1](https://github.com/ste-script/byteroute/commit/61fe3b141e7349d55404f2428e99f88b8a8f1e4c))
+
 ## [5.7.1](https://github.com/ste-script/byteroute/compare/v5.7.0...v5.7.1) (2026-03-16)
 
 ### Bug Fixes
