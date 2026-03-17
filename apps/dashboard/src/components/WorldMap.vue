@@ -134,11 +134,14 @@ function updateLayers() {
       new ArcLayer({
         id: 'traffic-arcs',
         data: renderableFlows,
-        getSourcePosition: (d) => d.sourcePosition,
-        getTargetPosition: (d) => d.targetPosition,
+        getSourcePosition: (d) => d.arcSourcePosition,
+        getTargetPosition: (d) => d.arcTargetPosition,
         getSourceColor: (d) => d.sourceColor,
         getTargetColor: (d) => d.targetColor,
         getWidth: (d) => d.arcWidth,
+        widthUnits: 'pixels',
+        widthMinPixels: 2,
+        opacity: 0.9,
         greatCircle: true,
         pickable: false,
         onClick: (info: { object?: { flow: TrafficFlow } }) => {

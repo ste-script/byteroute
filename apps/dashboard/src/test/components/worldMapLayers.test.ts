@@ -17,6 +17,8 @@ describe('worldMapLayers', () => {
     const [renderable] = buildRenderableFlows(flows)
 
     expect(renderable).toBeDefined()
+    expect(renderable?.arcSourcePosition).toEqual([-74.006, 40.7128])
+    expect(renderable?.arcTargetPosition).toEqual([-0.1278, 51.5074])
     expect(renderable?.sourcePosition).toEqual([-74.006, 40.7128])
     expect(renderable?.targetPosition).toEqual([-0.1278, 51.5074])
     expect(renderable?.arcWidth).toBe(2.5)
@@ -57,5 +59,23 @@ describe('worldMapLayers', () => {
 
     expect(renderable).toHaveLength(1)
     expect(renderable[0]?.id).toBe('valid')
+  })
+
+  it('keeps point coordinates while offsetting degenerate arc endpoints', () => {
+    const flows: TrafficFlow[] = [
+      {
+        id: 'same-point-flow',
+        source: { lat: 10, lng: 15 },
+        target: { lat: 10, lng: 15 },
+        value: 500,
+      },
+    ]
+
+    const [renderable] = buildRenderableFlows(flows)
+
+    expect(renderable?.sourcePosition).toEqual([15, 10])
+    expect(renderable?.targetPosition).toEqual([15, 10])
+    expect(renderable?.arcSourcePosition).toEqual([15, 10])
+    expect(renderable?.arcTargetPosition).not.toEqual([15, 10])
   })
 })
