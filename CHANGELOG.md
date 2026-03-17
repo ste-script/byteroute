@@ -1,3 +1,9 @@
+## [5.10.0](https://github.com/ste-script/byteroute/compare/v5.9.0...v5.10.0) (2026-03-17)
+
+### Features
+
+* historical search ([72966b7](https://github.com/ste-script/byteroute/commit/72966b7c8559378362e926e9fb408bc9d9c6340d))
+
 ## [5.9.0](https://github.com/ste-script/byteroute/compare/v5.8.0...v5.9.0) (2026-03-17)
 
 ### Features
