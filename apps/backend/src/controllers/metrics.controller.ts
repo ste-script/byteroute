@@ -6,6 +6,7 @@ import type { Request, Response } from "express";
 import type { AppContext } from "../config/composition-root.js";
 import { createAppContext } from "../config/composition-root.js";
 import type { TimeSeriesData } from "@byteroute/shared";
+import { z } from "zod";
 import {
   tryResolveTenantIdFromRequest,
   userHasTenantAccess,
@@ -16,6 +17,10 @@ interface MetricsRequestBody {
   snapshots: TimeSeriesData[];
 }
 
+const metricsRequestBodySchema = z.object({
+  snapshots: z.array(z.unknown()),
+});
+
 /**
  * Creates metrics controller.
  * @param ctx - The ctx input.
@@ -25,14 +30,14 @@ export function createMetricsController(ctx: AppContext) {
   return {
     ingest: async (req: Request, res: Response): Promise<void> => {
       try {
-        const body = req.body as MetricsRequestBody;
-
-        if (!body.snapshots || !Array.isArray(body.snapshots)) {
+        const parsedBody = metricsRequestBodySchema.safeParse(req.body);
+        if (!parsedBody.success) {
           res
             .status(400)
             .json({ error: "Invalid request: snapshots array required" });
           return;
         }
+        const body = parsedBody.data as MetricsRequestBody;
 
         const principal = getPrincipal(req);
         const tenantId = tryResolveTenantIdFromRequest(req);

@@ -61,6 +61,14 @@ describe('Router navigation guard', () => {
     expect(router.currentRoute.value.name).toBe('connections')
   })
 
+  it('allows authenticated user to access history search route', async () => {
+    mockAuthStore.isAuthenticated = true
+    mockAuthStore.hydrated = true
+
+    await router.push('/history-search').catch(() => null)
+    expect(router.currentRoute.value.name).toBe('history-search')
+  })
+
   it('calls restoreSession when not yet hydrated and not authenticated', async () => {
     mockAuthStore.hydrated = false
     mockAuthStore.isAuthenticated = false

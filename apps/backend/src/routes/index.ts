@@ -70,7 +70,10 @@ export function createRoutes(ctx: AppContext): Router {
   const connectionsController =
     typeof createConnectionsController === "function"
       ? createConnectionsController(ctx)
-      : { ingest: connectionsControllerModule.postConnections };
+      : {
+          ingest: connectionsControllerModule.postConnections,
+          searchHistory: connectionsControllerModule.searchConnectionsHistory,
+        };
   const metricsController =
     typeof createMetricsController === "function"
       ? createMetricsController(ctx)
@@ -109,6 +112,7 @@ export function createRoutes(ctx: AppContext): Router {
   router.use("/api", requireApiAuth);
 
   router.post("/api/connections", connectionsController.ingest);
+  router.get("/api/connections/history", connectionsController.searchHistory);
 
   router.post("/api/metrics", metricsController.ingest);
 

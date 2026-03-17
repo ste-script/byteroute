@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
 import type { Connection } from '@byteroute/shared'
-import { postConnections } from '../../src/controllers/connections.controller.js'
+import {
+  createConnectionsController,
+  postConnections
+} from '../../src/controllers/connections.controller.js'
 
 // Mock the dependencies
 vi.mock('../../src/services/ingest.js', () => ({
@@ -312,6 +315,84 @@ describe('Connections Controller', () => {
       await postConnections(req as Request, res as Response)
 
       expect(res.status).toHaveBeenCalledWith(403)
+    })
+  })
+
+  describe('searchHistory', () => {
+    it('returns tenant-scoped historical results only for the authenticated owner', async () => {
+      const loadHistory = vi.fn().mockResolvedValue({
+        items: [createConnection({ id: 'conn-1', tenantId: 'default' })],
+        total: 1
+      })
+      const findByTenantId = vi.fn().mockResolvedValue({
+        tenantId: 'default',
+        ownerId: 'user-1',
+        name: 'Default'
+      })
+
+      const controller = createConnectionsController({
+        connectionRepository: { loadHistory },
+        tenantRepository: { findByTenantId }
+      } as any)
+
+      const req = {
+        headers: { 'x-tenant-id': 'default' },
+        user: { id: 'user-1', tenantIds: ['default'] },
+        query: {
+          q: '8.8.8.8',
+          status: 'active',
+          protocol: 'TCP',
+          from: '2026-01-01T00:00:00.000Z',
+          to: '2026-01-31T23:59:59.000Z',
+          limit: '25',
+          offset: '5'
+        }
+      }
+      const res = createMockResponse()
+
+      await controller.searchHistory(req as unknown as Request, res as Response)
+
+      expect(findByTenantId).toHaveBeenCalledWith('default')
+      expect(loadHistory).toHaveBeenCalledWith('default', {
+        q: '8.8.8.8',
+        status: 'active',
+        protocol: 'TCP',
+        from: new Date('2026-01-01T00:00:00.000Z'),
+        to: new Date('2026-01-31T23:59:59.000Z'),
+        limit: 25,
+        offset: 5
+      })
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.jsonData).toEqual({
+        items: [expect.objectContaining({ id: 'conn-1', tenantId: 'default' })],
+        total: 1
+      })
+    })
+
+    it('returns 403 when authenticated user does not own the selected tenant', async () => {
+      const loadHistory = vi.fn()
+      const findByTenantId = vi.fn().mockResolvedValue({
+        tenantId: 'default',
+        ownerId: 'other-user',
+        name: 'Default'
+      })
+
+      const controller = createConnectionsController({
+        connectionRepository: { loadHistory },
+        tenantRepository: { findByTenantId }
+      } as any)
+
+      const req = {
+        headers: { 'x-tenant-id': 'default' },
+        user: { id: 'user-1', tenantIds: ['default'] },
+        query: {}
+      }
+      const res = createMockResponse()
+
+      await controller.searchHistory(req as unknown as Request, res as Response)
+
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(loadHistory).not.toHaveBeenCalled()
     })
   })
 })
