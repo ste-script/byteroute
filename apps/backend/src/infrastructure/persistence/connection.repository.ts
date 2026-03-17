@@ -3,8 +3,16 @@
  */
 
 import type { Connection } from "@byteroute/shared";
-import type { IConnectionRepository } from "../../domain/connection/connection-repository.interface.js";
+import type {
+  ConnectionHistoryFilters,
+  ConnectionHistoryResult,
+  IConnectionRepository,
+} from "../../domain/connection/connection-repository.interface.js";
 import { ConnectionModel } from "./models/connection.model.js";
+
+function escapeRegexLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Coerces date.
@@ -96,5 +104,55 @@ export class MongoConnectionRepository implements IConnectionRepository {
     }
 
     return grouped;
+  }
+
+  async loadHistory(
+    tenantId: string,
+    filters: ConnectionHistoryFilters,
+  ): Promise<ConnectionHistoryResult> {
+    const query: Record<string, unknown> = { tenantId };
+
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
+    if (filters.protocol) {
+      query.protocol = filters.protocol;
+    }
+
+    if (filters.from || filters.to) {
+      query.lastActivity = {};
+      if (filters.from) {
+        (query.lastActivity as Record<string, unknown>).$gte = filters.from;
+      }
+      if (filters.to) {
+        (query.lastActivity as Record<string, unknown>).$lte = filters.to;
+      }
+    }
+
+    if (filters.q) {
+      const regex = new RegExp(escapeRegexLiteral(filters.q), "i");
+      query.$or = [
+        { sourceIp: regex },
+        { destIp: regex },
+        { country: regex },
+        { city: regex },
+        { asOrganization: regex },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      ConnectionModel.find(query, { _id: 0 })
+        .sort({ lastActivity: -1 })
+        .skip(filters.offset)
+        .limit(filters.limit)
+        .lean(),
+      ConnectionModel.countDocuments(query),
+    ]);
+
+    return {
+      items: items as Connection[],
+      total,
+    };
   }
 }

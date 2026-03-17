@@ -83,4 +83,9 @@ describe('DashboardHeader', () => {
       expect(wrapper.emitted('copy-token')).toBeTruthy()
     }
   })
+
+  it('renders a navigation control for history search page', () => {
+    const wrapper = mount(DashboardHeader, { props: defaultProps })
+    expect(wrapper.find('[aria-label="Open historical data search"]').exists()).toBe(true)
+  })
 })

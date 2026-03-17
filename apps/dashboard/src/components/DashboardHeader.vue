@@ -77,6 +77,14 @@ const emit = defineEmits<{
         :loading="copyTokenPending"
         @click="emit('copy-token')"
       />
+      <router-link to="/history-search" class="history-link">
+        <Button
+          icon="pi pi-search"
+          aria-label="Open historical data search"
+          text
+          rounded
+        />
+      </router-link>
       <Button icon="pi pi-sign-out" aria-label="Sign out" text rounded @click="emit('logout')" />
       <span v-if="copyTokenMessage" class="copy-token-message">{{ copyTokenMessage }}</span>
     </div>
@@ -146,6 +154,10 @@ const emit = defineEmits<{
 .copy-token-message {
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
+}
+
+.history-link {
+  display: inline-flex;
 }
 
 @media (max-width: 768px) {

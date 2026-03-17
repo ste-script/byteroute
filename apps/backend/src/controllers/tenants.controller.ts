@@ -4,10 +4,22 @@
 
 import type { Request, Response } from "express";
 import * as shared from "@byteroute/shared";
+import { z } from "zod";
 import type { AppContext } from "../config/composition-root.js";
 import { TenantModel as InfraTenantModel } from "../infrastructure/persistence/models/tenant.model.js";
 import { getPrincipal } from "../auth/principal.js";
 import { TenantService } from "../services/tenant.service.js";
+
+const principalIdSchema = z.object({ id: z.string().min(1) });
+const tenantCreateRequestSchema = z.object({
+  name: z.string(),
+  tenantId: z.string().optional(),
+});
+const tenantCreateLegacyRequestSchema = z.object({
+  name: z.string().trim().min(1),
+  tenantId: z.string().optional(),
+});
+const tenantParamsSchema = z.object({ tenantId: z.string().min(1) });
 
 const TenantModel =
   (shared as { TenantModel?: typeof InfraTenantModel }).TenantModel ??
@@ -23,33 +35,33 @@ export function createTenantsController(ctx: AppContext) {
 
   return {
     list: async (req: Request, res: Response): Promise<void> => {
-      const principal = req.user as { id?: string } | undefined;
-      if (!principal?.id) {
+      const principal = principalIdSchema.safeParse(req.user);
+      if (!principal.success) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      const tenants = await tenantService.list(principal.id);
+      const tenants = await tenantService.list(principal.data.id);
       res.json({ tenants });
     },
 
     create: async (req: Request, res: Response): Promise<void> => {
-      const principal = req.user as { id?: string } | undefined;
-      if (!principal?.id) {
+      const principal = principalIdSchema.safeParse(req.user);
+      if (!principal.success) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      const body = req.body as { name?: unknown; tenantId?: unknown };
-      if (typeof body.name !== "string") {
+      const body = tenantCreateRequestSchema.safeParse(req.body);
+      if (!body.success) {
         res.status(400).json({ error: "Invalid request: name is required" });
         return;
       }
 
       const result = await tenantService.create(
-        principal.id,
-        body.name,
-        typeof body.tenantId === "string" ? body.tenantId : undefined,
+        principal.data.id,
+        body.data.name,
+        body.data.tenantId,
       );
 
       if (!result.ok) {
@@ -61,22 +73,22 @@ export function createTenantsController(ctx: AppContext) {
     },
 
     remove: async (req: Request, res: Response): Promise<void> => {
-      const principal = req.user as { id?: string } | undefined;
-      if (!principal?.id) {
+      const principal = principalIdSchema.safeParse(req.user);
+      if (!principal.success) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      const tenantId =
-        typeof req.params.tenantId === "string"
-          ? req.params.tenantId
-          : undefined;
-      if (!tenantId) {
+      const params = tenantParamsSchema.safeParse(req.params);
+      if (!params.success) {
         res.status(400).json({ error: "tenantId is required" });
         return;
       }
 
-      const deleted = await tenantService.remove(principal.id, tenantId);
+      const deleted = await tenantService.remove(
+        principal.data.id,
+        params.data.tenantId,
+      );
       if (!deleted) {
         res.status(404).json({ error: "Tenant not found" });
         return;
@@ -121,17 +133,16 @@ export async function createTenant(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const body = req.body as { name?: unknown; tenantId?: unknown };
-
-  if (typeof body.name !== "string" || body.name.trim().length === 0) {
+  const body = tenantCreateLegacyRequestSchema.safeParse(req.body);
+  if (!body.success) {
     res.status(400).json({ error: "Invalid request: name is required" });
     return;
   }
 
-  const name = body.name.trim();
+  const name = body.data.name;
   const rawTenantId =
-    typeof body.tenantId === "string" && body.tenantId.trim().length > 0
-      ? body.tenantId.trim()
+    typeof body.data.tenantId === "string" && body.data.tenantId.trim().length > 0
+      ? body.data.tenantId.trim()
       : name
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
@@ -175,16 +186,14 @@ export async function deleteTenant(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const tenantId =
-    typeof req.params.tenantId === "string" ? req.params.tenantId : undefined;
-
-  if (!tenantId) {
+  const params = tenantParamsSchema.safeParse(req.params);
+  if (!params.success) {
     res.status(400).json({ error: "tenantId is required" });
     return;
   }
 
   const result = await TenantModel.deleteOne({
-    tenantId,
+    tenantId: params.data.tenantId,
     ownerId: principal.id,
   });
 

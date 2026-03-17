@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn((req, res) => res.status(200).json({ user: { id: "u1" } })),
   signOut: vi.fn((req, res) => res.status(204).send()),
   postConnections: vi.fn((req, res) => res.status(202).json({ received: 0 })),
+  searchConnectionsHistory: vi.fn((req, res) =>
+    res.status(200).json({ items: [], total: 0 }),
+  ),
   postMetrics: vi.fn((req, res) => res.status(202).json({ received: 0 })),
   getTenants: vi.fn((req, res) => res.status(200).json({ tenants: ["default"] })),
   createTenant: vi.fn((req, res) => res.status(201).json({ tenant: { tenantId: "new-tenant", name: "New Tenant" } })),
@@ -35,7 +38,8 @@ vi.mock("../../src/controllers/health.controller.js", () => ({
 }));
 
 vi.mock("../../src/controllers/connections.controller.js", () => ({
-  postConnections: mocks.postConnections
+  postConnections: mocks.postConnections,
+  searchConnectionsHistory: mocks.searchConnectionsHistory,
 }));
 
 vi.mock("../../src/controllers/auth.controller.js", () => ({
@@ -105,6 +109,19 @@ describe("routes", () => {
       .send({ connections: [] })
       .expect(202);
     expect(mocks.postConnections).toHaveBeenCalled();
+  });
+
+  it("wires /api/connections/history to searchConnectionsHistory", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+
+    await request(app)
+      .get("/api/connections/history")
+      .set("Authorization", `Bearer ${token()}`)
+      .set("x-tenant-id", "default")
+      .expect(200);
+    expect(mocks.searchConnectionsHistory).toHaveBeenCalled();
   });
 
   it("wires /api/metrics to postMetrics", async () => {
