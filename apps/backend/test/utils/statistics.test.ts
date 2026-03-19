@@ -56,17 +56,11 @@ describe("generateStatistics", () => {
     expect(stats.byProtocol).toEqual([]);
   });
 
-  it("generates fallback timeSeries of 24 entries when metricsStore is empty", () => {
+  it("returns empty timeSeries when metricsStore is empty", () => {
     const stats = generateStatistics([], "default");
 
-    expect(stats.timeSeries).toHaveLength(24);
+    expect(stats.timeSeries).toEqual([]);
     expect(mockGetTimeSeries).toHaveBeenCalledWith("default", 24);
-
-    const entry = stats.timeSeries[0]!;
-    expect(entry).toHaveProperty("timestamp");
-    expect(entry).toHaveProperty("connections");
-    expect(entry).toHaveProperty("bandwidthIn");
-    expect(entry).toHaveProperty("bandwidthOut");
   });
 
   it("uses real timeSeries from metricsStore when available", () => {
