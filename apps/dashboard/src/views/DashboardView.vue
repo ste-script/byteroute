@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/services/socket'
 import { useTenantManager } from '@/composables/useTenantManager'
 import { useClientToken } from '@/composables/useClientToken'
+import { useDashboardSampleData } from '@/composables/useDashboardSampleData'
 import { createTenant } from '@/services/tenants'
 import type { Connection, TrafficFlow } from '@/types'
 import { useRouter } from 'vue-router'
@@ -99,12 +100,29 @@ function toggleConnectionsPaused() {
 
 const limitedConnections = computed(() => connections.value.slice(0, connectionLimit.value))
 
+const {
+  usingSampleConnections,
+  usingSampleFlows,
+  usingSampleStatistics,
+  displayConnections,
+  displayStatistics,
+  displayFlows,
+  markConnectionsFromItem,
+  markConnectionsFromBatch,
+  markFlows,
+  markStatistics,
+  reset,
+} = useDashboardSampleData({
+  connectionLimit,
+  limitedConnections,
+  trafficFlows,
+  statistics,
+})
+
 const hasTenants = computed(() => discoveredTenants.value.length > 0)
 
 // ── Computed display aliases ──────────────────────────────────────────────────
-const displayStatistics = computed(() => statistics.value)
 const displayTimeSeries = computed(() => statistics.value?.timeSeries ?? [])
-const displayFlows = computed(() => trafficFlows.value)
 
 // ── Socket listeners ──────────────────────────────────────────────────────────
 const unsubscribers: (() => void)[] = []
@@ -121,19 +139,29 @@ function setupSocketListeners() {
       discoveredTenants.value = Array.from(new Set([...discoveredTenants.value, ...cleaned]))
     }),
     socket.on('connection:new', (conn) => {
+      markConnectionsFromItem()
       if (!connectionsPaused.value) store.addConnection(conn)
     }),
     socket.on('connection:update', (conn) => {
+      markConnectionsFromItem()
       if (!connectionsPaused.value) store.updateConnection(conn.id, conn)
     }),
     socket.on('connection:remove', ({ id }) => {
+      markConnectionsFromItem()
       if (!connectionsPaused.value) store.removeConnection(id)
     }),
     socket.on('connections:batch', (conns) => {
+      markConnectionsFromBatch(conns)
       if (!connectionsPaused.value) store.setConnections(conns)
     }),
-    socket.on('traffic:flows', (flows) => store.setTrafficFlows(flows)),
-    socket.on('statistics:update', (stats) => store.setStatistics(stats))
+    socket.on('traffic:flows', (flows) => {
+      markFlows(flows)
+      store.setTrafficFlows(flows)
+    }),
+    socket.on('statistics:update', (stats) => {
+      markStatistics(stats)
+      store.setStatistics(stats)
+    })
   )
 }
 
@@ -174,6 +202,10 @@ onMounted(async () => {
   }
 
   connectTenant(selectedTenant.value, { connectionsLimit: connectionLimit.value })
+})
+
+watch(() => selectedTenant.value, () => {
+  reset()
 })
 
 watch(connectionLimit, (next) => {
@@ -218,7 +250,10 @@ onUnmounted(() => {
       <!-- Map Panel -->
       <section class="panel map-panel" aria-labelledby="world-traffic-title">
         <div class="panel-header dashboard-section-header">
-          <h2 id="world-traffic-title" class="panel-title dashboard-section-title">World Traffic</h2>
+          <div class="section-title-wrap">
+            <h2 id="world-traffic-title" class="panel-title dashboard-section-title">World Traffic</h2>
+            <span v-if="usingSampleFlows" class="sample-pill">sample data</span>
+          </div>
           <Button
             icon="pi pi-refresh"
             aria-label="Reset world map view"
@@ -243,7 +278,10 @@ onUnmounted(() => {
           <!-- Statistics -->
           <section class="sidebar-section statistics-section" aria-labelledby="statistics-title">
             <div class="panel-header dashboard-section-header">
-              <h2 id="statistics-title" class="panel-title dashboard-section-title">Statistics</h2>
+              <div class="section-title-wrap">
+                <h2 id="statistics-title" class="panel-title dashboard-section-title">Statistics</h2>
+                <span v-if="usingSampleStatistics" class="sample-pill">sample data</span>
+              </div>
             </div>
             <div class="panel-content">
               <StatisticsPanel :statistics="displayStatistics" :dark-mode="darkMode" />
@@ -255,7 +293,8 @@ onUnmounted(() => {
             <div class="panel-header dashboard-section-header">
               <div class="connections-header-left">
                 <h2 id="connections-title" class="panel-title dashboard-section-title">Live Connections</h2>
-                <Badge :value="connections.length.toString()" severity="info" />
+                <span v-if="usingSampleConnections" class="sample-pill">sample data</span>
+                <Badge :value="displayConnections.length.toString()" severity="info" />
               </div>
               <div class="connections-header-right">
                 <Select
@@ -277,7 +316,7 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="panel-content no-padding">
-              <ConnectionList :connections="limitedConnections" @select="handleConnectionSelect" />
+              <ConnectionList :connections="displayConnections" @select="handleConnectionSelect" />
             </div>
           </section>
         </div>
@@ -401,6 +440,25 @@ onUnmounted(() => {
   gap: 0.5rem;
   min-width: 0;
   overflow: visible;
+}
+
+.section-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.sample-pill {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--p-primary-color);
+  border: 1px solid color-mix(in srgb, var(--p-primary-color) 55%, transparent);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
 }
 
 .connections-header-left {
