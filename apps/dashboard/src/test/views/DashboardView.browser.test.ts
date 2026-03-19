@@ -66,4 +66,5 @@ describe('DashboardView mobile layout', () => {
     const dialogState = document.querySelector('[data-test="new-tenant-dialog"]') as HTMLElement | null
     expect(dialogState?.dataset.visible).toBe('open')
   })
+
 })

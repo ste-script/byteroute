@@ -217,8 +217,8 @@ onUnmounted(() => {
     >
       <!-- Map Panel -->
       <section class="panel map-panel" aria-labelledby="world-traffic-title">
-        <div class="panel-header">
-          <h2 id="world-traffic-title" class="panel-title">World Traffic</h2>
+        <div class="panel-header dashboard-section-header">
+          <h2 id="world-traffic-title" class="panel-title dashboard-section-title">World Traffic</h2>
           <Button
             icon="pi pi-refresh"
             aria-label="Reset world map view"
@@ -242,8 +242,8 @@ onUnmounted(() => {
         <div class="sidebar-sections">
           <!-- Statistics -->
           <section class="sidebar-section statistics-section" aria-labelledby="statistics-title">
-            <div class="panel-header">
-              <h2 id="statistics-title" class="panel-title">Statistics</h2>
+            <div class="panel-header dashboard-section-header">
+              <h2 id="statistics-title" class="panel-title dashboard-section-title">Statistics</h2>
             </div>
             <div class="panel-content">
               <StatisticsPanel :statistics="displayStatistics" :dark-mode="darkMode" />
@@ -252,9 +252,9 @@ onUnmounted(() => {
 
           <!-- Connections -->
           <section class="sidebar-section connections-section" aria-labelledby="connections-title">
-            <div class="panel-header">
+            <div class="panel-header dashboard-section-header">
               <div class="connections-header-left">
-                <h2 id="connections-title" class="panel-title">Live Connections</h2>
+                <h2 id="connections-title" class="panel-title dashboard-section-title">Live Connections</h2>
                 <Badge :value="connections.length.toString()" severity="info" />
               </div>
               <div class="connections-header-right">
@@ -285,8 +285,8 @@ onUnmounted(() => {
 
       <!-- Charts Panel -->
       <section class="panel charts-panel" aria-labelledby="timeline-title">
-        <div class="panel-header">
-          <h2 id="timeline-title" class="panel-title">Traffic Timeline</h2>
+        <div class="panel-header dashboard-section-header">
+          <h2 id="timeline-title" class="panel-title dashboard-section-title">Traffic Timeline</h2>
         </div>
         <div class="panel-content no-padding">
           <TrafficChart :data="displayTimeSeries" :dark-mode="darkMode" title="" />
@@ -399,13 +399,40 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  overflow-x: hidden;
-  overflow-y: visible;
+  min-width: 0;
+  overflow: visible;
+}
+
+.connections-header-left {
+  flex-wrap: nowrap;
+}
+
+.connections-header-left :deep(.p-badge) {
+  flex-shrink: 0;
 }
 
 .connections-header-right {
   width: 100%;
   justify-content: flex-end;
+}
+
+.dashboard-section-header {
+  background: var(--p-surface-card);
+  border-bottom: 1px solid var(--p-surface-border);
+}
+
+.dashboard-section-title {
+  color: var(--p-text-color);
+  transition: color 0.2s ease;
+}
+
+:global(html.dark-mode) .dashboard-section-header {
+  background: var(--p-surface-card);
+  border-bottom-color: var(--p-surface-border);
+}
+
+:global(html.dark-mode) .dashboard-section-title {
+  color: var(--p-text-color);
 }
 
 @include m.max-width(t.$bp-xl) {

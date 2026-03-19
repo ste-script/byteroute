@@ -69,4 +69,31 @@ describe('DashboardView desktop browsers', () => {
 
     await expect.element(heading).toBeVisible()
   })
+
+  it('applies dark-mode-aware styling to dashboard section titles', async () => {
+    await page.viewport(1280, 900)
+    window.localStorage.setItem('byteroute:dark-mode', 'true')
+    document.documentElement.style.setProperty('--p-text-color', 'rgb(230, 232, 240)')
+    document.documentElement.style.setProperty('--p-surface-50', 'rgb(245, 245, 245)')
+    document.documentElement.style.setProperty('--p-surface-card', 'rgb(25, 28, 34)')
+
+    await mountDashboardViewForBrowser(
+      async () => ((await import('../../views/DashboardView.vue')) as { default: Component }).default,
+    )
+
+    const expectedTextColor = 'rgb(230, 232, 240)'
+    const expectedHeaderBackground = 'rgb(25, 28, 34)'
+    const titleIds = ['world-traffic-title', 'timeline-title', 'statistics-title', 'connections-title']
+
+    for (const id of titleIds) {
+      const title = document.getElementById(id)
+      expect(title).not.toBeNull()
+      expect(title?.classList.contains('dashboard-section-title')).toBe(true)
+      expect(window.getComputedStyle(title as HTMLElement).color).toBe(expectedTextColor)
+
+      const header = title?.closest('.dashboard-section-header') as HTMLElement | null
+      expect(header).not.toBeNull()
+      expect(window.getComputedStyle(header as HTMLElement).backgroundColor).toBe(expectedHeaderBackground)
+    }
+  })
 })
