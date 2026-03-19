@@ -1,3 +1,13 @@
+## [5.11.0](https://github.com/ste-script/byteroute/compare/v5.10.0...v5.11.0) (2026-03-19)
+
+### Features
+
+* **dashboard:** improved sample data section ([8277a2b](https://github.com/ste-script/byteroute/commit/8277a2b9e0ac48dcc4987f34479ba2f0b4e699b6))
+
+### Bug Fixes
+
+* **dashboard:** darkmode header text behaviour ([c1e0b0c](https://github.com/ste-script/byteroute/commit/c1e0b0c760140f97a2d682545d6250b0b4be42e8))
+
 ## [5.10.0](https://github.com/ste-script/byteroute/compare/v5.9.0...v5.10.0) (2026-03-17)
 
 ### Features
