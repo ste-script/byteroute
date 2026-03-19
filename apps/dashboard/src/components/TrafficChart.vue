@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -45,9 +45,56 @@ const props = withDefaults(defineProps<Props>(), {
 
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
 
+const staticSampleData: TimeSeriesData[] = [
+  {
+    timestamp: new Date('2026-01-01T12:00:00Z'),
+    connections: 55,
+    bandwidthIn: 24_000,
+    bandwidthOut: 18_000
+  },
+  {
+    timestamp: new Date('2026-01-01T12:10:00Z'),
+    connections: 82,
+    bandwidthIn: 39_000,
+    bandwidthOut: 26_000
+  },
+  {
+    timestamp: new Date('2026-01-01T12:20:00Z'),
+    connections: 67,
+    bandwidthIn: 31_000,
+    bandwidthOut: 43_000
+  },
+  {
+    timestamp: new Date('2026-01-01T12:30:00Z'),
+    connections: 91,
+    bandwidthIn: 48_000,
+    bandwidthOut: 35_000
+  }
+]
+
+const hasReceivedRealData = ref(false)
+
+watch(
+  () => props.data,
+  (nextData) => {
+    if (nextData.length > 0) {
+      hasReceivedRealData.value = true
+    }
+  },
+  { immediate: true }
+)
+
+const shouldShowSampleData = computed(
+  () => !hasReceivedRealData.value && props.data.length === 0
+)
+
+const displayedData = computed(() =>
+  shouldShowSampleData.value ? staticSampleData : props.data
+)
+
 const chartOption = computed(() => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
-  const timestamps = props.data.map(d => 
+  const timestamps = displayedData.value.map(d => 
     new Date(d.timestamp).toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -61,7 +108,7 @@ const chartOption = computed(() => {
     {
       name: 'Bandwidth In',
       type: 'line',
-      data: props.data.map(d => d.bandwidthIn),
+      data: displayedData.value.map(d => d.bandwidthIn),
       smooth: true,
       showSymbol: false,
       lineStyle: { width: 2 },
@@ -73,7 +120,7 @@ const chartOption = computed(() => {
     {
       name: 'Bandwidth Out',
       type: 'line',
-      data: props.data.map(d => d.bandwidthOut),
+      data: displayedData.value.map(d => d.bandwidthOut),
       smooth: true,
       showSymbol: false,
       lineStyle: { width: 2 },
@@ -85,7 +132,7 @@ const chartOption = computed(() => {
     {
       name: 'Connections',
       type: 'bar',
-      data: props.data.map(d => d.connections),
+      data: displayedData.value.map(d => d.connections),
       yAxisIndex: 1,
       itemStyle: { 
         color: props.darkMode ? 'rgba(139, 92, 246, 0.6)' : 'rgba(139, 92, 246, 0.4)'
@@ -213,18 +260,45 @@ defineExpose({
 </script>
 
 <template>
-  <v-chart
-    ref="chartRef"
-    class="traffic-chart"
-    :option="chartOption"
-    autoresize
-  />
+  <div class="traffic-chart-wrap">
+    <v-chart
+      ref="chartRef"
+      class="traffic-chart"
+      :option="chartOption"
+      autoresize
+    />
+    <div v-if="shouldShowSampleData" class="sample-data-watermark" aria-label="Sample data watermark">
+      sample data
+    </div>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.traffic-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
 .traffic-chart {
   width: 100%;
   height: 100%;
   min-height: 0;
+}
+
+.sample-data-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  font-size: clamp(0.7rem, 0.6rem + 0.25vw, 0.9rem);
+  color: color-mix(in srgb, currentColor 30%, transparent);
+  opacity: 0.6;
 }
 </style>

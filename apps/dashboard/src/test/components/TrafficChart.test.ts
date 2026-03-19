@@ -137,12 +137,33 @@ describe('TrafficChart', () => {
     expect(formatter(1_000_000_000)).toBe('1.0 GB')
   })
 
-  it('handles empty data array', () => {
+  it('shows sample data and watermark when no real data is available', () => {
     const wrapper = mount(TrafficChart, {
       props: { data: [] },
       global: { stubs: { VChart: MockVChart } }
     })
     const option = wrapper.findComponent(MockVChart).props('option') as Record<string, unknown>
-    expect((option.xAxis as Record<string, unknown[]>).data).toHaveLength(0)
+    expect((option.xAxis as Record<string, unknown[]>).data).toHaveLength(4)
+    expect(wrapper.text().toLowerCase()).toContain('sample data')
+  })
+
+  it('switches to real data and hides watermark when first payload arrives', async () => {
+    const wrapper = mount(TrafficChart, {
+      props: { data: [] },
+      global: { stubs: { VChart: MockVChart } }
+    })
+
+    expect(wrapper.text().toLowerCase()).toContain('sample data')
+
+    await wrapper.setProps({ data: sampleData })
+
+    const option = wrapper.findComponent(MockVChart).props('option') as Record<string, unknown>
+    const xAxisData = (option.xAxis as Record<string, unknown[]>).data
+    const series = option.series as Array<Record<string, unknown>>
+    const bandwidthInSeries = series[0]
+
+    expect(wrapper.text().toLowerCase()).not.toContain('sample data')
+    expect(xAxisData).toHaveLength(sampleData.length)
+    expect(bandwidthInSeries.data).toEqual(sampleData.map((point) => point.bandwidthIn))
   })
 })

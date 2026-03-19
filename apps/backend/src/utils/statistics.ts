@@ -11,17 +11,6 @@ import {
 } from "../infrastructure/dsl/domain-dsl.js";
 
 /**
- * Randoms int.
- * @param min - The min input.
- * @param max - The max input.
- * @returns The int result.
- */
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/**
  * Applies aggregation query.
  * @param entries - The entries input.
  * @param query - The query input.
@@ -161,22 +150,7 @@ export function generateStatistics(
   );
   const byProtocol = applyAggregationQuery(byProtocolRaw, queryDsl.byProtocol);
 
-  // Get real time series data from metrics store, fallback to mock if empty
-  let timeSeries = store.getTimeSeries(tenantId, 24);
-
-  // If no real metrics yet, generate mock data
-  if (timeSeries.length === 0) {
-    const now = Date.now();
-    timeSeries = Array.from({ length: 24 }, (_, i) => {
-      const timestamp = new Date(now - (23 - i) * 3600000);
-      return {
-        timestamp: timestamp.toISOString(),
-        connections: randomInt(50, 200),
-        bandwidthIn: randomInt(10000, 100000),
-        bandwidthOut: randomInt(10000, 100000),
-      };
-    });
-  }
+  const timeSeries = store.getTimeSeries(tenantId, 24);
 
   return {
     totalConnections: connections.length,
