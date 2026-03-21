@@ -1,3 +1,9 @@
+## [5.12.0](https://github.com/ste-script/byteroute/compare/v5.11.0...v5.12.0) (2026-03-21)
+
+### Features
+
+* **dashboard:** sample data ([24ba10a](https://github.com/ste-script/byteroute/commit/24ba10a071850b59d353a1380288059727b5714b))
+
 ## [5.11.0](https://github.com/ste-script/byteroute/compare/v5.10.0...v5.11.0) (2026-03-19)
 
 ### Features
