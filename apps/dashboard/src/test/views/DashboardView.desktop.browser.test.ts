@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Component } from 'vue'
 
 import {
+  CONNECTION_ROW_ARIA_LABEL_PATTERN,
   mountDashboardViewForBrowser,
   resetDashboardBrowserHarness,
   waitForLayout,
@@ -21,7 +22,7 @@ describe('DashboardView desktop browsers', () => {
     )
 
     const heading = page.getByRole('heading', { name: 'Live Connections' })
-    const firstConnection = page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })
+    const firstConnection = page.getByRole('button', { name: CONNECTION_ROW_ARIA_LABEL_PATTERN }).first()
 
     await expect.element(heading).toBeVisible()
     await expect.element(firstConnection).toBeVisible()

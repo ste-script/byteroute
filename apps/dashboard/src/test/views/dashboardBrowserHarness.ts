@@ -10,6 +10,8 @@ import { vi } from 'vitest'
 import { useDashboardStore } from '../../stores/dashboard'
 import type { Connection, Statistics } from '../../types'
 
+export const CONNECTION_ROW_ARIA_LABEL_PATTERN = /connection from .* to .*/i
+
 const mockSocket = vi.hoisted(() => ({
   disconnect: vi.fn(),
   connect: vi.fn(),
