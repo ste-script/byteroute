@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Component } from 'vue'
 
 import {
+  CONNECTION_ROW_ARIA_LABEL_PATTERN,
   mountDashboardViewForBrowser,
   resetDashboardBrowserHarness,
   setDashboardBrowserHarnessTenants,
@@ -24,7 +25,7 @@ describe('DashboardView mobile layout', () => {
     const scrollElement = layoutScroller.scrollHeight > documentScroller.scrollHeight ? layoutScroller : documentScroller
 
     const heading = page.getByRole('heading', { name: 'Live Connections' })
-    const firstConnection = page.getByRole('button', { name: /connection from 192\.168\.1\.1 to 10\.0\.0\.1/i })
+    const firstConnection = page.getByRole('button', { name: CONNECTION_ROW_ARIA_LABEL_PATTERN }).first()
     const chartRect = chartsSection.getBoundingClientRect()
     const connectionsRect = connectionsSection.getBoundingClientRect()
 
