@@ -75,8 +75,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       mongoose:
-        specifier: ^9.3.2
-        version: 9.3.2
+        specifier: ^9.3.3
+        version: 9.3.3
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -3440,8 +3440,8 @@ packages:
       socks:
         optional: true
 
-  mongoose@9.3.2:
-    resolution: {integrity: sha512-4hMJA4vLAeNG6LnDwJImPYM+uJMVw+sFs7jtS/91OKOT7rzv19ytAAeswtAdWoinVBUVrzmClL/ZoPhcU5RL8w==}
+  mongoose@9.3.3:
+    resolution: {integrity: sha512-sfv5LOIPWeN5o/281kp4Rx9ZnuXb0g8CtvBTi7trYQs2PYYx8LWXegXxG3ar7VEns1o+d4h9LI/Dtc7dTTyYmA==}
     engines: {node: '>=20.19.0'}
 
   monocart-coverage-reports@2.12.9:
@@ -8286,7 +8286,7 @@ snapshots:
       bson: 7.2.0
       mongodb-connection-string-url: 7.0.1
 
-  mongoose@9.3.2:
+  mongoose@9.3.3:
     dependencies:
       kareem: 3.2.0
       mongodb: 7.1.0
