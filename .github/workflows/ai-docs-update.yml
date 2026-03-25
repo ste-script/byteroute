@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24.14.0
+          node-version: 24.14.1
 
       - name: Update LaTeX reports with AI
         continue-on-error: true
