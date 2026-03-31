@@ -182,3 +182,8 @@ Defaults:
 
 - Dashboard:
 	- `VITE_SOCKET_URL` (optional; default connects to same origin)
+
+## License
+
+ByteRoute is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE)
+for the full license text and [NOTICE](NOTICE) for attribution information.
