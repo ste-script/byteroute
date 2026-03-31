@@ -24,6 +24,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "node -e \"console.log('shared: lint (placeholder)')\"",
+    "license:add:src": "cd src && license-check-and-add add -f ../../../.license-check-and-add.json",
+    "license:check:src": "cd src && license-check-and-add check -f ../../../.license-check-and-add.json",
     "test": "node -e \"console.log('shared: test (placeholder)')\""
   },
   "devDependencies": {

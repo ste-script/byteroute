@@ -1,0 +1,21 @@
+{
+  "license": "../../../.license-header.txt",
+  "trailingWhitespace": "TRIM",
+  "defaultFormat": {
+    "prepend": "/*",
+    "append": "*/"
+  },
+  "licenseFormats": {
+    "ts|go": {
+      "prepend": "/*\n",
+      "eachLine": {
+        "prepend": " * "
+      },
+      "append": " */\n"
+    },
+    "vue": {
+      "prepend": "<!--\n",
+      "append": "\n-->\n"
+    }
+  }
+}
