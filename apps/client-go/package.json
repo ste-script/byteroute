@@ -6,6 +6,8 @@
   "scripts": {
     "build": "go mod tidy && go build -o build/byteroute-client ./cmd/byteroute-client",
     "build:docker": "docker build -f Dockerfile.static -t byteroute-client-builder . && docker create --name byteroute-temp byteroute-client-builder && mkdir -p build && docker cp byteroute-temp:/byteroute-client build/byteroute-client && docker rm byteroute-temp",
+    "license:add:src": "(cd internal && license-check-and-add add -f ../../../.license-check-and-add.json) && (cd cmd && license-check-and-add add -f ../../../.license-check-and-add.json)",
+    "license:check:src": "(cd internal && license-check-and-add check -f ../../../.license-check-and-add.json) && (cd cmd && license-check-and-add check -f ../../../.license-check-and-add.json)",
     "test": "go test ./...",
     "coverage": "go test ./... -coverprofile=coverage.out -covermode=atomic && go tool cover -func=coverage.out | tail -1"
   }

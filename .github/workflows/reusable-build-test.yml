@@ -54,6 +54,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Check license headers
+        run: pnpm -w license:check
+
       - name: Lint commits (Conventional Commits)
         if: ${{ inputs.run_commitlint }}
         shell: bash

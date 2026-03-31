@@ -9,6 +9,8 @@
     "build": "pnpm typecheck && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint --fix --config eslint.config.ts",
+    "license:add:src": "cd src && license-check-and-add add -f ../../../.license-check-and-add.json",
+    "license:check:src": "cd src && license-check-and-add check -f ../../../.license-check-and-add.json",
     "pretest": "pnpm -C ../../packages/shared build",
     "test": "pnpm test:unit && pnpm test:e2e",
     "pretest:unit": "pnpm -C ../../packages/shared build",

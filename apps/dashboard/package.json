@@ -11,6 +11,8 @@
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "license:add:src": "cd src && license-check-and-add add -f ../../../.license-check-and-add.json",
+    "license:check:src": "cd src && license-check-and-add check -f ../../../.license-check-and-add.json",
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser-chromium --project browser-firefox --project browser-webkit --project browser-mobile --browser.headless",
     "test:browser:watch": "vitest --project browser-chromium --project browser-firefox --project browser-webkit --project browser-mobile",

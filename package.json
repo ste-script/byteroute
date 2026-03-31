@@ -13,6 +13,8 @@
     "dev:docs": "node scripts/docs-watch.mjs",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
+    "license:add": "pnpm -r --if-present license:add:src",
+    "license:check": "pnpm -r --if-present license:check:src",
     "test": "turbo run test",
     "format": "turbo run format",
     "seed": "pnpm -F @byteroute/backend seed",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "license-check-and-add": "^4.0.5",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
