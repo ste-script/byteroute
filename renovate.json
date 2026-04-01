@@ -26,6 +26,10 @@
       "automerge": true
     },
     {
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
       "matchDepTypes": [
         "devDependencies"
       ],
