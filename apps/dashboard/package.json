@@ -35,7 +35,7 @@
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4",
-    "vue-virtual-scroller": "2.0.0"
+    "vue-virtual-scroller": "2.0.1"
   },
   "devDependencies": {
     "@byteroute/typescript": "workspace:^5.3.0",
@@ -58,7 +58,7 @@
     "vue": "^3.5.32",
     "vue-echarts": "^8.0.1",
     "vue-router": "^5.0.4",
-    "vue-virtual-scroller": "^2.0.0",
+    "vue-virtual-scroller": "^2.0.1",
     "vue-tsc": "^3.2.6"
   }
 }
