@@ -1,6 +1,6 @@
 LATEX=pdflatex
 FLAGS=-interaction=nonstopmode
-REPORTS=SPE-report ASW-report
+REPORTS=SPE-report ASW-report SPE-presentation
 
 .PHONY: all pdf clean
 

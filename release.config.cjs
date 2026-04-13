@@ -39,6 +39,10 @@ module.exports = {
           {
             path: "docs/ASW-report.pdf",
             label: "ASW Report PDF"
+          },
+          {
+            path: "docs/SPE-presentation.pdf",
+            label: "SPE Presentation PDF"
           }
         ]
       }

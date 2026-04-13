@@ -1,0 +1,305 @@
+\documentclass[aspectratio=169]{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+
+\title[ByteRoute]{ByteRoute: Network Traffic Monitoring Platform}
+\subtitle{Software Process Engineering}
+\author[Babini Stefano]{
+    Babini Stefano \\
+    \small 0001125127 \\
+    \footnotesize \texttt{stefano.babini5@studio.unibo.it}
+}
+\institute[Unibo]{University of Bologna}
+\date{\today}
+
+\begin{document}
+
+% Slide 1: Title
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% Slide 2: Agenda
+\begin{frame}{Agenda}
+    \tableofcontents
+\end{frame}
+
+% Section 1: Introduction & Problem
+\section{Context \& Problem Statement}
+
+% Slide 3: Introduction
+\begin{frame}{Introduction}
+    \textbf{ByteRoute} is a real-time network traffic monitoring platform.
+    \vspace{0.5cm}
+    \begin{itemize}
+        \item Captures network packets at the OS level (Linux).
+        \item Enriches records with geographic and organizational metadata (GeoIP, ASN).
+        \item Presents results through an interactive web dashboard in real-time.
+        \item Target audience: Individual developers, system administrators, and small teams.
+    \end{itemize}
+\end{frame}
+
+% Slide 4: The Problem
+\begin{frame}{The Problem}
+    Modern network activity is incredibly opaque and complex.
+    \vspace{0.5cm}
+    \begin{itemize}
+        \item \textbf{Lack of visibility:} Hard to know which Autonomous Systems (ASNs) or countries a host is contacting.
+        \item \textbf{Fragmented tooling:} Tools like \texttt{tcpdump} or \texttt{Wireshark} require deep expertise and lack persistent, enriched records.
+        \item \textbf{No multi-host correlation:} Difficult to monitor several machines in a single, unified view.
+        \item \textbf{High barriers:} Enterprise solutions are expensive; configuring custom dashboards requires heavy infrastructure overhead.
+    \end{itemize}
+\end{frame}
+
+% Slide 5: The Proposed Solution
+\begin{frame}{The Proposed Solution (Three-Tier System)}
+    \begin{enumerate}
+        \item \textbf{Linux Client (Go):} Captures packets, aggregates them into connection records, and forwards batches over HTTPS.
+        \item \textbf{Backend (Node.js/Express):} Enriches data with GeoLite2, stores records in MongoDB, and broadcasts live updates via Socket.IO.
+        \item \textbf{Dashboard (Vue.js 3):} Interactive UI with a world map, live connection list, and aggregated real-time statistics.
+    \end{enumerate}
+    \vspace{0.5cm}
+    \textit{Everything is containerized with Docker and orchestrated with Docker Compose.}
+\end{frame}
+
+% Section 2: Requirements & Domain
+\section{Requirements \& Domain Model}
+
+% Slide 6: Functional Requirements
+\begin{frame}{Key Functional Requirements}
+    \begin{itemize}
+        \item \textbf{Interactive World Map:} Visualize destination countries via pins/flow lines.
+        \item \textbf{Live Connection List:} Display active connections with IP, Country, ASN, Organization, and Protocol.
+        \item \textbf{Real-Time Statistics:} Aggregation panels grouped by Country, ASN, and Protocol.
+        \item \textbf{Authentication \& Tenants:} Secure authentication (JWT); support for multiple isolated tenants for different monitored hosts.
+        \item \textbf{Agent Configuration:} Flexible configuration for capture interface, direction, BPF filters, and batch rules.
+    \end{itemize}
+\end{frame}
+
+% Slide 7: Non-Functional Requirements
+\begin{frame}{Key Non-Functional Requirements}
+    \begin{itemize}
+        \item \textbf{Performance:} The client must capture and aggregate sustained packet rates in-memory without dropping events.
+        \item \textbf{Security:} All APIs protected by bearer authentication. Client \& session tokens are independent.
+        \item \textbf{Portability:} Containerized setup. Backend and Dashboard run anywhere; Client targets Linux due to \texttt{libpcap}.
+        \item \textbf{Observability:} High test coverage with CI generating Cobertura XML and HTML reports.
+        \item \textbf{Configurability:} Ingestion rules and analytics separated into a Domain DSL (YAML).
+    \end{itemize}
+\end{frame}
+
+% Slide 8: Domain Driven Design (Ubiquitous Language)
+\begin{frame}{Domain Model \& Ubiquitous Language}
+    Establishing a shared language across components:
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Connection:} Core aggregate representing a single network flow enriched with metadata.
+        \item \textbf{PacketEvent / Flow:} Raw pcap events and their in-memory deduplicated representations from the Go client.
+        \item \textbf{Tenant:} Logical namespace isolating connections for specific hosts/users.
+        \item \textbf{GeoIpEnrichment:} Value object with metadata (City, Country, Lat/Lon, ASN).
+        \item \textbf{Domain DSL:} YAML config governing ingestion rules and analytics.
+    \end{itemize}
+\end{frame}
+
+% Section 3: Architecture
+\section{System Architecture}
+
+% Slide 9: Physical Architecture
+\begin{frame}{Physical Deployment Topology}
+    \begin{itemize}
+        \item \textbf{Go Client:} Runs on monitored Linux hosts. Pushes via HTTPS.
+        \item \textbf{Traefik:} Reverse proxy. Ingress for browser \& client requests.
+        \item \textbf{Backend (Node.js):} The core API. Reads/writes to MongoDB.
+        \item \textbf{Dashboard (Vue.js/Nginx):} Pre-compiled SPA served via Nginx.
+        \item \textbf{MongoDB:} NoSQL database storing users, tenants, and connections.
+    \end{itemize}
+    \vspace{0.3cm}
+    {\small \textit{Dashboard $\leftrightarrow$ Backend communicates via HTTP REST and persistent Socket.IO.}}
+\end{frame}
+
+% Slide 10: Logical Architecture (Backend)
+\begin{frame}{Logical Architecture (Backend)}
+    Inspired by \textbf{Hexagonal Architecture (Ports \& Adapters)}:
+    \vspace{0.3cm}
+    \begin{enumerate}
+        \item \textbf{Domain Layer:} Types, interfaces, and pure business logic (Connections, GeoIP value objects). No external library dependencies.
+        \item \textbf{Application Layer:} Services orchestrating logic (\texttt{ingest.ts}, \texttt{geoip.ts}, \texttt{auth.service.ts}).
+        \item \textbf{Infrastructure Layer:} Express routers, Socket.IO wrapper, Mongoose DAOs, DSL adapters.
+    \end{enumerate}
+\end{frame}
+
+% Slide 11: Data Flow Pipeline
+\begin{frame}{End-to-End Data Flow}
+    \begin{enumerate}
+        \item \textbf{Capture:} Go client extracts events from IP datagrams via \texttt{libpcap}.
+        \item \textbf{Aggregate:} In-memory grouping by 5-tuple (or IP pair).
+        \item \textbf{Export:} Dirty flows sent as JSON batches to \texttt{/api/connections}.
+        \item \textbf{Ingestion/Enrichment:} Backend applies DSL rules, enriches with MaxMind databases, and upserts to MongoDB.
+        \item \textbf{Broadcast:} Backend emits \texttt{trafficFlows} and \texttt{statisticsUpdate} via Socket.IO.
+        \item \textbf{Render:} Dashboard reacts to socket events and updates UI instantly.
+    \end{enumerate}
+\end{frame}
+
+% Section 4: Implementation
+\section{Implementation Details}
+
+% Slide 12: Technology Stack
+\begin{frame}{Technology Stack Overview}
+    \begin{table}[]
+        \centering
+        \begin{tabular}{@{}ll@{}}
+            \toprule
+            \textbf{Component} & \textbf{Technologies} \\ \midrule
+            \textbf{Go Client} & Go ($\ge$ 1.26), \texttt{gopacket/pcap} \\
+            \textbf{Backend}   & TypeScript, Node.js, Express, Socket.IO, Mongoose \\
+            \textbf{Dashboard} & TypeScript, Vue.js 3, Vite, Pinia, Playwright \\
+            \textbf{Shared}    & TypeScript (Mongoose schemas, Domain typings) \\
+            \textbf{Infra}     & Docker, Docker Compose, Traefik, GitHub Actions \\ \bottomrule
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+% Slide 13: Go Client Deep Dive
+\begin{frame}{Go Client Implementation}
+    \begin{itemize}
+        \item \textbf{Capture Loop:} Opens a live \texttt{pcap} handle. Extracts IP and Transport layer details continuously.
+        \item \textbf{BPF Filtering:} Auto-generates Berkeley Packet Filter expressions to filter out loopback/intra-host noise if not manually specified.
+        \item \textbf{Deduplication:} Configurable via \texttt{--dedupe} (flow or IP). Tracks active byte/packet counts per connection.
+        \item \textbf{Batching:} Pushes to the backend only when a flow is "dirty" and "flushed" (e.g. every 5 seconds) to minimize overhead.
+    \end{itemize}
+\end{frame}
+
+% Slide 14: Backend \& Multi-Tenancy
+\begin{frame}{Backend \& Multi-Tenancy}
+    \begin{itemize}
+        \item \textbf{Ingestion Rules:} Reads from \texttt{domain.dsl.yaml} to allow/deny protocols and IPs without re-compiling code.
+        \item \textbf{Multi-Tenancy:} 
+        \begin{itemize}
+            \item Tenant ID required in HTTP headers and Socket.IO handshakes.
+            \item Connections are isolated; Users only see data for authorized tenants.
+        \item \textbf{MongoDB Upserts:} Batches use bulk \texttt{updateOne} operations for speed, keyed by \texttt{tenantId} + \texttt{connectionId}.
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+% Slide 15: Visual Dashboard \& SPA
+\begin{frame}{Vue.js Dashboard}
+    \begin{itemize}
+        \item \textbf{State Management (Pinia):} Distinct stores for Authentication, Tenants, Connections, and Live Statistics.
+        \item \textbf{Historical Search:} \texttt{/history-search} page querying persistent connection records from MongoDB with pagination and filtering.
+        \item \textbf{Onboarding:} Seamless "First Tenant Wizard" for isolated new users.
+        \item \textbf{Reactivity:} No page reloads needed when new data arrives over Socket.IO; Pinia drives UI reactions instantly.
+    \end{itemize}
+\end{frame}
+
+% Section 5: DevOps & Processes
+\section{DevOps \& Quality Assurance}
+
+% Slide 16: DevOps Workflow
+\begin{frame}{Software Process: Git \& Release Workflow}
+    \textbf{GitHub Flow Methodology}
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item Short-lived feature branches merged into \texttt{main} via Pull Requests.
+        \item No direct pushes to \texttt{main}.
+    \end{itemize}
+    \vspace{0.3cm}
+    \textbf{Automated Versioning (Semantic Release)}
+    \begin{itemize}
+        \item \textbf{Conventional Commits} enforced via Husky Git Hooks (commitlint).
+        \item \texttt{fix:} $\rightarrow$ Patch bump. \texttt{feat:} $\rightarrow$ Minor bump.
+        \item Generates Changelog, creates GitHub Release, bumps Monorepo \texttt{package.json} automatically.
+    \end{itemize}
+\end{frame}
+
+% Slide 17: GitHub Actions Workflow
+\begin{frame}{GitHub Actions CI/CD Pipeline}
+    \vspace{0.3cm}
+    The automated CI/CD pipeline runs on every PR and push to \texttt{main}, sequentially executing:
+    \vspace{0.2cm}
+    \begin{enumerate}
+        \item \textbf{Setup:} Installs dependencies and performs type checking across the monorepo (\texttt{pnpm}).
+        \item \textbf{Parallel Testing:} Runs core test suites concurrently to save time:
+        \begin{itemize}
+            \item Backend Tests
+            \item Dashboard Tests
+            \item Go Client Tests
+        \end{itemize}
+        \item \textbf{Coverage Consolidation:} Gathers and merges test coverage artifacts (Cobertura) from all parallel jobs.
+        \item \textbf{Automated Release:} Builds Docker images securely and triggers a Semantic Versioning release.
+    \end{enumerate}
+    
+    \vspace{0.4cm}
+    \textbf{Key Benefits:}
+    \begin{itemize}
+        \item \textbf{Parallel Execution:} Minimizes the overall duration of the pipeline.
+        \item \textbf{Unified Metrics:} Artifact consolidation ensures complete visibility into codebase coverage.
+        \item \textbf{Reliability:} Releases and Docker images are built identically and reliably on \texttt{main}.
+    \end{itemize}
+\end{frame}
+
+% Slide 18: Continuous Integration Pipeline
+\begin{frame}{CI Pipeline (GitHub Actions)}
+    Triggered on every PR and push to \texttt{main}:
+    \vspace{0.3cm}
+    \begin{enumerate}
+        \item Installs dependencies (\texttt{pnpm}) \& checks types.
+        \item Runs Backend Unit \& E2E tests (Vitest + MongoDB-Memory-Server).
+        \item Runs Dashboard Component \& Browser tests (Vitest + Playwright cross-browser).
+        \item Builds \& tests Go Client tests.
+        \item Merges coverage data into unifying Cobertura artifacts.
+    \end{enumerate}
+\end{frame}
+
+% Slide 18: Quality Assurance Tools
+\begin{frame}{Code Quality Ecosystem}
+    \begin{itemize}
+        \item \textbf{Husky \& Linting:} Local hooks protect history. ESLint + Prettier enforce consistent JS/TS styles.
+        \item \textbf{Dependency Management:} \textbf{Renovate} automatically opens PRs keeping Monorepo dependencies fresh.
+        \item \textbf{Testing Matrix:} 
+        \begin{itemize}
+            \item Backend isolated unit tests.
+            \item Backend integrated E2E tests with real HTTP router \& Mongo memory server.
+            \item Dashboard components explicitly rendering in Playwright (Chromium, Firefox, WebKit, Mobile).
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+% Slide 19: Continuous Deployment \& Artifacts
+\begin{frame}{Release \& Deployment Validation}
+    \begin{itemize}
+        \item \textbf{Docker Publishing:} When Semantic Release decides to tag a new version, GitHub Actions rebuilds the \texttt{ghcr.io} Docker images safely.
+        \item \textbf{Coverage Badges:} Coverage reports merged across Node and Go environments upload securely to Codecov.
+        \item \textbf{Observability:} Deployment smoke-tests verify behavior via \texttt{GET /health} endpoint and Database index validation scripts.
+    \end{itemize}
+\end{frame}
+
+% Slide 20: Future Enhancements & Conclusion
+\begin{frame}{Conclusion \& Future Outlook}
+    \textbf{Achievements}
+    \begin{itemize}
+        \item Successfully implemented a rigorous, automated Software Process.
+        \item Created a scalable, 3-tier real-time platform with 0 commercial lock-in.
+        \item Solidified strong monorepo structures (pnpm, Turborepo boundaries).
+    \end{itemize}
+    \vspace{0.3cm}
+    \textbf{Future Directions}
+    \begin{itemize}
+        \item Integration with Time-Series Databases (e.g. ClickHouse) for long-term storage scalability.
+        \item EBPF integration for reduced privilege capture.
+        \item Real-time anomaly alerts for administrators via WebHooks.
+    \end{itemize}
+\end{frame}
+
+% Slide 21: Q&A
+\begin{frame}
+    \centering
+    \Huge \textbf{Thank You}
+    
+\end{frame}
+
+\end{document}
