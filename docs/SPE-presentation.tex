@@ -242,19 +242,6 @@
     \end{itemize}
 \end{frame}
 
-% Slide 18: Continuous Integration Pipeline
-\begin{frame}{CI Pipeline (GitHub Actions)}
-    Triggered on every PR and push to \texttt{main}:
-    \vspace{0.3cm}
-    \begin{enumerate}
-        \item Installs dependencies (\texttt{pnpm}) \& checks types.
-        \item Runs Backend Unit \& E2E tests (Vitest + MongoDB-Memory-Server).
-        \item Runs Dashboard Component \& Browser tests (Vitest + Playwright cross-browser).
-        \item Builds \& tests Go Client tests.
-        \item Merges coverage data into unifying Cobertura artifacts.
-    \end{enumerate}
-\end{frame}
-
 % Slide 18: Quality Assurance Tools
 \begin{frame}{Code Quality Ecosystem}
     \begin{itemize}
