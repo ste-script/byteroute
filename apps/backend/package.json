@@ -51,7 +51,7 @@
     "typescript": "6.0.2",
     "typescript-eslint": "^8.58.1",
     "vitest": "^4.1.4",
-    "typedoc": "^0.28.18",
+    "typedoc": "^0.28.19",
     "vitest-monocart-coverage": "^4.0.2"
   },
   "dependencies": {
