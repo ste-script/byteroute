@@ -198,7 +198,7 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
       '@tanstack/vue-query':
-        specifier: ^5.97.0
+        specifier: ^5.99.0
         version: 5.99.0(vue@3.5.32(typescript@6.0.2))
       axios:
         specifier: ^1.15.0
