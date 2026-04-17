@@ -40,7 +40,7 @@
     "@vitest/coverage-v8": "^4.1.4",
     "c8": "^11.0.0",
     "eslint": "^9.39.4",
-    "globals": "^17.4.0",
+    "globals": "^17.5.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-instrument": "^6.0.3",
     "istanbul-lib-report": "^3.0.1",
