@@ -28,7 +28,7 @@
     "@tanstack/vue-query": "^5.99.0",
     "axios": "^1.15.0",
     "echarts": "^6.0.0",
-    "maplibre-gl": "5.22.0",
+    "maplibre-gl": "5.23.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
