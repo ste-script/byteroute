@@ -25,7 +25,7 @@
     "@deck.gl/layers": "^9.3.1",
     "@deck.gl/mapbox": "^9.3.1",
     "@primevue/themes": "^4.5.4",
-    "@tanstack/vue-query": "^5.99.1",
+    "@tanstack/vue-query": "^5.99.2",
     "axios": "^1.15.0",
     "echarts": "^6.0.0",
     "maplibre-gl": "5.23.0",
