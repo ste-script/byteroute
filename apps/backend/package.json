@@ -49,7 +49,7 @@
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.58.2",
+    "typescript-eslint": "^8.59.0",
     "vitest": "^4.1.4",
     "typedoc": "^0.28.19",
     "vitest-monocart-coverage": "^4.0.2"
