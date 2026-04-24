@@ -26,7 +26,7 @@
     "@deck.gl/mapbox": "^9.3.1",
     "@primevue/themes": "^4.5.4",
     "@tanstack/vue-query": "^5.99.2",
-    "axios": "^1.15.1",
+    "axios": "^1.15.2",
     "echarts": "^6.0.0",
     "maplibre-gl": "5.23.0",
     "pinia": "^3.0.4",
