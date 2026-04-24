@@ -201,7 +201,7 @@ importers:
         specifier: ^5.99.2
         version: 5.99.2(vue@3.5.32(typescript@6.0.3))
       axios:
-        specifier: ^1.15.1
+        specifier: ^1.15.2
         version: 1.15.2
       echarts:
         specifier: ^6.0.0
