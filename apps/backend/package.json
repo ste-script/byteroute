@@ -37,7 +37,7 @@
     "@types/passport": "^1.0.17",
     "@types/passport-http-bearer": "^1.0.42",
     "@types/supertest": "^7.2.0",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.5",
     "c8": "^11.0.0",
     "eslint": "^9.39.4",
     "globals": "^17.5.0",
@@ -50,7 +50,7 @@
     "tsx": "^4.21.0",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.59.0",
-    "vitest": "^4.1.4",
+    "vitest": "^4.1.5",
     "typedoc": "^0.28.19",
     "vitest-monocart-coverage": "^4.0.2"
   },
