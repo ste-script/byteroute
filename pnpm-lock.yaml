@@ -228,8 +228,8 @@ importers:
         specifier: ^5.0.6
         version: 5.0.6(@vue/compiler-sfc@3.5.33)(pinia@3.0.4(typescript@6.0.3)(vue@3.5.33(typescript@6.0.3)))(vue@3.5.33(typescript@6.0.3))
       vue-virtual-scroller:
-        specifier: 3.0.1
-        version: 3.0.1(vue@3.5.33(typescript@6.0.3))
+        specifier: 3.0.2
+        version: 3.0.2(vue@3.5.33(typescript@6.0.3))
     devDependencies:
       '@byteroute/typescript':
         specifier: workspace:^5.3.0
@@ -4864,8 +4864,8 @@ packages:
     peerDependencies:
       typescript: '>=5.0.0'
 
-  vue-virtual-scroller@3.0.1:
-    resolution: {integrity: sha512-2uBYBx3UhsWmB1w5h/t6PGo2KdaVogpYJEZJJufyvoT3LWnR5cVDnrSY7WAP2OEEqZvDtzv+H3Eue0oBv+OtKQ==}
+  vue-virtual-scroller@3.0.2:
+    resolution: {integrity: sha512-zneKxsBecfFBpH2NAk8zF0IWBRSYRaXnXK/dPQ/AnXE9xlbRyW6sSO9EUb5L5cSFz2Dpfb2giN30/y+/Xvu5PQ==}
     peerDependencies:
       vue: ^3.3.0
 
@@ -9902,7 +9902,7 @@ snapshots:
       '@vue/language-core': 3.2.7
       typescript: 6.0.3
 
-  vue-virtual-scroller@3.0.1(vue@3.5.33(typescript@6.0.3)):
+  vue-virtual-scroller@3.0.2(vue@3.5.33(typescript@6.0.3)):
     dependencies:
       vue: 3.5.33(typescript@6.0.3)
 
