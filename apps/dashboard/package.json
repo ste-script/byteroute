@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "@byteroute/shared": "workspace:^5.3.0",
-    "@deck.gl/core": "^9.3.1",
-    "@deck.gl/layers": "^9.3.1",
-    "@deck.gl/mapbox": "^9.3.1",
+    "@deck.gl/core": "^9.3.2",
+    "@deck.gl/layers": "^9.3.2",
+    "@deck.gl/mapbox": "^9.3.2",
     "@primevue/themes": "^4.5.4",
     "@tanstack/vue-query": "^5.100.6",
     "axios": "^1.15.2",
