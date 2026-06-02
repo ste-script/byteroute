@@ -134,7 +134,7 @@ importers:
         version: 4.1.7(@vitest/browser@4.1.7)(vitest@4.1.7)
       c8:
         specifier: ^11.0.0
-        version: 11.0.0(monocart-coverage-reports@2.12.11)
+        version: 11.0.0(monocart-coverage-reports@2.12.12)
       eslint:
         specifier: ^10.4.1
         version: 10.4.1(jiti@2.6.1)
@@ -154,8 +154,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       monocart-coverage-reports:
-        specifier: ^2.12.11
-        version: 2.12.11
+        specifier: ^2.12.12
+        version: 2.12.12
       supertest:
         specifier: ^7.2.2
         version: 7.2.2
@@ -3528,8 +3528,8 @@ packages:
     resolution: {integrity: sha512-B4blGFkFL1s0G24URuMvx0qTlx+gRVLmfO7WcSz8NcmW/XHEJ3G69capdyW1iRsGKiycp1tkwKHnxHbnwjwmPw==}
     engines: {node: '>=20.19.0'}
 
-  monocart-coverage-reports@2.12.11:
-    resolution: {integrity: sha512-yo4/FdUdFIWoc9OjhBZCNXM95tYHS4e8nov9Q3AGbpvteT/W5aQSc4B+Q0nhmedZFvjvm3BUH/Xu9GT2n/0wkw==}
+  monocart-coverage-reports@2.12.12:
+    resolution: {integrity: sha512-d9FdUr2dn58Crweon0IE0zVi8r/i4vLvfvb2G7eL5vL5LfrxCB2X6F6qzuiwV6RioA4zbAI//7CYi6LjCvN3zA==}
     hasBin: true
 
   monocart-locator@1.0.3:
@@ -6956,7 +6956,7 @@ snapshots:
 
   bytes@3.1.2: {}
 
-  c8@11.0.0(monocart-coverage-reports@2.12.11):
+  c8@11.0.0(monocart-coverage-reports@2.12.12):
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@istanbuljs/schema': 0.1.3
@@ -6970,7 +6970,7 @@ snapshots:
       yargs: 17.7.2
       yargs-parser: 21.1.1
     optionalDependencies:
-      monocart-coverage-reports: 2.12.11
+      monocart-coverage-reports: 2.12.12
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
@@ -8462,7 +8462,7 @@ snapshots:
       - snappy
       - socks
 
-  monocart-coverage-reports@2.12.11:
+  monocart-coverage-reports@2.12.12:
     dependencies:
       acorn: 8.16.0
       acorn-loose: 8.5.2
@@ -9563,7 +9563,7 @@ snapshots:
       '@vitest/coverage-istanbul': 4.1.2(vitest@4.1.7)
       '@vitest/coverage-v8': 4.1.7(@vitest/browser@4.1.7)(vitest@4.1.7)
       istanbul-lib-instrument: 6.0.3
-      monocart-coverage-reports: 2.12.11
+      monocart-coverage-reports: 2.12.12
       test-exclude: 8.0.0
     transitivePeerDependencies:
       - '@vitest/browser'
