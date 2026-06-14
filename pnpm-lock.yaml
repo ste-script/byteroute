@@ -51,7 +51,7 @@ importers:
         specifier: ^25.0.5
         version: 25.0.5(typescript@6.0.3)
       turbo:
-        specifier: ^2.9.17
+        specifier: ^2.9.18
         version: 2.9.18
       typescript:
         specifier: 6.0.3
