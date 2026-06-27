@@ -198,8 +198,8 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
       '@tanstack/vue-query':
-        specifier: ^5.101.0
-        version: 5.101.0(vue@3.5.38(typescript@6.0.3))
+        specifier: ^5.101.1
+        version: 5.101.1(vue@3.5.38(typescript@6.0.3))
       axios:
         specifier: ^1.18.0
         version: 1.18.0
@@ -1367,11 +1367,11 @@ packages:
     resolution: {integrity: sha512-Wo1iKt2b9OT7d+YGhvEPD3DXvPv2etTusIMhMUoG7fbhmxcXCtIjJDEygy91Y2JFlwGyjqiBPRozme7UD8hoqg==}
     engines: {node: '>=12'}
 
-  '@tanstack/query-core@5.101.0':
-    resolution: {integrity: sha512-cQetA74EB+seWySv1TTKr828TnP0u39m6LykwDXIo84SNortpDkp30TMEjkqtYCNP9c40uT/iwl6MLiufEt0Ow==}
+  '@tanstack/query-core@5.101.1':
+    resolution: {integrity: sha512-Y6Y92dkXtNqx67m2pMSxUsA3zOCwv862JexZRP8/EPwvKXMPu9m8rv43spiXWzOUIggQ3SQApttALStzhA8B4g==}
 
-  '@tanstack/vue-query@5.101.0':
-    resolution: {integrity: sha512-sZeW0RvfEZ9QRiaXirE/HQZsFT5saMlPZVfeYvjPX6lqSBS9lkD7wfnCfzOBns6HD2f34Gx9cazkuU3Xj6hl/A==}
+  '@tanstack/vue-query@5.101.1':
+    resolution: {integrity: sha512-w36v/HlCF2xRpdDCz7cygk99AwBWhZaT5No1dJOwqIZ1AR8q7tiovRyPFID/49gkjXG7KgXs/nHfRg+eCydH4Q==}
     peerDependencies:
       '@vue/composition-api': ^1.1.2
       vue: ^2.6.0 || ^3.3.0
@@ -2794,6 +2794,7 @@ packages:
   git-raw-commits@5.0.1:
     resolution: {integrity: sha512-Y+csSm2GD/PCSh6Isd/WiMjNAydu0VBiG9J7EdQsNA5P9uXvLayqjmTsNlK5Gs9IhblFZqOU0yid5Il5JPoLiQ==}
     engines: {node: '>=18'}
+    deprecated: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
     hasBin: true
 
   gitignore-to-glob@0.3.0:
@@ -6149,12 +6150,12 @@ snapshots:
     dependencies:
       remove-accents: 0.5.0
 
-  '@tanstack/query-core@5.101.0': {}
+  '@tanstack/query-core@5.101.1': {}
 
-  '@tanstack/vue-query@5.101.0(vue@3.5.38(typescript@6.0.3))':
+  '@tanstack/vue-query@5.101.1(vue@3.5.38(typescript@6.0.3))':
     dependencies:
       '@tanstack/match-sorter-utils': 8.19.4
-      '@tanstack/query-core': 5.101.0
+      '@tanstack/query-core': 5.101.1
       '@vue/devtools-api': 6.6.4
       vue: 3.5.38(typescript@6.0.3)
       vue-demi: 0.14.10(vue@3.5.38(typescript@6.0.3))
