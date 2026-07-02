@@ -34,7 +34,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "conventional-changelog-conventionalcommits": "^10.2.0",
     "husky": "^9.1.7",
-    "prettier": "^3.9.1",
+    "prettier": "^3.9.3",
     "semantic-release": "^25.0.5",
     "turbo": "^2.10.0",
     "typescript": "6.0.3"
