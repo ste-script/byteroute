@@ -63,8 +63,8 @@ importers:
         specifier: workspace:^5.3.0
         version: link:../../packages/shared
       '@maxmind/geoip2-node':
-        specifier: ^6.3.4
-        version: 6.3.4
+        specifier: ^7.0.0
+        version: 7.0.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -942,8 +942,9 @@ packages:
   '@math.gl/web-mercator@4.1.0':
     resolution: {integrity: sha512-HZo3vO5GCMkXJThxRJ5/QYUYRr3XumfT8CzNNCwoJfinxy5NtKUd7dusNTXn7yJ40UoB8FMIwkVwNlqaiRZZAw==}
 
-  '@maxmind/geoip2-node@6.3.4':
-    resolution: {integrity: sha512-BTRFHCX7Uie4wVSPXsWQfg0EVl4eGZgLCts0BTKAP+Eiyt1zmF2UPyuUZkaj0R59XSDYO+84o1THAtaenUoQYg==}
+  '@maxmind/geoip2-node@7.0.0':
+    resolution: {integrity: sha512-TUuCUXP93+cCkHmSy42vLwKquMsr20vrhcDBqqEPrpfdFFw16sL6hcmEuAyHbs2S+IVgouqsF37wnCdtbi+i7A==}
+    engines: {node: '>=22'}
 
   '@mongodb-js/saslprep@1.4.6':
     resolution: {integrity: sha512-y+x3H1xBZd38n10NZF/rEBlvDOOMQ6LKUTHqr8R9VkJ+mmQOYtJFxIlkkK8fZrtOiL6VixbOBWMbZGBdal3Z1g==}
@@ -5742,7 +5743,7 @@ snapshots:
     dependencies:
       '@math.gl/core': 4.1.0
 
-  '@maxmind/geoip2-node@6.3.4':
+  '@maxmind/geoip2-node@7.0.0':
     dependencies:
       maxmind: 5.0.5
 
