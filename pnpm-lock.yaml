@@ -103,7 +103,7 @@ importers:
         specifier: workspace:^5.3.0
         version: link:../../packages/typescript
       '@cucumber/cucumber':
-        specifier: ^13.1.0
+        specifier: ^13.1.1
         version: 13.1.1
       '@eslint/js':
         specifier: ^10.0.1
@@ -558,9 +558,6 @@ packages:
     resolution: {integrity: sha512-MXsD7ZAWWAiWMrn3Lzq2nwu9DJpPbbvdqXj2ot1BSM2gXnoSvg8d0pc6PzS9pI02swMSn/KN11mTdF5ScE7X0Q==}
     peerDependencies:
       '@cucumber/messages': '>=17.1.1'
-
-  '@cucumber/messages@32.3.1':
-    resolution: {integrity: sha512-yNQq1KoXRYaEKrWMFmpUQX7TdeQuU9jeGgJAZ3dArTsC/T4NpJ6DnqaJIIgwPnz/wtQIQTNX7/h0rOuF5xY4qQ==}
 
   '@cucumber/messages@33.0.4':
     resolution: {integrity: sha512-i6P1a0bnmhecOHfvIW0rhMxv/gMKfBKwDMxmD9/Uo1HSqpQ17ocHms1JwWW6uTMLAopqqWlcz7l6Pax+qUOTzg==}
@@ -2092,9 +2089,6 @@ packages:
   chokidar@5.0.0:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
-
-  class-transformer@0.5.1:
-    resolution: {integrity: sha512-SQa1Ws6hUbfC98vKGxZH3KFY0Y1lm5Zm0SY8XX9zbK7FJCyVEac3ATW0RIpwzW+oOfmHE5PMPufDG9hCfoEOMw==}
 
   clean-stack@2.2.0:
     resolution: {integrity: sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==}
@@ -5310,7 +5304,7 @@ snapshots:
 
   '@cucumber/gherkin@41.0.0':
     dependencies:
-      '@cucumber/messages': 32.3.1
+      '@cucumber/messages': 33.0.4
 
   '@cucumber/html-formatter@24.0.0(@cucumber/messages@34.0.1)':
     dependencies:
@@ -5328,11 +5322,6 @@ snapshots:
     dependencies:
       '@cucumber/messages': 34.0.1
       mime: 4.1.0
-
-  '@cucumber/messages@32.3.1':
-    dependencies:
-      class-transformer: 0.5.1
-      reflect-metadata: 0.2.2
 
   '@cucumber/messages@33.0.4': {}
 
@@ -7009,8 +6998,6 @@ snapshots:
     dependencies:
       readdirp: 5.0.0
 
-  class-transformer@0.5.1: {}
-
   clean-stack@2.2.0: {}
 
   clean-stack@5.3.0:
@@ -7128,7 +7115,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       handlebars: 4.7.8
       meow: 13.2.0
-      semver: 7.8.1
+      semver: 7.8.5
 
   conventional-commits-filter@5.0.0: {}
 
@@ -8277,7 +8264,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.1
+      semver: 7.8.5
 
   maplibre-gl@5.24.0:
     dependencies:
@@ -9575,7 +9562,7 @@ snapshots:
       eslint-visitor-keys: 5.0.1
       espree: 11.2.0
       esquery: 1.7.0
-      semver: 7.8.1
+      semver: 7.8.5
     transitivePeerDependencies:
       - supports-color
 
