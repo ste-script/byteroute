@@ -48,7 +48,7 @@
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.4.11",
     "eslint": "^10.7.0",
-    "eslint-plugin-vue": "^10.9.2",
+    "eslint-plugin-vue": "^10.10.0",
     "happy-dom": "^20.11.0",
     "playwright": "^1.61.1",
     "sass": "^1.101.0",
