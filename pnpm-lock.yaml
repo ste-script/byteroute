@@ -186,13 +186,13 @@ importers:
         specifier: workspace:^5.3.0
         version: link:../../packages/shared
       '@deck.gl/core':
-        specifier: ^9.3.8
+        specifier: ^9.3.9
         version: 9.3.9
       '@deck.gl/layers':
-        specifier: ^9.3.8
+        specifier: ^9.3.9
         version: 9.3.9(@deck.gl/core@9.3.9)(@loaders.gl/core@4.4.3)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
       '@deck.gl/mapbox':
-        specifier: ^9.3.8
+        specifier: ^9.3.9
         version: 9.3.9(@deck.gl/core@9.3.9)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)
       '@primevue/themes':
         specifier: ^4.5.4
