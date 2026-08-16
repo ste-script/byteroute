@@ -29,7 +29,7 @@
     "axios": "^1.19.0",
     "echarts": "^6.1.0",
     "maplibre-gl": "5.24.0",
-    "pinia": "^4.0.2",
+    "pinia": "^4.0.3",
     "primeicons": "^8.0.0",
     "primevue": "^5.0.0",
     "socket.io-client": "^4.8.3",
