@@ -53,7 +53,7 @@
     "playwright": "^1.62.1",
     "sass": "^1.102.0",
     "typescript": "6.0.3",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vitest": "^4.1.10",
     "vue": "^3.5.41",
     "vue-echarts": "^8.1.0",
