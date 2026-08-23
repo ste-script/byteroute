@@ -173,7 +173,7 @@ importers:
         version: 8.67.0(eslint@10.8.1(jiti@2.6.1))(typescript@6.0.3)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+        version: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
       vitest-monocart-coverage:
         specifier: ^4.0.2
         version: 4.0.2(@vitest/browser@4.1.10)(vitest@4.1.10)
@@ -265,8 +265,8 @@ importers:
         specifier: ^10.10.0
         version: 10.10.0(@typescript-eslint/parser@8.67.0(eslint@10.8.1(jiti@2.6.1))(typescript@6.0.3))(eslint@10.8.1(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.8.1(jiti@2.6.1)))
       happy-dom:
-        specifier: ^20.11.2
-        version: 20.11.2
+        specifier: ^20.11.6
+        version: 20.11.6
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
@@ -281,7 +281,7 @@ importers:
         version: 8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+        version: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
       vue-echarts:
         specifier: ^8.1.0
         version: 8.1.0(echarts@6.1.0)(vue@3.5.41(typescript@6.0.3))
@@ -2879,8 +2879,8 @@ packages:
     engines: {node: '>=0.4.7'}
     hasBin: true
 
-  happy-dom@20.11.2:
-    resolution: {integrity: sha512-7MB+bJLkxu3SowAfBJbjW+c55kNz5tkR45gu2qzrxznezhLeN5YIlJbwUgSzlGc+qWoZ8Ykg71H5ezz69xixrw==}
+  happy-dom@20.11.6:
+    resolution: {integrity: sha512-Hldbg8AdAa5a5oDcZpjqnGitp7JB0hqWmfv/8qr+kft4vzSD8BHsbdRfzYvL/0QcbKcURC/yyoygbeDQarPvYg==}
     engines: {node: '>=20.0.0'}
 
   has-ansi@6.0.2:
@@ -6559,7 +6559,7 @@ snapshots:
       '@vitest/mocker': 4.1.10(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
       playwright: 1.62.1
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -6575,7 +6575,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -6595,7 +6595,7 @@ snapshots:
       magicast: 0.5.2
       obug: 2.1.1
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
     transitivePeerDependencies:
       - supports-color
 
@@ -6611,7 +6611,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
     optionalDependencies:
       '@vitest/browser': 4.1.10(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.10)
 
@@ -7905,7 +7905,7 @@ snapshots:
     optionalDependencies:
       uglify-js: 3.19.3
 
-  happy-dom@20.11.2:
+  happy-dom@20.11.6:
     dependencies:
       '@types/node': 24.13.3
       '@types/whatwg-mimetype': 3.0.2
@@ -9591,7 +9591,7 @@ snapshots:
       - supports-color
       - vitest
 
-  vitest@4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0)):
+  vitest@4.1.10(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.6)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -9617,7 +9617,7 @@ snapshots:
       '@types/node': 24.13.3
       '@vitest/browser-playwright': 4.1.10(playwright@1.62.1)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.102.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.10)
       '@vitest/coverage-v8': 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
-      happy-dom: 20.11.2
+      happy-dom: 20.11.6
     transitivePeerDependencies:
       - msw
 
