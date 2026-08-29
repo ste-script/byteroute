@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.26
 
-FROM node:24.19.0-alpine AS base
+FROM node:24.20.0-alpine AS base
 WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
