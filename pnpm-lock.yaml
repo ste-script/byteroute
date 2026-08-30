@@ -265,7 +265,7 @@ importers:
         specifier: ^10.10.0
         version: 10.10.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(jiti@2.6.1))(typescript@6.0.3))(eslint@10.9.1(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@10.9.1(jiti@2.6.1)))
       happy-dom:
-        specifier: ^20.11.8
+        specifier: ^20.11.12
         version: 20.12.0
       playwright:
         specifier: ^1.62.1
