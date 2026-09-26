@@ -157,8 +157,8 @@ importers:
         specifier: ^2.13.0
         version: 2.13.0
       supertest:
-        specifier: ^7.2.2
-        version: 7.2.2
+        specifier: ^7.3.0
+        version: 7.3.0
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -4303,8 +4303,8 @@ packages:
   supercluster@8.0.1:
     resolution: {integrity: sha512-IiOea5kJ9iqzD2t7QJq/cREyLHTtSmUT6gQsweojg9WH2sYJqZK9SswTu6jrscO6D1G5v5vYZ9ru/eq85lXeZQ==}
 
-  supertest@7.2.2:
-    resolution: {integrity: sha512-oK8WG9diS3DlhdUkcFn4tkNIiIbBx9lI2ClF8K+b2/m8Eyv47LSawxUzZQSNKUrVb2KsqeTDCcjAAVPYaSLVTA==}
+  supertest@7.3.0:
+    resolution: {integrity: sha512-UwwmWq3xLhyU96c521wYNaBg7IqX78Wpj4FKs6Katp6vdklX42zU5ESvX3KeZRLFyO44RwFp4yvxYMNZzCcX9g==}
     engines: {node: '>=14.18.0'}
 
   supports-color@11.0.0:
@@ -9184,7 +9184,7 @@ snapshots:
     dependencies:
       kdbush: 4.0.2
 
-  supertest@7.2.2:
+  supertest@7.3.0:
     dependencies:
       cookie-signature: 1.2.2
       methods: 1.1.2
