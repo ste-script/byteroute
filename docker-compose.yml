@@ -18,7 +18,7 @@ services:
       - traefik
 
   mongodb:
-    image: mongo:8
+    image: mongo:9
     container_name: byteroute-mongodb
     restart: unless-stopped
     environment:
