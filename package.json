@@ -2,7 +2,7 @@
   "name": "byteroute",
   "private": true,
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.34.6",
+  "packageManager": "pnpm@12.8.2",
   "workspaces": [
     "apps/*",
     "packages/*"
