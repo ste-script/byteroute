@@ -59,6 +59,6 @@
     "vue-echarts": "^8.3.1",
     "vue-router": "^5.3.1",
     "vue-virtual-scroller": "^3.0.5",
-    "vue-tsc": "^3.3.11"
+    "vue-tsc": "^3.3.12"
   }
 }
