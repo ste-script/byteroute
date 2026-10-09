@@ -45,7 +45,7 @@
     "istanbul-lib-instrument": "^6.0.3",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
-    "monocart-coverage-reports": "^2.13.0",
+    "monocart-coverage-reports": "^2.13.1",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
