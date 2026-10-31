@@ -154,7 +154,7 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       monocart-coverage-reports:
-        specifier: ^3.1.0
+        specifier: ^3.2.0
         version: 3.2.0
       supertest:
         specifier: ^7.3.1
