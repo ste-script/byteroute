@@ -1,6 +1,6 @@
 module github.com/byteroute/client-go
 
-go 1.27.3
+go 1.27.4
 
 require github.com/google/gopacket v1.1.19
 
