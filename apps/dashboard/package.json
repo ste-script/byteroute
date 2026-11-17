@@ -50,7 +50,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-vue": "^10.12.1",
     "happy-dom": "^21.0.4",
-    "playwright": "^1.65.0",
+    "playwright": "^1.65.1",
     "sass": "^1.108.2",
     "typescript": "6.0.3",
     "vite": "^8.3.8",
