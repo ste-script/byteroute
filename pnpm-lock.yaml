@@ -186,14 +186,14 @@ importers:
         specifier: workspace:^5.3.0
         version: link:../../packages/shared
       '@deck.gl/core':
-        specifier: ^9.4.1
-        version: 9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
+        specifier: ^9.4.2
+        version: 9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@deck.gl/layers':
-        specifier: ^9.4.1
-        version: 9.4.1(@deck.gl/core@9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.4.3)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
+        specifier: ^9.4.2
+        version: 9.4.2(@deck.gl/core@9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.4.3)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@deck.gl/mapbox':
-        specifier: ^9.4.1
-        version: 9.4.1(@deck.gl/core@9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(@math.gl/web-mercator@4.1.0)
+        specifier: ^9.4.2
+        version: 9.4.2(@deck.gl/core@9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(@math.gl/web-mercator@4.1.0)
       '@primevue/themes':
         specifier: ^4.5.4
         version: 4.5.4
@@ -582,19 +582,19 @@ packages:
   '@cucumber/tag-expressions@11.0.1':
     resolution: {integrity: sha512-x0AssM2HKLoxw8gSeAsYo0QK9wImODYBNDO423/K1Pfk2vwA/MdecRS1ky5i3Rl84kohaG0uUXhIBR+HTu/Qjg==}
 
-  '@deck.gl/core@9.4.1':
-    resolution: {integrity: sha512-DyZTcn4DIWbCKqi4W4PMcG57DD+B/CbEkNex9EKLLUvxl27i45UEEwbYu5Br+c3P3bkcH6tNvB8v/rbsxkCWWQ==}
+  '@deck.gl/core@9.4.2':
+    resolution: {integrity: sha512-zA7X/iqxlHqMVTVM36sO9MOGrV+/pS8yHUwm4OEZVlsnqPqQLO1GEGhhiyhl6PbGUOKWGXejdWLQURsuHQLIag==}
 
-  '@deck.gl/layers@9.4.1':
-    resolution: {integrity: sha512-a2i/HjbQFePZc0R0I+TFIzTdrjhmoPjfDKNvIo6SzktZ2XI+upUZt3nky3PEhcxbcQ0Sc1GHviETazAeA+S9EQ==}
+  '@deck.gl/layers@9.4.2':
+    resolution: {integrity: sha512-evWWLM5ASGGkfJpueOY+dPQlZQSIT6c+XhuzCqhFYeeC25nT6wbMQ6zLXdcwTJR7r5LBO5+zWVy+ICVndUi/zA==}
     peerDependencies:
       '@deck.gl/core': ~9.4.0
       '@loaders.gl/core': ^4.4.3
       '@luma.gl/core': ~9.4.0
       '@luma.gl/engine': ~9.4.0
 
-  '@deck.gl/mapbox@9.4.1':
-    resolution: {integrity: sha512-gg18JhYAHZoW8v7QVzcIU5mTRkfuPWuZRXHF+vBq6QY3E5OKInEmRzHsw/iRa/BKu3lSkN2WM3tKn8CpMie64Q==}
+  '@deck.gl/mapbox@9.4.2':
+    resolution: {integrity: sha512-iIpe1wWCMtLyc/6kRkB9m3dmiuULsjqkWlue2X5gASAnb6+bOgj46QRUaBG6rIe7gQ85eLmBFdRswVzqu8Ka2w==}
     peerDependencies:
       '@deck.gl/core': ~9.4.0
       '@luma.gl/core': ~9.4.0
@@ -5561,7 +5561,7 @@ snapshots:
 
   '@cucumber/tag-expressions@11.0.1': {}
 
-  '@deck.gl/core@9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))':
+  '@deck.gl/core@9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))':
     dependencies:
       '@loaders.gl/core': 4.4.3
       '@loaders.gl/images': 4.4.3(@loaders.gl/core@4.4.3)
@@ -5584,9 +5584,9 @@ snapshots:
       - '@75lb/nature'
       - '@luma.gl/webgpu'
 
-  '@deck.gl/layers@9.4.1(@deck.gl/core@9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.4.3)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))':
+  '@deck.gl/layers@9.4.2(@deck.gl/core@9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@loaders.gl/core@4.4.3)(@luma.gl/core@9.4.2)(@luma.gl/engine@9.4.2(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))':
     dependencies:
-      '@deck.gl/core': 9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
+      '@deck.gl/core': 9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@loaders.gl/core': 4.4.3
       '@loaders.gl/images': 4.4.3(@loaders.gl/core@4.4.3)
       '@loaders.gl/schema': 4.4.3
@@ -5602,9 +5602,9 @@ snapshots:
     transitivePeerDependencies:
       - '@75lb/nature'
 
-  '@deck.gl/mapbox@9.4.1(@deck.gl/core@9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(@math.gl/web-mercator@4.1.0)':
+  '@deck.gl/mapbox@9.4.2(@deck.gl/core@9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2))))(@luma.gl/core@9.4.2)(@math.gl/web-mercator@4.1.0)':
     dependencies:
-      '@deck.gl/core': 9.4.1(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
+      '@deck.gl/core': 9.4.2(@luma.gl/webgpu@9.4.0(@luma.gl/core@9.4.2)(@luma.gl/shadertools@9.4.2(@luma.gl/core@9.4.2)))
       '@luma.gl/core': 9.4.2
       '@math.gl/web-mercator': 4.1.0
 
